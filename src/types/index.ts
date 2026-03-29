@@ -75,3 +75,10 @@ export interface EmbeddedObject {
   position: { x: number; y: number }
   size: { width: number; height: number }
 }
+
+export interface EmbedItem {
+  id: string
+  type: 'model' | 'code' | 'simulation'
+  name: string
+  data?: any
+}
