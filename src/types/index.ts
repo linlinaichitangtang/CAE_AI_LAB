@@ -68,6 +68,16 @@ export interface SimulationResults {
   strain: number[]
 }
 
+// Simulation Result Viewer types
+export interface SimulationResult {
+  nodes: Array<{ id: number; x: number; y: number; z: number }>
+  elements: Array<{ id: number; type: string; nodeIds: number[] }>
+  displacement?: { step: number; data: Record<string, Record<string, number>> }
+  stress?: { step: number; data: Record<string, Record<string, number>> }
+  vonMises?: { step: number; data: Record<string, number> }
+  deformationScale?: number
+}
+
 export interface EmbeddedObject {
   type: '3d-model' | 'code' | 'simulation-result'
   refId: string
