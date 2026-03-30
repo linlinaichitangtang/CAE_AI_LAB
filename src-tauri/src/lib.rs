@@ -18,8 +18,6 @@ pub fn run() {
     tracing::info!("Starting CAELab application");
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             tracing::info!("Application setup complete");
             
@@ -68,7 +66,6 @@ pub fn run() {
             commands::cae_api::generate_3d_mesh,
             commands::cae_api::generate_structured_mesh,
             commands::cae_api::export_mesh_to_inp,
-            // Boundary Condition API
             commands::cae_api::create_fixed_bc,
             commands::cae_api::create_custom_fixed_bc,
             commands::cae_api::create_point_load,

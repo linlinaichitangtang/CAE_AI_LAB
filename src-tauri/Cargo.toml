@@ -5,30 +5,20 @@ description = "科研与工程创作一体化工作台"
 authors = ["CAELab Team"]
 edition = "2021"
 
-[lib]
-name = "caelab_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = "1.0"
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
-tauri-plugin-shell = "2"
-tauri-plugin-fs = "2"
+tauri = { version = "=1.0.0-beta.20", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-log = "0.4"
 
-[dev-dependencies]
-tempfile = "3"
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
 
 [profile.release]
 panic = "abort"
