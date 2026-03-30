@@ -82,6 +82,10 @@ pub fn run() {
             commands::cae_api::create_cantilever_fixed_bc,
             commands::cae_api::create_cantilever_point_load,
             commands::cae_api::generate_complete_inp,
+            // AI commands
+            commands::ai::ai_chat,
+            commands::ai::ai_chat_stream,
+            commands::ai::test_ai_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

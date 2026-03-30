@@ -92,3 +92,13 @@ export interface EmbedItem {
   name: string
   data?: any
 }
+
+// 3D Modeling types
+export interface GeometryItem {
+  type: 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus'
+  name: string
+  icon: string
+  dimensions: string
+  group?: any // THREE.Group
+  params?: any
+}

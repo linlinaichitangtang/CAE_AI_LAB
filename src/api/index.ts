@@ -19,6 +19,19 @@ export type {
   EmbedItem
 } from './types'
 
+// ============ CAE API 导出 ============
+
+export * from './cae'
+export type {
+  Node,
+  Element,
+  FixedBc,
+  PointLoad,
+  UniformLoad,
+  MeshApiResult,
+  ResultSet
+} from './cae'
+
 import type {
   Project,
   ProjectFile,

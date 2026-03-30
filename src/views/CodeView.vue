@@ -56,6 +56,25 @@
 
         <!-- Tab Actions -->
         <div class="ml-auto px-2 flex items-center gap-1">
+          <!-- 🔗 嵌入到笔记 -->
+          <button 
+            @click="showEmbedToNoteDialog"
+            :disabled="!projectStore.currentNoteId || !activeTabId"
+            class="p-1 text-orange-400 hover:text-orange-300 transition-colors border border-orange-400 rounded px-2 flex items-center gap-1 text-xs"
+            title="将当前代码嵌入到笔记"
+          >
+            <span>🔗</span>
+            <span>嵌入</span>
+          </button>
+          <div class="w-px h-4 bg-[#3c3c3c] mx-1"></div>
+          <!-- AI功能按钮 -->
+          <button @click="openAiExplainDialog" :disabled="!activeTabId" class="p-1 text-purple-400 hover:text-purple-300 transition-colors" title="AI解释代码">
+            🤖 解释
+          </button>
+          <button @click="openAiOptimizeDialog" :disabled="!activeTabId" class="p-1 text-blue-400 hover:text-blue-300 transition-colors" title="AI优化代码">
+            🤖 优化
+          </button>
+          <div class="w-px h-4 bg-[#3c3c3c] mx-1"></div>
           <button class="p-1 text-[#858585] hover:text-[#d4d4d4] transition-colors" @click="toggleTerminal" title="终端">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -121,12 +140,145 @@
         </div>
       </div>
     </div>
+
+    <!-- AI解释对话框 -->
+    <div v-if="showAiExplain" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showAiExplain = false">
+      <div class="bg-[#1e1e1e] rounded-lg shadow-xl w-[700px] flex flex-col max-h-[80vh] border border-[#3c3c3c]">
+        <div class="p-4 border-b border-[#3c3c3c] flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-[#d4d4d4]">
+            🤖 AI解释代码
+          </h3>
+          <button @click="showAiExplain = false" class="text-[#858585] hover:text-[#d4d4d4]">✕</button>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <p class="text-xs text-[#858585] mb-4">AI将分析当前代码并给出详细解释</p>
+          <div v-if="aiExplainThinking" class="bg-[#2d2d2d] rounded p-3 mb-4">
+            <div class="text-xs text-[#858585] mb-2">AI 分析中...</div>
+            <div class="text-xs text-[#d4d4d4] font-mono whitespace-pre-wrap">
+              {{ aiExplainThinking }}
+            </div>
+          </div>
+          <div v-if="aiExplainResult" class="bg-[#2d2d2d] rounded p-4 text-xs text-[#d4d4d4] max-h-64 overflow-auto whitespace-pre-wrap">
+            {{ aiExplainResult }}
+          </div>
+          <div v-if="aiExplainError" class="bg-red-900/30 rounded p-3 text-xs text-red-400">
+            {{ aiExplainError }}
+          </div>
+        </div>
+        <div class="p-4 border-t border-[#3c3c3c] flex justify-end gap-3">
+          <button @click="showAiExplain = false" class="px-4 py-2 bg-[#3c3c3c] rounded text-[#d4d4d4] hover:bg-[#4c4c4c] text-sm">
+            关闭
+          </button>
+          <button v-if="!aiExplainResult" @click="doAiExplain" :disabled="aiExplaining" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm disabled:opacity-50">
+            {{ aiExplaining ? '分析中...' : '开始分析' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI优化对话框 -->
+    <div v-if="showAiOptimize" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showAiOptimize = false">
+      <div class="bg-[#1e1e1e] rounded-lg shadow-xl w-[800px] flex flex-col max-h-[85vh] border border-[#3c3c3c]">
+        <div class="p-4 border-b border-[#3c3c3c] flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-[#d4d4d4]">
+            🤖 AI优化代码
+          </h3>
+          <button @click="showAiOptimize = false" class="text-[#858585] hover:text-[#d4d4d4]">✕</button>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <p class="text-xs text-[#858585] mb-4">AI将优化当前代码，包括改善代码结构、提高可读性、修复潜在问题</p>
+          <div v-if="aiOptimizing" class="bg-[#2d2d2d] rounded p-3 mb-4">
+            <div class="text-xs text-[#858585] mb-2">AI 优化中...</div>
+            <div class="text-xs text-[#d4d4d4] font-mono whitespace-pre-wrap">
+              {{ aiOptimizeThinking }}
+            </div>
+          </div>
+          <div v-if="aiOptimizedCode" class="mb-4">
+            <div class="text-xs font-semibold text-blue-400 mb-2">优化后的代码:</div>
+            <pre class="bg-[#2d2d2d] rounded p-4 text-xs text-[#d4d4d4] max-h-64 overflow-auto whitespace-pre-wrap">{{ aiOptimizedCode }}</pre>
+          </div>
+          <div v-if="aiOptimizeError" class="bg-red-900/30 rounded p-3 text-xs text-red-400">
+            {{ aiOptimizeError }}
+          </div>
+        </div>
+        <div class="p-4 border-t border-[#3c3c3c] flex justify-end gap-3">
+          <button @click="showAiOptimize = false" class="px-4 py-2 bg-[#3c3c3c] rounded text-[#d4d4d4] hover:bg-[#4c4c4c] text-sm">
+            取消
+          </button>
+          <button v-if="aiOptimizedCode" @click="applyOptimizedCode" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+            应用优化结果
+          </button>
+          <button v-else @click="doAiOptimize" :disabled="aiOptimizing" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:opacity-50">
+            {{ aiOptimizing ? '优化中...' : '开始优化' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔗 嵌入到笔记对话框 -->
+    <div v-if="showEmbedDialog" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showEmbedDialog = false">
+      <div class="bg-[#1e1e1e] rounded-lg shadow-xl w-[500px] border border-[#3c3c3c]">
+        <div class="p-4 border-b border-[#3c3c3c] flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-[#d4d4d4] flex items-center gap-2">
+            <span>🔗</span>
+            <span>嵌入到笔记</span>
+          </h3>
+          <button @click="showEmbedDialog = false" class="text-[#858585] hover:text-[#d4d4d4]">✕</button>
+        </div>
+        <div class="p-4">
+          <div class="mb-4">
+            <label class="text-sm font-medium text-[#d4d4d4] mb-2 block">选择要嵌入的笔记</label>
+            <select 
+              v-model="selectedEmbedNoteId"
+              class="w-full px-3 py-2 border border-[#3c3c3c] rounded bg-[#2d2d2d] text-[#d4d4d4] text-sm"
+            >
+              <option value="">-- 选择笔记 --</option>
+              <option v-for="note in codeFiles" :key="note.id" :value="note.id">
+                {{ note.file_name || '无标题笔记' }}
+              </option>
+            </select>
+          </div>
+          
+          <!-- 嵌入预览 -->
+          <div class="bg-[#2d2d2d] rounded p-3">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">📄</span>
+              <div>
+                <div class="text-sm font-medium text-[#d4d4d4]">
+                  {{ tabs.find(t => t.id === activeTabId)?.name || '代码文件' }} (代码)
+                </div>
+                <div class="text-xs text-[#858585]">
+                  {{ new Date().toLocaleDateString() }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 border-t border-[#3c3c3c] flex justify-end gap-3">
+          <button @click="showEmbedDialog = false" class="px-4 py-2 bg-[#3c3c3c] rounded text-[#d4d4d4] hover:bg-[#4c4c4c] text-sm">
+            取消
+          </button>
+          <button 
+            @click="embedCodeToNote" 
+            :disabled="!selectedEmbedNoteId || !activeTabId"
+            class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            确认嵌入
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useCodeEditor, type FileTreeNode } from '@/composables/useCodeEditor'
+import { invoke } from '@tauri-apps/api/tauri'
+import { useAiStore } from '@/stores/ai'
+import { useProjectStore } from '@/stores/project'
+const aiStore = useAiStore()
+const projectStore = useProjectStore()
 
 // Dynamic worker import for Monaco
 let monacoLoaded = false
@@ -247,6 +399,73 @@ const FileTreeItem = defineComponent({
 const editorContainer = ref<HTMLElement | null>(null)
 const showTerminal = ref(false)
 
+// AI 功能状态
+const showAiExplain = ref(false)
+const aiExplaining = ref(false)
+const aiExplainThinking = ref('')
+const aiExplainResult = ref('')
+const aiExplainError = ref('')
+
+const showAiOptimize = ref(false)
+const aiOptimizing = ref(false)
+const aiOptimizeThinking = ref('')
+const aiOptimizedCode = ref('')
+const aiOptimizeError = ref('')
+
+// ========== 嵌入到笔记功能 ==========
+const showEmbedDialog = ref(false)
+const selectedEmbedNoteId = ref<string>('')
+const codeFiles = ref<any[]>([])
+
+async function loadFilesForEmbed() {
+  if (projectStore.currentProject) {
+    try {
+      const { listFiles } = await import('@/api')
+      const allFiles = await listFiles(projectStore.currentProject.id)
+      codeFiles.value = allFiles.filter((f: any) => f.file_type === 'note')
+    } catch (e) {
+      console.error('加载笔记列表失败:', e)
+    }
+  }
+}
+
+function showEmbedToNoteDialog() {
+  if (codeFiles.value.length === 0) {
+    loadFilesForEmbed()
+  }
+  if (!projectStore.currentNoteId && codeFiles.value.length > 0) {
+    selectedEmbedNoteId.value = codeFiles.value[0]?.id || ''
+  } else {
+    selectedEmbedNoteId.value = projectStore.currentNoteId || ''
+  }
+  showEmbedDialog.value = true
+}
+
+async function embedCodeToNote() {
+  if (!selectedEmbedNoteId.value) return
+  
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  const embedRecord = projectStore.addEmbedRecord({
+    type: 'code',
+    targetId: activeTabId.value || 'current-code',
+    targetName: activeTab ? `${activeTab.name} (代码)` : '代码文件',
+    noteId: selectedEmbedNoteId.value
+  })
+
+  console.log('代码已嵌入到笔记:', embedRecord)
+  showEmbedDialog.value = false
+  
+  alert('✓ 代码已成功嵌入到笔记！\n\n在笔记中点击嵌入卡片可跳转到代码界面。')
+}
+
+// Watch for project changes
+import { watch } from 'vue'
+watch(() => projectStore.currentProject, (project) => {
+  if (project) {
+    loadFilesForEmbed()
+  }
+})
+
 const {
   tabs,
   activeTabId,
@@ -255,7 +474,8 @@ const {
   openFile,
   closeTab,
   switchTab,
-  dispose
+  dispose,
+  editorRef
 } = useCodeEditor()
 
 const handleFileSelect = (data: { path: string; name: string }) => {
@@ -296,6 +516,16 @@ onMounted(async () => {
     initEditor(editorContainer.value)
   }
   window.addEventListener('keydown', handleKeydown)
+  
+  // Update AI context
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  aiStore.updateContext({
+    currentTool: 'code',
+    ...(activeTab && activeTab.content && {
+      codeContent: activeTab.content.slice(0, 2000),
+      codeLanguage: activeTab.language || 'text'
+    })
+  })
 })
 
 onBeforeUnmount(() => {
@@ -306,6 +536,141 @@ onBeforeUnmount(() => {
 // Context menu state (simplified - no actual menu implementation)
 const showTabContextMenu = (_e: MouseEvent, _tab: any) => {
   // Could implement context menu here
+}
+
+// AI解释代码
+function openAiExplainDialog() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab || !activeTab.content) {
+    aiExplainError.value = '请先打开一个有内容的文件'
+    showAiExplain.value = true
+    return
+  }
+  showAiExplain.value = true
+  aiExplainResult.value = ''
+  aiExplainError.value = ''
+  aiExplainThinking.value = ''
+}
+
+async function doAiExplain() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab || !activeTab.content || aiExplaining.value) return
+
+  aiExplaining.value = true
+  aiExplainThinking.value = '正在分析代码...'
+  aiExplainError.value = ''
+
+  try {
+    const prompt = `你是一位专业的编程导师和代码审查员。请详细解释以下代码：
+
+文件: ${activeTab.name}
+语言: ${activeTab.language || 'text'}
+
+代码:
+\`\`\`${activeTab.language || ''}
+${activeTab.content}
+\`\`\`
+
+请提供：
+1. 代码的整体功能和目的
+2. 主要的代码结构和逻辑
+3. 关键函数/方法的说明
+4. 代码中可能存在的问题或改进建议
+5. 相关的最佳实践建议
+
+请用中文回答，解释要详细但简洁。`
+
+    const response = await invoke<string>('ai_chat_completion', {
+      messages: [{ role: 'user', content: prompt }],
+      config: aiStore.config
+    })
+
+    aiExplainThinking.value = '分析完成！'
+    aiExplainResult.value = response
+
+  } catch (e: any) {
+    console.error('AI解释失败:', e)
+    aiExplainError.value = `分析失败: ${String(e)}`
+  } finally {
+    aiExplaining.value = false
+  }
+}
+
+// AI优化代码
+function openAiOptimizeDialog() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab || !activeTab.content) {
+    aiOptimizeError.value = '请先打开一个有内容的文件'
+    showAiOptimize.value = true
+    return
+  }
+  showAiOptimize.value = true
+  aiOptimizedCode.value = ''
+  aiOptimizeError.value = ''
+  aiOptimizeThinking.value = ''
+}
+
+async function doAiOptimize() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab || !activeTab.content || aiOptimizing.value) return
+
+  aiOptimizing.value = true
+  aiOptimizeThinking.value = '正在优化代码...'
+  aiOptimizeError.value = ''
+
+  try {
+    const prompt = `你是一位专业的软件开发工程师。请优化以下代码：
+
+文件: ${activeTab.name}
+语言: ${activeTab.language || 'text'}
+
+原始代码:
+\`\`\`${activeTab.language || ''}
+${activeTab.content}
+\`\`\`
+
+请进行以下优化：
+1. 改善代码结构和可读性
+2. 消除潜在的bug和代码异味
+3. 优化性能和资源使用
+4. 添加必要的注释
+5. 遵循语言的最佳实践和编码规范
+
+请直接返回优化后的完整代码，不要解释过程。`
+
+    const response = await invoke<string>('ai_chat_completion', {
+      messages: [{ role: 'user', content: prompt }],
+      config: aiStore.config
+    })
+
+    aiOptimizeThinking.value = '优化完成！'
+    aiOptimizedCode.value = response
+
+  } catch (e: any) {
+    console.error('AI优化失败:', e)
+    aiOptimizeError.value = `优化失败: ${String(e)}`
+  } finally {
+    aiOptimizing.value = false
+  }
+}
+
+function applyOptimizedCode() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab || !aiOptimizedCode.value) return
+
+  if (editorRef.value) {
+    const model = editorRef.value.getModel()
+    if (model) {
+      model.setValue(aiOptimizedCode.value)
+      const tabIndex = tabs.value.findIndex(t => t.id === activeTabId.value)
+      if (tabIndex !== -1) {
+        tabs.value[tabIndex].content = aiOptimizedCode.value
+        tabs.value[tabIndex].dirty = true
+      }
+    }
+  }
+
+  showAiOptimize.value = false
 }
 </script>
 

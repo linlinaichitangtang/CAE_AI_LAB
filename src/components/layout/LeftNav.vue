@@ -34,6 +34,27 @@ const navItems = [
   { path: '/notes', icon: '📝', label: '笔记' },
   { path: '/modeling', icon: '🎨', label: '建模' },
   { path: '/code', icon: '💻', label: '代码' },
-  { path: '/simulation', icon: '🔬', label: '仿真' }
+  { path: '/simulation', icon: '🔬', label: '仿真' },
+  { path: '/ai', icon: '🤖', label: 'AI聊天' }
 ]
 </script>
+
+<style scoped>
+/* Navigation styles */
+.nav-item {
+  @apply flex flex-col items-center justify-center w-14 h-14 rounded-lg transition-colors cursor-pointer;
+  @apply text-[var(--text-secondary)] hover:bg-[var(--bg-hover)];
+}
+
+.nav-item.active {
+  @apply bg-[var(--accent-primary)] bg-opacity-10 text-[var(--accent-primary)];
+}
+
+.nav-icon {
+  @apply text-xl mb-0.5;
+}
+
+.nav-label {
+  @apply text-xs font-medium;
+}
+</style>

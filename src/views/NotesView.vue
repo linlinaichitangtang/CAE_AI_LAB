@@ -32,6 +32,13 @@
             保存
           </button>
           <button 
+            @click="openAiOptimizeDialog"
+            :disabled="!noteContent.trim()"
+            class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            🤖 AI优化
+          </button>
+          <button 
             @click="deleteNote"
             :disabled="!currentFileId"
             class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -103,6 +110,41 @@
 
           <!-- 编辑器 -->
           <div class="flex-1 overflow-auto p-4">
+            <!-- 嵌入记录展示 -->
+            <div v-if="currentEmbedRecords.length > 0" class="mb-4 bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 flex items-center gap-2">
+                <span>🔗</span>
+                <span>已嵌入对象</span>
+              </h4>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="record in currentEmbedRecords"
+                  :key="record.id"
+                  @click="navigateToEmbedItem(record)"
+                  class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
+                >
+                  <span class="text-2xl">
+                    {{ record.type === 'model' ? '📐' : record.type === 'code' ? '📄' : '📊' }}
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-800 dark:text-white truncate">
+                      {{ record.targetName }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ record.type === 'model' ? '3D建模' : record.type === 'code' ? '代码' : '仿真结果' }}
+                    </div>
+                  </div>
+                  <button 
+                    @click.stop="removeEmbedRecord(record.id)"
+                    class="text-gray-400 hover:text-red-500 text-xs"
+                    title="移除嵌入"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <TipTapEditor
               v-model="noteContent"
               placeholder="开始创作你的笔记..."
@@ -146,25 +188,95 @@
       </div>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="fixed inset-0 bg-black/30 flex items-center justify-center z-40">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-4 flex items-center gap-3">
-        <div class="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-        <span>加载中...</span>
+    <!-- AI优化对话框 -->
+    <div v-if="showAiOptimize" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showAiOptimize = false">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[700px] flex flex-col max-h-[85vh]">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+            🤖 AI优化笔记
+          </h3>
+          <button @click="showAiOptimize = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">✕</button>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            AI将优化当前笔记内容，包括润色、完善格式、补充内容
+          </p>
+          <!-- AI思考过程 -->
+          <div v-if="aiOptimizing" class="bg-gray-50 dark:bg-gray-700 rounded p-3 mb-4">
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">AI 优化中...</div>
+            <div class="text-xs text-gray-600 dark:text-gray-300 font-mono whitespace-pre-wrap">
+              {{ aiOptimizeThinking }}
+            </div>
+          </div>
+          <!-- 原始内容预览 -->
+          <div v-if="aiOptimizedContent" class="mb-4">
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">原始内容预览:</div>
+            <div class="bg-gray-100 dark:bg-gray-900 rounded p-3 text-xs text-gray-600 dark:text-gray-300 max-h-32 overflow-auto">
+              {{ noteContent.slice(0, 500) }}{{ noteContent.length > 500 ? '...' : '' }}
+            </div>
+          </div>
+          <!-- 优化后的内容 -->
+          <div v-if="aiOptimizedContent" class="mb-4">
+            <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">优化后的内容:</div>
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded p-3 text-xs text-gray-700 dark:text-gray-300 max-h-64 overflow-auto whitespace-pre-wrap">
+              {{ aiOptimizedContent }}
+            </div>
+          </div>
+          <!-- 错误信息 -->
+          <div v-if="aiOptimizeError" class="bg-red-50 dark:bg-red-900/20 rounded p-3 text-xs text-red-600 dark:text-red-400">
+            {{ aiOptimizeError }}
+          </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+          <button @click="showAiOptimize = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm">
+            取消
+          </button>
+          <button v-if="aiOptimizedContent" @click="applyOptimizedContent" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+            应用优化结果
+          </button>
+          <button v-else @click="doAiOptimize" :disabled="aiOptimizing" class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm disabled:opacity-50">
+            {{ aiOptimizing ? '优化中...' : '开始优化' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import TipTapEditor from '@/components/editor/TipTapEditor.vue'
 import type { EmbedItem, Project, ProjectFile } from '@/api'
 import { listProjects, listFiles, createFile, updateFile, deleteFile, readFileContent, getFileTypeIcon } from '@/api'
 import { formatProjectDate } from '@/api'
+import { useProjectStore } from '@/stores/project'
 
 const route = useRoute()
+const router = useRouter()
+const projectStore = useProjectStore()
+
+// 获取当前笔记的嵌入记录
+const currentEmbedRecords = computed(() => {
+  if (!currentFileId.value) return []
+  return projectStore.getEmbedRecordsByNoteId(currentFileId.value)
+})
+
+// 跳转到嵌入对象
+function navigateToEmbedItem(record: { type: 'model' | 'code' | 'simulation'; targetId: string; noteId: string }) {
+  const routes: Record<string, string> = {
+    model: '/modeling',
+    code: '/code',
+    simulation: '/simulation'
+  }
+  projectStore.setCurrentNoteId(currentFileId.value)
+  router.push(routes[record.type] || '/')
+}
+
+// 移除嵌入记录
+function removeEmbedRecord(id: string) {
+  projectStore.removeEmbedRecord(id)
+}
 
 // 状态
 const projects = ref<Project[]>([])
@@ -175,6 +287,13 @@ const noteTitle = ref('')
 const noteContent = ref('')
 const embedPreviewItem = ref<EmbedItem | null>(null)
 const loading = ref(false)
+
+// AI优化状态
+const showAiOptimize = ref(false)
+const aiOptimizing = ref(false)
+const aiOptimizeThinking = ref('')
+const aiOptimizedContent = ref('')
+const aiOptimizeError = ref('')
 
 // 加载项目列表
 async function loadProjects() {
@@ -306,6 +425,10 @@ async function deleteNote() {
 // 处理嵌入
 function handleEmbed(item: EmbedItem) {
   embedPreviewItem.value = item
+  // 如果当前有笔记ID，设置它以便其他工具可以嵌入到此笔记
+  if (currentFileId.value) {
+    projectStore.setCurrentNoteId(currentFileId.value)
+  }
 }
 
 // 跳转到嵌入对象
@@ -316,6 +439,11 @@ function navigateToEmbed() {
     model: '/modeling',
     code: '/code',
     simulation: '/simulation'
+  }
+
+  // 设置当前笔记ID，方便从其他工具嵌入
+  if (currentFileId.value) {
+    projectStore.setCurrentNoteId(currentFileId.value)
   }
 
   router.push(routes[embedPreviewItem.value.type] || '/')
@@ -337,7 +465,64 @@ function formatDate(dateStr: string) {
 
 // 导入router
 import { useRouter } from 'vue-router'
-const router = useRouter()
+import { invoke } from '@tauri-apps/api/tauri'
+import { useAiStore } from '@/stores/ai'
+
+const aiStore = useAiStore()
+
+// AI优化笔记
+function openAiOptimizeDialog() {
+  showAiOptimize.value = true
+  aiOptimizedContent.value = ''
+  aiOptimizeError.value = ''
+  aiOptimizeThinking.value = ''
+}
+
+async function doAiOptimize() {
+  if (!noteContent.value.trim() || aiOptimizing.value) return
+
+  aiOptimizing.value = true
+  aiOptimizeThinking.value = '正在调用AI优化...'
+  aiOptimizeError.value = ''
+
+  try {
+    const prompt = `你是一位专业的技术文档编辑。请优化以下笔记内容：
+
+要求：
+1. 润色语言，使其更加流畅专业
+2. 完善格式，使用适当的标题、列表等
+3. 补充完善可能遗漏的内容
+4. 保持原意，不要改变核心内容
+5. 如果有技术术语，确保使用正确
+
+原始内容：
+${noteContent.value}
+
+请直接返回优化后的内容，不需要解释。`
+
+    const response = await invoke<string>('ai_chat_completion', {
+      messages: [{ role: 'user', content: prompt }],
+      config: aiStore.config
+    })
+
+    aiOptimizeThinking.value = '优化完成！'
+    aiOptimizedContent.value = response
+
+  } catch (e: any) {
+    console.error('AI优化失败:', e)
+    aiOptimizeError.value = `优化失败: ${String(e)}`
+  } finally {
+    aiOptimizing.value = false
+  }
+}
+
+function applyOptimizedContent() {
+  if (aiOptimizedContent.value) {
+    noteContent.value = aiOptimizedContent.value
+    showAiOptimize.value = false
+    aiOptimizedContent.value = ''
+  }
+}
 
 // 监听项目变化
 watch(currentProjectId, () => {
@@ -348,6 +533,16 @@ watch(currentProjectId, () => {
 
 onMounted(() => {
   loadProjects()
+  // Update AI context
+  aiStore.updateContext({
+    currentTool: 'notes',
+    ...(noteContent.value && {
+      noteContent: noteContent.value.slice(0, 2000) // Limit length
+    }),
+    ...(currentProjectId.value && projects.value.find(p => p.id === currentProjectId.value) && {
+      projectName: projects.value.find(p => p.id === currentProjectId.value)!.name
+    })
+  })
 })
 </script>
 
