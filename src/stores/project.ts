@@ -10,6 +10,8 @@
 import { defineStore } from 'pinia'
 import type { Project } from '@/api/types'
 import type { Node, Element, MeshApiResult, FixedBc, PointLoad, UniformLoad, ResultSet } from '@/api/cae'
+import type { BucklingResult } from '@/api/cae'
+import type { TransientResults } from '@/api/transient_dynamics'
 
 interface EmbedRecord {
   id: string
@@ -36,6 +38,10 @@ interface ProjectState {
   }
   // 最近一次求解结果
   lastResult: ResultSet | null
+  // 屈曲分析结果
+  lastBucklingResult: BucklingResult | null
+  // 动力学瞬态分析结果
+  lastTransientResult: TransientResults | null
   // 当前活跃的工具视图
   activeTool: 'notes' | 'modeling' | 'code' | 'simulation'
   // 嵌入记录列表
@@ -54,6 +60,8 @@ export const useProjectStore = defineStore('project', {
       uniformLoads: []
     },
     lastResult: null,
+    lastBucklingResult: null,
+    lastTransientResult: null,
     activeTool: 'notes',
     embedRecords: [],
     currentNoteId: null
@@ -65,7 +73,9 @@ export const useProjectStore = defineStore('project', {
       state.boundaryConditions.fixedBcs.length > 0 || 
       state.boundaryConditions.pointLoads.length > 0 ||
       state.boundaryConditions.uniformLoads.length > 0,
-    hasResult: (state) => state.lastResult !== null
+    hasResult: (state) => state.lastResult !== null,
+    hasBucklingResult: (state) => state.lastBucklingResult !== null,
+    hasTransientResult: (state) => state.lastTransientResult !== null
   },
 
   actions: {
@@ -153,6 +163,26 @@ export const useProjectStore = defineStore('project', {
     /** 清除求解结果 */
     clearResult() {
       this.lastResult = null
+    },
+
+    /** 设置屈曲分析结果 */
+    setBucklingResult(result: BucklingResult) {
+      this.lastBucklingResult = result
+    },
+
+    /** 清除屈曲分析结果 */
+    clearBucklingResult() {
+      this.lastBucklingResult = null
+    },
+
+    /** 设置动力学瞬态分析结果 */
+    setTransientResult(result: TransientResults) {
+      this.lastTransientResult = result
+    },
+
+    /** 清除动力学瞬态分析结果 */
+    clearTransientResult() {
+      this.lastTransientResult = null
     },
 
     /** 设置当前活跃工具 */

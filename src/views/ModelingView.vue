@@ -46,16 +46,17 @@
             <div 
               v-for="(item, idx) in geometryItems" 
               :key="idx"
-              @click="selectGeometry(idx)"
+              @click="selectGeometry(idx, $event)"
               :class="['p-2 rounded cursor-pointer text-xs transition', 
-                selectedGeometryIdx === idx 
-                  ? 'bg-[var(--accent)]/10 text-[var(--accent)]' 
-                  : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)]'
+                selectedGeometryIdx === idx || multiSelectedIndices.includes(idx)
+                  ? 'bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/30' 
+                  : 'hover:bg-[var(--bg-hover)] text-[var(--text-primary)] border border-transparent'
               ]"
             >
               <div class="flex items-center gap-2">
                 <span class="text-base">{{ item.icon }}</span>
                 <span class="truncate">{{ item.name }}</span>
+                <span v-if="multiSelectedIndices.includes(idx)" class="ml-auto text-[10px] bg-[var(--accent)] text-white rounded px-1">✓</span>
               </div>
               <div class="text-[10px] text-[var(--text-muted)] mt-0.5 pl-6">
                 {{ item.dimensions }}
@@ -116,6 +117,42 @@
               title="缩放 (E)"
             >
               <span class="text-sm">⤢</span>
+            </button>
+          </div>
+          <!-- 布尔运算按钮组 -->
+          <div class="border-l border-[var(--border-subtle)] pl-4 flex items-center gap-1">
+            <span class="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mr-1">布尔</span>
+            <button 
+              @click="performBooleanOp('union')" 
+              :disabled="!canPerformBoolean"
+              class="icon-btn w-8 h-8 text-xs"
+              title="并集 (并集多个几何体)"
+            >
+              <span class="text-sm">⊕</span>
+            </button>
+            <button 
+              @click="performBooleanOp('subtract')" 
+              :disabled="!canPerformBoolean"
+              class="icon-btn w-8 h-8 text-xs"
+              title="差集 (从第一个几何体减去其他)"
+            >
+              <span class="text-sm">⊖</span>
+            </button>
+            <button 
+              @click="performBooleanOp('intersect')" 
+              :disabled="!canPerformBoolean"
+              class="icon-btn w-8 h-8 text-xs"
+              title="交集 (保留重叠部分)"
+            >
+              <span class="text-sm">⊙</span>
+            </button>
+            <button 
+              v-if="multiSelectedIndices.length > 0"
+              @click="clearBooleanSelection"
+              class="icon-btn w-8 h-8 text-xs text-red-500"
+              title="清除选择"
+            >
+              <span class="text-sm">✕</span>
             </button>
           </div>
           <div class="flex-1"></div>
@@ -311,6 +348,348 @@
               删除几何体
             </button>
           </div>
+          
+          <!-- Sphere Properties -->
+          <div v-else-if="currentGeometry?.type === 'sphere'" class="space-y-4">
+            <div>
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">几何参数</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.radius" 
+                    @input="updateSphereGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">水平分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.widthSegments" 
+                    @input="updateSphereGeometry"
+                    class="input w-full text-xs"
+                    min="3"
+                    max="128"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">垂直分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.heightSegments" 
+                    @input="updateSphereGeometry"
+                    class="input w-full text-xs"
+                    min="2"
+                    max="64"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-[var(--border-subtle)] pt-4">
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">变换</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 X</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.posX" 
+                    @input="updateSpherePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Y</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.posY" 
+                    @input="updateSpherePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Z</label>
+                  <input 
+                    type="number" 
+                    v-model.number="sphereParams.posZ" 
+                    @input="updateSpherePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button 
+              @click="deleteCurrentGeometry"
+              class="btn btn-ghost text-xs w-full text-red-500 hover:bg-red-50 mt-4"
+            >
+              删除几何体
+            </button>
+          </div>
+          
+          <!-- Cylinder Properties -->
+          <div v-else-if="currentGeometry?.type === 'cylinder'" class="space-y-4">
+            <div>
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">几何参数</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">顶面半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.radiusTop" 
+                    @input="updateCylinderGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">底面半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.radiusBottom" 
+                    @input="updateCylinderGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">高度 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.height" 
+                    @input="updateCylinderGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">径向分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.radialSegments" 
+                    @input="updateCylinderGeometry"
+                    class="input w-full text-xs"
+                    min="3"
+                    max="128"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-[var(--border-subtle)] pt-4">
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">变换</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 X</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.posX" 
+                    @input="updateCylinderPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Y</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.posY" 
+                    @input="updateCylinderPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Z</label>
+                  <input 
+                    type="number" 
+                    v-model.number="cylinderParams.posZ" 
+                    @input="updateCylinderPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button 
+              @click="deleteCurrentGeometry"
+              class="btn btn-ghost text-xs w-full text-red-500 hover:bg-red-50 mt-4"
+            >
+              删除几何体
+            </button>
+          </div>
+          
+          <!-- Cone Properties -->
+          <div v-else-if="currentGeometry?.type === 'cone'" class="space-y-4">
+            <div>
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">几何参数</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">底面半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.radius" 
+                    @input="updateConeGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">高度 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.height" 
+                    @input="updateConeGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">径向分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.radialSegments" 
+                    @input="updateConeGeometry"
+                    class="input w-full text-xs"
+                    min="3"
+                    max="128"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-[var(--border-subtle)] pt-4">
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">变换</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 X</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.posX" 
+                    @input="updateConePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Y</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.posY" 
+                    @input="updateConePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Z</label>
+                  <input 
+                    type="number" 
+                    v-model.number="coneParams.posZ" 
+                    @input="updateConePosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button 
+              @click="deleteCurrentGeometry"
+              class="btn btn-ghost text-xs w-full text-red-500 hover:bg-red-50 mt-4"
+            >
+              删除几何体
+            </button>
+          </div>
+          
+          <!-- Torus Properties -->
+          <div v-else-if="currentGeometry?.type === 'torus'" class="space-y-4">
+            <div>
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">几何参数</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">外半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.radius" 
+                    @input="updateTorusGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">管半径 (mm)</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.tube" 
+                    @input="updateTorusGeometry"
+                    class="input w-full text-xs"
+                    min="0.1"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">径向分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.radialSegments" 
+                    @input="updateTorusGeometry"
+                    class="input w-full text-xs"
+                    min="3"
+                    max="64"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">管分段</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.tubularSegments" 
+                    @input="updateTorusGeometry"
+                    class="input w-full text-xs"
+                    min="3"
+                    max="512"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-[var(--border-subtle)] pt-4">
+              <h4 class="text-xs font-medium text-[var(--text-primary)] mb-3">变换</h4>
+              <div class="space-y-3">
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 X</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.posX" 
+                    @input="updateTorusPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Y</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.posY" 
+                    @input="updateTorusPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+                <div>
+                  <label class="text-[10px] text-[var(--text-muted)] block mb-1">位置 Z</label>
+                  <input 
+                    type="number" 
+                    v-model.number="torusParams.posZ" 
+                    @input="updateTorusPosition"
+                    class="input w-full text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button 
+              @click="deleteCurrentGeometry"
+              class="btn btn-ghost text-xs w-full text-red-500 hover:bg-red-50 mt-4"
+            >
+              删除几何体
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -482,6 +861,60 @@ const boxParams = ref({
   rotZ: 0
 })
 
+// Sphere parameters
+const sphereParams = ref({
+  radius: 25,
+  widthSegments: 32,
+  heightSegments: 16,
+  posX: 0,
+  posY: 0,
+  posZ: 0,
+  rotX: 0,
+  rotY: 0,
+  rotZ: 0
+})
+
+// Cylinder parameters
+const cylinderParams = ref({
+  radiusTop: 20,
+  radiusBottom: 20,
+  height: 50,
+  radialSegments: 32,
+  posX: 0,
+  posY: 0,
+  posZ: 0,
+  rotX: 0,
+  rotY: 0,
+  rotZ: 0
+})
+
+// Cone parameters
+const coneParams = ref({
+  radius: 25,
+  height: 50,
+  radialSegments: 32,
+  posX: 0,
+  posY: 0,
+  posZ: 0,
+  rotX: 0,
+  rotY: 0,
+  rotZ: 0
+})
+
+// Torus parameters
+const torusParams = ref({
+  radius: 30,
+  tube: 10,
+  radialSegments: 16,
+  tubularSegments: 100,
+  posX: 0,
+  posY: 0,
+  posZ: 0,
+  rotX: 0,
+  rotY: 0,
+  rotZ: 0
+})
+
 // Tool state
 const currentTool = ref<'select' | 'move' | 'rotate' | 'scale'>('select')
 const showGrid = ref(true)
@@ -492,6 +925,14 @@ const generating = ref(false)
 // Result display
 const resultDisplayMode = ref<'stress' | 'displacement' | 'none'>('stress')
 let resultMeshGroup: THREE.Group | null = null
+
+// Boolean operation state
+const multiSelectedIndices = ref<number[]>([])
+
+// Can perform boolean
+const canPerformBoolean = computed(() => {
+  return multiSelectedIndices.value.length >= 2 && !generating.value
+})
 
 // Current geometry computed
 const currentGeometry = computed(() => {
@@ -640,28 +1081,205 @@ function createBox(params: typeof boxParams.value) {
   return group
 }
 
+function createSphere(params: typeof sphereParams.value) {
+  const geometry = new THREE.SphereGeometry(params.radius, params.widthSegments, params.heightSegments)
+  
+  const edges = new THREE.EdgesGeometry(geometry)
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 1 })
+  const wireframe = new THREE.LineSegments(edges, lineMaterial)
+  
+  const material = new THREE.MeshPhongMaterial({
+    color: 0x00ff88,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  
+  const group = new THREE.Group()
+  group.add(mesh)
+  group.add(wireframe)
+  group.position.set(params.posX, params.posY, params.posZ)
+  group.rotation.set(
+    THREE.MathUtils.degToRad(params.rotX),
+    THREE.MathUtils.degToRad(params.rotY),
+    THREE.MathUtils.degToRad(params.rotZ)
+  )
+  
+  group.userData = {
+    type: 'sphere',
+    params: { ...params },
+    mesh: mesh,
+    wireframe: wireframe,
+    geometry: geometry
+  }
+  
+  return group
+}
+
+function createCylinder(params: typeof cylinderParams.value) {
+  const geometry = new THREE.CylinderGeometry(params.radiusTop, params.radiusBottom, params.height, params.radialSegments)
+  
+  const edges = new THREE.EdgesGeometry(geometry)
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff8800, linewidth: 1 })
+  const wireframe = new THREE.LineSegments(edges, lineMaterial)
+  
+  const material = new THREE.MeshPhongMaterial({
+    color: 0xff8800,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  
+  const group = new THREE.Group()
+  group.add(mesh)
+  group.add(wireframe)
+  group.position.set(params.posX, params.posY, params.posZ)
+  group.rotation.set(
+    THREE.MathUtils.degToRad(params.rotX),
+    THREE.MathUtils.degToRad(params.rotY),
+    THREE.MathUtils.degToRad(params.rotZ)
+  )
+  
+  group.userData = {
+    type: 'cylinder',
+    params: { ...params },
+    mesh: mesh,
+    wireframe: wireframe,
+    geometry: geometry
+  }
+  
+  return group
+}
+
+function createCone(params: typeof coneParams.value) {
+  const geometry = new THREE.ConeGeometry(params.radius, params.height, params.radialSegments)
+  
+  const edges = new THREE.EdgesGeometry(geometry)
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0088, linewidth: 1 })
+  const wireframe = new THREE.LineSegments(edges, lineMaterial)
+  
+  const material = new THREE.MeshPhongMaterial({
+    color: 0xff0088,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  
+  const group = new THREE.Group()
+  group.add(mesh)
+  group.add(wireframe)
+  group.position.set(params.posX, params.posY, params.posZ)
+  group.rotation.set(
+    THREE.MathUtils.degToRad(params.rotX),
+    THREE.MathUtils.degToRad(params.rotY),
+    THREE.MathUtils.degToRad(params.rotZ)
+  )
+  
+  group.userData = {
+    type: 'cone',
+    params: { ...params },
+    mesh: mesh,
+    wireframe: wireframe,
+    geometry: geometry
+  }
+  
+  return group
+}
+
+function createTorus(params: typeof torusParams.value) {
+  const geometry = new THREE.TorusGeometry(params.radius, params.tube, params.radialSegments, params.tubularSegments)
+  
+  const edges = new THREE.EdgesGeometry(geometry)
+  const lineMaterial = new THREE.LineBasicMaterial({ color: 0x8800ff, linewidth: 1 })
+  const wireframe = new THREE.LineSegments(edges, lineMaterial)
+  
+  const material = new THREE.MeshPhongMaterial({
+    color: 0x8800ff,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  
+  const group = new THREE.Group()
+  group.add(mesh)
+  group.add(wireframe)
+  group.position.set(params.posX, params.posY, params.posZ)
+  group.rotation.set(
+    THREE.MathUtils.degToRad(params.rotX),
+    THREE.MathUtils.degToRad(params.rotY),
+    THREE.MathUtils.degToRad(params.rotZ)
+  )
+  
+  group.userData = {
+    type: 'torus',
+    params: { ...params },
+    mesh: mesh,
+    wireframe: wireframe,
+    geometry: geometry
+  }
+  
+  return group
+}
+
 function addGeometryToScene(type: string) {
   if (!scene) return
   
-  let group: THREE.Group
+  let group: THREE.Group | undefined
+  let name = ''
+  let dimensions = ''
+  let params: any = {}
   
   switch (type) {
     case 'box':
       group = createBox(boxParams.value)
-      geometryItems.value.push({
-        type: 'box',
-        name: `立方体 ${geometryItems.value.filter(g => g.type === 'box').length + 1}`,
-        icon: '⬜',
-        dimensions: `${boxParams.value.width}×${boxParams.value.height}×${boxParams.value.depth}`,
-        group: group,
-        params: { ...boxParams.value }
-      })
+      name = `立方体 ${geometryItems.value.filter(g => g.type === 'box').length + 1}`
+      dimensions = `${boxParams.value.width}×${boxParams.value.height}×${boxParams.value.depth}`
+      params = { ...boxParams.value }
+      break
+    case 'sphere':
+      group = createSphere(sphereParams.value)
+      name = `球体 ${geometryItems.value.filter(g => g.type === 'sphere').length + 1}`
+      dimensions = `半径${sphereParams.value.radius}`
+      params = { ...sphereParams.value }
+      break
+    case 'cylinder':
+      group = createCylinder(cylinderParams.value)
+      name = `圆柱体 ${geometryItems.value.filter(g => g.type === 'cylinder').length + 1}`
+      dimensions = `R${sphereParams.value.radius}×高${cylinderParams.value.height}`
+      params = { ...cylinderParams.value }
+      break
+    case 'cone':
+      group = createCone(coneParams.value)
+      name = `圆锥体 ${geometryItems.value.filter(g => g.type === 'cone').length + 1}`
+      dimensions = `R${coneParams.value.radius}×高${coneParams.value.height}`
+      params = { ...coneParams.value }
+      break
+    case 'torus':
+      group = createTorus(torusParams.value)
+      name = `圆环体 ${geometryItems.value.filter(g => g.type === 'torus').length + 1}`
+      dimensions = `R${torusParams.value.radius}×管${torusParams.value.tube}`
+      params = { ...torusParams.value }
       break
     default:
       return
   }
   
+  if (!group) return
+  
   scene.add(group)
+  
+  geometryItems.value.push({
+    type: type as any,
+    name,
+    icon: type === 'box' ? '⬜' : type === 'sphere' ? '⚪' : type === 'cylinder' ? '🔘' : type === 'cone' ? '△' : '◎',
+    dimensions,
+    group,
+    params
+  })
   
   // Select the new geometry
   selectedGeometryIdx.value = geometryItems.value.length - 1
@@ -674,7 +1292,34 @@ function onGeometryTypeChange() {
   }
 }
 
-function selectGeometry(idx: number) {
+function selectGeometry(idx: number, event?: MouseEvent) {
+  // Check for multi-select (Ctrl/Cmd key)
+  if (event && (event.ctrlKey || event.metaKey)) {
+    // Toggle selection
+    const existingIdx = multiSelectedIndices.value.indexOf(idx)
+    if (existingIdx >= 0) {
+      multiSelectedIndices.value.splice(existingIdx, 1)
+    } else {
+      multiSelectedIndices.value.push(idx)
+    }
+    // Update primary selection
+    if (multiSelectedIndices.value.length > 0) {
+      selectedGeometryIdx.value = multiSelectedIndices.value[multiSelectedIndices.value.length - 1]
+    } else {
+      selectedGeometryIdx.value = null
+    }
+    return
+  }
+  
+  // Check if clicking on already multi-selected item
+  if (multiSelectedIndices.value.includes(idx) && multiSelectedIndices.value.length > 1) {
+    selectedGeometryIdx.value = idx
+    return
+  }
+  
+  // Clear multi-select for normal click
+  multiSelectedIndices.value = []
+  
   // Deselect previous
   if (selectedGeometryIdx.value !== null && scene) {
     const prevGeom = geometryItems.value[selectedGeometryIdx.value]
@@ -691,9 +1336,19 @@ function selectGeometry(idx: number) {
   selectedGeometryIdx.value = idx
   const geom = geometryItems.value[idx]
   
-  // Update box params from selected geometry
-  if (geom.type === 'box' && geom.params) {
-    boxParams.value = { ...geom.params }
+  // Update params from selected geometry based on type
+  if (geom.params) {
+    if (geom.type === 'box') {
+      boxParams.value = { ...geom.params }
+    } else if (geom.type === 'sphere') {
+      sphereParams.value = { ...geom.params }
+    } else if (geom.type === 'cylinder') {
+      cylinderParams.value = { ...geom.params }
+    } else if (geom.type === 'cone') {
+      coneParams.value = { ...geom.params }
+    } else if (geom.type === 'torus') {
+      torusParams.value = { ...geom.params }
+    }
   }
   
   // Highlight selected
@@ -763,16 +1418,212 @@ function updateBoxRotation() {
   geom.params!.rotZ = boxParams.value.rotZ
 }
 
-function deleteCurrentGeometry() {
+// Sphere update functions
+function updateSphereGeometry() {
   if (selectedGeometryIdx.value === null) return
   
   const geom = geometryItems.value[selectedGeometryIdx.value]
-  if (geom.group && scene) {
-    scene.remove(geom.group)
+  if (geom.type !== 'sphere' || !scene) return
+  
+  scene.remove(geom.group!)
+  
+  const newGroup = createSphere(sphereParams.value)
+  scene.add(newGroup)
+  
+  geom.group = newGroup
+  geom.dimensions = `半径${sphereParams.value.radius}`
+  geom.params = { ...sphereParams.value }
+  
+  selectGeometry(selectedGeometryIdx.value)
+}
+
+function updateSpherePosition() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (!geom.group) return
+  
+  geom.group.position.set(sphereParams.value.posX, sphereParams.value.posY, sphereParams.value.posZ)
+  geom.params!.posX = sphereParams.value.posX
+  geom.params!.posY = sphereParams.value.posY
+  geom.params!.posZ = sphereParams.value.posZ
+}
+
+// Cylinder update functions
+function updateCylinderGeometry() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (geom.type !== 'cylinder' || !scene) return
+  
+  scene.remove(geom.group!)
+  
+  const newGroup = createCylinder(cylinderParams.value)
+  scene.add(newGroup)
+  
+  geom.group = newGroup
+  geom.dimensions = `R${cylinderParams.value.radiusTop}-${cylinderParams.value.radiusBottom}×高${cylinderParams.value.height}`
+  geom.params = { ...cylinderParams.value }
+  
+  selectGeometry(selectedGeometryIdx.value)
+}
+
+function updateCylinderPosition() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (!geom.group) return
+  
+  geom.group.position.set(cylinderParams.value.posX, cylinderParams.value.posY, cylinderParams.value.posZ)
+  geom.params!.posX = cylinderParams.value.posX
+  geom.params!.posY = cylinderParams.value.posY
+  geom.params!.posZ = cylinderParams.value.posZ
+}
+
+// Cone update functions
+function updateConeGeometry() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (geom.type !== 'cone' || !scene) return
+  
+  scene.remove(geom.group!)
+  
+  const newGroup = createCone(coneParams.value)
+  scene.add(newGroup)
+  
+  geom.group = newGroup
+  geom.dimensions = `R${coneParams.value.radius}×高${coneParams.value.height}`
+  geom.params = { ...coneParams.value }
+  
+  selectGeometry(selectedGeometryIdx.value)
+}
+
+function updateConePosition() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (!geom.group) return
+  
+  geom.group.position.set(coneParams.value.posX, coneParams.value.posY, coneParams.value.posZ)
+  geom.params!.posX = coneParams.value.posX
+  geom.params!.posY = coneParams.value.posY
+  geom.params!.posZ = coneParams.value.posZ
+}
+
+// Torus update functions
+function updateTorusGeometry() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (geom.type !== 'torus' || !scene) return
+  
+  scene.remove(geom.group!)
+  
+  const newGroup = createTorus(torusParams.value)
+  scene.add(newGroup)
+  
+  geom.group = newGroup
+  geom.dimensions = `R${torusParams.value.radius}×管${torusParams.value.tube}`
+  geom.params = { ...torusParams.value }
+  
+  selectGeometry(selectedGeometryIdx.value)
+}
+
+function updateTorusPosition() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geom = geometryItems.value[selectedGeometryIdx.value]
+  if (!geom.group) return
+  
+  geom.group.position.set(torusParams.value.posX, torusParams.value.posY, torusParams.value.posZ)
+  geom.params!.posX = torusParams.value.posX
+  geom.params!.posY = torusParams.value.posY
+  geom.params!.posZ = torusParams.value.posZ
+}
+
+function deleteCurrentGeometry() {
+  if (selectedGeometryIdx.value === null && multiSelectedIndices.value.length === 0) return
+  
+  const indicesToDelete = multiSelectedIndices.value.length > 0 
+    ? [...multiSelectedIndices.value] 
+    : [selectedGeometryIdx.value!]
+  
+  // Sort in descending order to avoid index shifting issues
+  indicesToDelete.sort((a, b) => b - a)
+  
+  for (const idx of indicesToDelete) {
+    const geom = geometryItems.value[idx]
+    if (geom.group && scene) {
+      scene.remove(geom.group)
+    }
+    geometryItems.value.splice(idx, 1)
   }
   
-  geometryItems.value.splice(selectedGeometryIdx.value, 1)
+  multiSelectedIndices.value = []
   selectedGeometryIdx.value = null
+}
+
+function clearBooleanSelection() {
+  multiSelectedIndices.value = []
+}
+
+// Boolean operations using three-bvh-csg
+async function performBooleanOp(op: 'union' | 'subtract' | 'intersect') {
+  if (multiSelectedIndices.value.length < 2) return
+  
+  generating.value = true
+  
+  try {
+    // Import CSG functionality
+    const { performCSG } = await import('@/utils/csg')
+    
+    // Get selected geometries
+    const geometries = multiSelectedIndices.value.map(idx => geometryItems.value[idx])
+    
+    // Show progress feedback
+    console.log(`Performing ${op} on ${geometries.length} geometries...`)
+    
+    // Perform boolean operation
+    const result = await performCSG(geometries, op)
+    
+    if (result) {
+      // Remove original geometries
+      const indicesToRemove = [...multiSelectedIndices.value].sort((a, b) => b - a)
+      for (const idx of indicesToRemove) {
+        const geom = geometryItems.value[idx]
+        if (geom.group && scene) {
+          scene.remove(geom.group)
+        }
+        geometryItems.value.splice(idx, 1)
+      }
+      
+      // Add result geometry
+      scene!.add(result.group)
+      
+      const newIdx = geometryItems.value.length
+      geometryItems.value.push({
+        type: 'box',
+        name: `布尔${op === 'union' ? '并集' : op === 'subtract' ? '差集' : '交集'}结果`,
+        icon: '◈',
+        dimensions: result.dimensions,
+        group: result.group,
+        params: result.params
+      })
+      
+      // Select the result
+      multiSelectedIndices.value = []
+      selectedGeometryIdx.value = newIdx
+      
+      console.log('Boolean operation completed successfully')
+    }
+    
+  } catch (error) {
+    console.error('Boolean operation failed:', error)
+    alert(`布尔运算失败: ${error}`)
+  } finally {
+    generating.value = false
+  }
 }
 
 function importModel() {

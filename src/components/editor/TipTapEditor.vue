@@ -18,6 +18,7 @@
       @insert-math="insertMathBlock"
       @insert-handwriting="insertHandwriting"
       @insert-embed="insertEmbed"
+      @insert-note-link="showNoteLinkSelector = true"
     />
     
     <div class="editor-content-wrapper min-h-[300px] border border-gray-200 dark:border-gray-700 rounded-b bg-white dark:bg-gray-900">
@@ -44,6 +45,34 @@
       @select="handleEmbedSelect"
       @cancel="showEmbedSelector = false"
     />
+
+    <!-- Note Link Selector -->
+    <div v-if="showNoteLinkSelector" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showNoteLinkSelector = false">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-[500px] max-h-[400px] flex flex-col">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+            📝 引用笔记
+          </h3>
+          <button @click="showNoteLinkSelector = false" class="text-gray-500 hover:text-gray-700 dark:text-gray-400">✕</button>
+        </div>
+        <div class="p-4 flex-1 overflow-auto">
+          <div v-if="availableNotes.length === 0" class="text-center py-8 text-gray-500">
+            暂无可引用的笔记
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="note in availableNotes"
+              :key="note.id"
+              @click="insertNoteLink(note)"
+              class="p-3 bg-gray-50 dark:bg-gray-700 rounded cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-300 transition"
+            >
+              <div class="text-sm font-medium text-gray-800 dark:text-white">{{ note.title }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ note.updated }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -65,27 +94,44 @@ import type { EmbedItem } from '@/types'
 
 const lowlight = createLowlight(common)
 
+// 笔记列表项
+interface NoteItem {
+  id: string
+  title: string
+  updated: string
+}
+
 interface Props {
   modelValue?: string
   placeholder?: string
   editable?: boolean
+  notes?: NoteItem[]
+  currentNoteId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
   placeholder: '开始创作...',
-  editable: true
+  editable: true,
+  notes: () => []
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'embed', item: EmbedItem): void
+  (e: 'linkNote', noteId: string, noteTitle: string): void
 }>()
 
 const editor = shallowRef<Editor | null>(null)
 const showMathEditor = ref(false)
 const showHandwriting = ref(false)
 const showEmbedSelector = ref(false)
+const showNoteLinkSelector = ref(false)
+
+// 可引用的笔记列表（排除当前笔记）
+const availableNotes = computed(() => {
+  return props.notes.filter(n => n.id !== props.currentNoteId)
+})
 
 const toolbarActive = computed(() => {
   if (!editor.value) {
@@ -203,6 +249,18 @@ const handleHandwritingSave = (dataUrl: string) => {
 const handleEmbedSelect = (item: EmbedItem) => {
   emit('embed', item)
   showEmbedSelector.value = false
+}
+
+// 插入笔记链接
+const insertNoteLink = (note: NoteItem) => {
+  // 插入链接样式的内容
+  const linkHtml = `<a href="#" class="note-link" data-note-id="${note.id}" onclick="event.preventDefault(); window.dispatchEvent(new CustomEvent('note-link-click', {detail: '${note.id}'}))">📝 ${note.title}</a>`
+  editor.value?.chain().focus().insertContent(linkHtml).run()
+  
+  // 通知父组件创建链接记录
+  emit('linkNote', note.id, note.title)
+  
+  showNoteLinkSelector.value = false
 }
 
 const escapeAttr = (text: string) => {

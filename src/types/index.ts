@@ -102,3 +102,12 @@ export interface GeometryItem {
   group?: any // THREE.Group
   params?: any
 }
+
+// Boolean operation types
+export type BooleanOperation = 'union' | 'subtract' | 'intersect'
+
+export interface BooleanState {
+  operation: BooleanOperation | null
+  selectedIndices: number[]
+  isSelecting: boolean
+}

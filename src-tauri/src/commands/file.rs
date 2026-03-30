@@ -1,7 +1,36 @@
 use crate::db::Database;
 use crate::models::{CreateFileInput, FileType, ProjectFile, UpdateFileInput};
+use serde::{Deserialize, Serialize};
 use tauri::command;
 use tauri::State;
+
+/// Note version model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteVersion {
+    pub id: String,
+    pub note_id: String,
+    pub title: String,
+    pub content: String,
+    pub created_at: String,
+}
+
+/// Note link model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteLink {
+    pub id: String,
+    pub source_note_id: String,
+    pub target_note_id: String,
+    pub created_at: String,
+}
+
+/// Search result model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub note_id: String,
+    pub title: String,
+    pub snippet: String,
+    pub score: f64,
+}
 
 /// Create a new file in a project
 #[command]
@@ -148,7 +177,16 @@ pub fn update_file(
 
     let now = chrono::Utc::now().to_rfc3339();
     let file_name = input.file_name.unwrap_or(current.file_name);
-    let content = input.content.or(current.content);
+    let content = input.content.or(current.content.clone());
+
+    // Save version history before updating (only for notes)
+    if current.file_type == FileType::Note {
+        let version_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO note_versions (id, note_id, title, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            (&version_id, &input.id, &current.file_name, &current.content.clone().unwrap_or_default(), &now),
+        ).map_err(|e| format!("Failed to save version: {}", e))?;
+    }
 
     conn.execute(
         "UPDATE project_files SET file_name = ?1, content = ?2, updated_at = ?3 WHERE id = ?4",
@@ -214,4 +252,331 @@ pub fn write_file_content(
 
     tracing::info!("Wrote content to file: {}", id);
     Ok(())
+}
+
+// ============ Note Version History Commands ============
+
+/// Save a version manually (not auto on every update)
+#[command]
+pub fn save_note_version(
+    db: State<'_, Database>,
+    note_id: String,
+    title: String,
+    content: String,
+) -> Result<NoteVersion, String> {
+    let now = chrono::Utc::now().to_rfc3339();
+    let id = uuid::Uuid::new_v4().to_string();
+    
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO note_versions (id, note_id, title, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (&id, &note_id, &title, &content, &now),
+    ).map_err(|e| format!("Failed to save version: {}", e))?;
+
+    tracing::info!("Saved version for note: {}", note_id);
+    Ok(NoteVersion { id, note_id, title, content, created_at: now })
+}
+
+/// Get all versions of a note
+#[command]
+pub fn get_note_versions(
+    db: State<'_, Database>,
+    note_id: String,
+) -> Result<Vec<NoteVersion>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, note_id, title, content, created_at FROM note_versions WHERE note_id = ?1 ORDER BY created_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let versions = stmt
+        .query_map([&note_id], |row| {
+            Ok(NoteVersion {
+                id: row.get(0)?,
+                note_id: row.get(1)?,
+                title: row.get(2)?,
+                content: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(versions)
+}
+
+/// Get a specific version
+#[command]
+pub fn get_note_version(
+    db: State<'_, Database>,
+    version_id: String,
+) -> Result<NoteVersion, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let version = conn
+        .query_row(
+            "SELECT id, note_id, title, content, created_at FROM note_versions WHERE id = ?1",
+            [&version_id],
+            |row| {
+                Ok(NoteVersion {
+                    id: row.get(0)?,
+                    note_id: row.get(1)?,
+                    title: row.get(2)?,
+                    content: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            },
+        )
+        .map_err(|e| format!("Version not found: {}", e))?;
+
+    Ok(version)
+}
+
+/// Restore a note to a specific version
+#[command]
+pub fn restore_note_version(
+    db: State<'_, Database>,
+    note_id: String,
+    version_id: String,
+) -> Result<ProjectFile, String> {
+    // First get the version
+    let version = get_note_version(db.clone(), version_id)?;
+    
+    // Make sure it belongs to this note
+    if version.note_id != note_id {
+        return Err("Version does not belong to this note".to_string());
+    }
+    
+    // Save current state as a version first
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    let current: ProjectFile = conn
+        .query_row(
+            "SELECT id, project_id, file_type, file_name, content, file_path, created_at, updated_at FROM project_files WHERE id = ?1",
+            [&note_id],
+            |row| {
+                let file_type_str: String = row.get(2)?;
+                let file_type = match file_type_str.as_str() {
+                    "note" => FileType::Note,
+                    "modeling_data" => FileType::ModelingData,
+                    "code_file" => FileType::CodeFile,
+                    _ => FileType::Note,
+                };
+                Ok(ProjectFile {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    file_type,
+                    file_name: row.get(3)?,
+                    content: row.get(4)?,
+                    file_path: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            },
+        )
+        .map_err(|e| format!("Note not found: {}", e))?;
+    
+    let now = chrono::Utc::now().to_rfc3339();
+    let backup_id = uuid::Uuid::new_v4().to_string();
+    
+    conn.execute(
+        "INSERT INTO note_versions (id, note_id, title, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (&backup_id, &note_id, &current.file_name, &current.content.clone().unwrap_or_default(), &now),
+    ).map_err(|e| format!("Failed to backup current state: {}", e))?;
+    
+    // Restore to the selected version
+    conn.execute(
+        "UPDATE project_files SET file_name = ?1, content = ?2, updated_at = ?3 WHERE id = ?4",
+        (&version.title, &version.content, &now, &note_id),
+    ).map_err(|e| format!("Failed to restore: {}", e))?;
+
+    tracing::info!("Restored note {} to version {}", note_id, version_id);
+    
+    Ok(ProjectFile {
+        id: current.id,
+        project_id: current.project_id,
+        file_type: current.file_type,
+        file_name: version.title,
+        content: Some(version.content),
+        file_path: current.file_path,
+        created_at: current.created_at,
+        updated_at: now,
+    })
+}
+
+/// Delete a specific version
+#[command]
+pub fn delete_note_version(
+    db: State<'_, Database>,
+    version_id: String,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM note_versions WHERE id = ?1", [&version_id])
+        .map_err(|e| format!("Failed to delete version: {}", e))?;
+
+    tracing::info!("Deleted version: {}", version_id);
+    Ok(())
+}
+
+// ============ Note Link Commands ============
+
+/// Create a link between two notes
+#[command]
+pub fn create_note_link(
+    db: State<'_, Database>,
+    source_note_id: String,
+    target_note_id: String,
+) -> Result<NoteLink, String> {
+    let now = chrono::Utc::now().to_rfc3339();
+    let id = uuid::Uuid::new_v4().to_string();
+    
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    
+    // Check if link already exists
+    let exists: Result<i32, _> = conn.query_row(
+        "SELECT COUNT(*) FROM note_links WHERE source_note_id = ?1 AND target_note_id = ?2",
+        [&source_note_id, &target_note_id],
+        |row| row.get(0),
+    );
+    
+    if exists.unwrap_or(0) > 0 {
+        return Err("Link already exists".to_string());
+    }
+    
+    conn.execute(
+        "INSERT INTO note_links (id, source_note_id, target_note_id, created_at) VALUES (?1, ?2, ?3, ?4)",
+        (&id, &source_note_id, &target_note_id, &now),
+    ).map_err(|e| format!("Failed to create link: {}", e))?;
+
+    tracing::info!("Created link: {} -> {}", source_note_id, target_note_id);
+    Ok(NoteLink { id, source_note_id, target_note_id, created_at: now })
+}
+
+/// Get all links from a note (outgoing)
+#[command]
+pub fn get_note_links(
+    db: State<'_, Database>,
+    note_id: String,
+) -> Result<Vec<NoteLink>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, source_note_id, target_note_id, created_at FROM note_links WHERE source_note_id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    let links = stmt
+        .query_map([&note_id], |row| {
+            Ok(NoteLink {
+                id: row.get(0)?,
+                source_note_id: row.get(1)?,
+                target_note_id: row.get(2)?,
+                created_at: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(links)
+}
+
+/// Get all links to a note (backlinks)
+#[command]
+pub fn get_note_backlinks(
+    db: State<'_, Database>,
+    note_id: String,
+) -> Result<Vec<NoteLink>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, source_note_id, target_note_id, created_at FROM note_links WHERE target_note_id = ?1")
+        .map_err(|e| e.to_string())?;
+
+    let links = stmt
+        .query_map([&note_id], |row| {
+            Ok(NoteLink {
+                id: row.get(0)?,
+                source_note_id: row.get(1)?,
+                target_note_id: row.get(2)?,
+                created_at: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(links)
+}
+
+/// Delete a note link
+#[command]
+pub fn delete_note_link(
+    db: State<'_, Database>,
+    link_id: String,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM note_links WHERE id = ?1", [&link_id])
+        .map_err(|e| format!("Failed to delete link: {}", e))?;
+
+    tracing::info!("Deleted link: {}", link_id);
+    Ok(())
+}
+
+// ============ Search Commands ============
+
+/// Search notes by title and content
+#[command]
+pub fn search_notes(
+    db: State<'_, Database>,
+    project_id: String,
+    query: String,
+) -> Result<Vec<SearchResult>, String> {
+    if query.trim().is_empty() {
+        return Ok(vec![]);
+    }
+    
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let search_pattern = format!("%{}%", query.to_lowercase());
+    
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, file_name, content FROM project_files 
+             WHERE project_id = ?1 AND file_type = 'note' 
+             AND (LOWER(file_name) LIKE ?2 OR LOWER(content) LIKE ?2)
+             ORDER BY updated_at DESC
+             LIMIT 20"
+        )
+        .map_err(|e| e.to_string())?;
+
+    let results = stmt
+        .query_map([&project_id, &search_pattern], |row| {
+            let id: String = row.get(0)?;
+            let title: String = row.get(1)?;
+            let content: String = row.get(2)?;
+            
+            // Generate snippet
+            let content_lower = content.to_lowercase();
+            let query_lower = query.to_lowercase();
+            
+            let snippet = if let Some(pos) = content_lower.find(&query_lower) {
+                let start = if pos > 50 { pos - 50 } else { 0 };
+                let end = std::cmp::min(pos + query.len() + 100, content.len());
+                let mut s = content[start..end].to_string();
+                if start > 0 { s = format!("...{}", s); }
+                if end < content.len() { s = format!("{}...", s); }
+                s.replace('\n', ' ').replace('<', "&lt;").replace('>', "&gt;")
+            } else {
+                content[..std::cmp::min(150, content.len())].to_string()
+                    .replace('\n', ' ').replace('<', "&lt;").replace('>', "&gt;")
+            };
+            
+            Ok(SearchResult {
+                note_id: id,
+                title,
+                snippet,
+                score: 1.0,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(results)
 }

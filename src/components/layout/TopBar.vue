@@ -88,6 +88,7 @@ const currentModule = computed(() => {
     '/modeling': '建模',
     '/code': '代码',
     '/simulation': '仿真',
+    '/comparison': '结果对比',
     '/settings': '设置'
   }
   return pathMap[route.path] || 'CAELab'

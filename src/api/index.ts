@@ -138,3 +138,79 @@ export function getFileTypeIcon(type: FileType): string {
   }
   return icons[type] || '📄'
 }
+
+// ============ 笔记增强 API (Phase2) ============
+
+export interface NoteVersion {
+  id: string
+  note_id: string
+  title: string
+  content: string
+  created_at: string
+}
+
+export interface NoteLink {
+  id: string
+  source_note_id: string
+  target_note_id: string
+  created_at: string
+}
+
+export interface SearchResult {
+  note_id: string
+  title: string
+  snippet: string
+  score: number
+}
+
+// Version history API
+export async function saveNoteVersion(noteId: string, title: string, content: string): Promise<NoteVersion> {
+  return await invoke<NoteVersion>('save_note_version', { noteId, title, content })
+}
+
+export async function getNoteVersions(noteId: string): Promise<NoteVersion[]> {
+  return await invoke<NoteVersion[]>('get_note_versions', { noteId })
+}
+
+export async function getNoteVersion(versionId: string): Promise<NoteVersion> {
+  return await invoke<NoteVersion>('get_note_version', { versionId })
+}
+
+export async function restoreNoteVersion(noteId: string, versionId: string): Promise<ProjectFile> {
+  return await invoke<ProjectFile>('restore_note_version', { noteId, versionId })
+}
+
+export async function deleteNoteVersion(versionId: string): Promise<void> {
+  await invoke('delete_note_version', { versionId })
+}
+
+// Note link API
+export async function createNoteLink(sourceNoteId: string, targetNoteId: string): Promise<NoteLink> {
+  return await invoke<NoteLink>('create_note_link', { sourceNoteId, targetNoteId })
+}
+
+export async function getNoteLinks(noteId: string): Promise<NoteLink[]> {
+  return await invoke<NoteLink[]>('get_note_links', { noteId })
+}
+
+export async function getNoteBacklinks(noteId: string): Promise<NoteLink[]> {
+  return await invoke<NoteLink[]>('get_note_backlinks', { noteId })
+}
+
+export async function deleteNoteLink(linkId: string): Promise<void> {
+  await invoke('delete_note_link', { linkId })
+}
+
+// Search API
+export async function searchNotes(projectId: string, query: string): Promise<SearchResult[]> {
+  return await invoke<SearchResult[]>('search_notes', { projectId, query })
+}
+
+// ============ 项目分享 API (Phase2) ============
+
+export * from './share'
+export type {
+  ExportData,
+  ImportOptions,
+  ProjectTemplate
+} from './share'

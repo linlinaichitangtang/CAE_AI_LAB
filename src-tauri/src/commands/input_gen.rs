@@ -116,6 +116,82 @@ pub struct Material {
     pub thermal_conductivity: Option<f64>,
     pub expansion_coefficient: Option<f64>,
     pub specific_heat: Option<f64>,
+    /// Material type: "elastic", "plastic", "viscoelastic", "hyperelastic"
+    pub material_type: Option<String>,
+    /// Plastic parameters (for elasto-plastic materials)
+    pub plastic_params: Option<PlasticParams>,
+    /// Viscoelastic parameters (for viscoelastic materials)
+    pub viscoelastic_params: Option<ViscoelasticParams>,
+    /// Hyperelastic parameters (for hyperelastic materials)
+    pub hyperelastic_params: Option<HyperelasticParams>,
+}
+
+/// Plastic material parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlasticParams {
+    /// Yield criterion: "von_mises", "tresca", "drucker_prager"
+    pub yield_criterion: Option<String>,
+    /// Hardening type: "isotropic", "kinematic", "combined"
+    pub hardening_type: Option<String>,
+    /// Plastic model: "bilinear", "multilinear", "exponential"
+    pub model: Option<String>,
+    /// Yield strength in MPa
+    pub yield_strength: Option<f64>,
+    /// Tangent modulus for bilinear model in MPa
+    pub tangent_modulus: Option<f64>,
+    /// Stress-strain table for multilinear model
+    pub plastic_table: Option<Vec<Point2D>>,
+}
+
+/// Simple 2D point for stress-strain data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Point2D {
+    pub x: f64,  // strain
+    pub y: f64,  // stress (MPa)
+}
+
+/// Viscoelastic material parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ViscoelasticParams {
+    /// Viscoelastic model: "maxwell", "kelvin", "standard_linear", "generalized_maxwell"
+    pub model: Option<String>,
+    /// Elastic modulus in MPa
+    pub elastic_modulus: Option<f64>,
+    /// Viscosity for Maxwell/Kelvin models
+    pub viscosity: Option<f64>,
+    /// Prony series terms for generalized Maxwell
+    pub prony_series: Option<Vec<PronyTerm>>,
+}
+
+/// Prony series term
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PronyTerm {
+    /// Relative modulus E_i / E_0
+    pub relative_modulus: f64,
+    /// Relaxation time in seconds
+    pub relaxation_time: f64,
+}
+
+/// Hyperelastic material parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HyperelasticParams {
+    /// Hyperelastic model: "neo_hookean", "mooney_rivlin", "mooney_rivlin_3", "ogden", "yeoh"
+    pub model: Option<String>,
+    /// Mooney-Rivlin parameters
+    pub c10: Option<f64>,
+    pub c01: Option<f64>,
+    pub c20: Option<f64>,
+    /// D parameter for compressibility
+    pub d: Option<f64>,
+    /// Ogden terms
+    pub ogden_terms: Option<Vec<OgdenTerm>>,
+}
+
+/// Ogden model term
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OgdenTerm {
+    pub mu: f64,
+    pub alpha: f64,
 }
 
 impl Material {
@@ -128,6 +204,10 @@ impl Material {
             thermal_conductivity: None,
             expansion_coefficient: None,
             specific_heat: None,
+            material_type: Some("elastic".to_string()),
+            plastic_params: None,
+            viscoelastic_params: None,
+            hyperelastic_params: None,
         }
     }
 
@@ -140,6 +220,24 @@ impl Material {
         self.thermal_conductivity = Some(conductivity);
         self.expansion_coefficient = Some(expansion);
         self.specific_heat = Some(specific_heat);
+        self
+    }
+
+    pub fn with_plastic(mut self, params: PlasticParams) -> Self {
+        self.material_type = Some("plastic".to_string());
+        self.plastic_params = Some(params);
+        self
+    }
+
+    pub fn with_viscoelastic(mut self, params: ViscoelasticParams) -> Self {
+        self.material_type = Some("viscoelastic".to_string());
+        self.viscoelastic_params = Some(params);
+        self
+    }
+
+    pub fn with_hyperelastic(mut self, params: HyperelasticParams) -> Self {
+        self.material_type = Some("hyperelastic".to_string());
+        self.hyperelastic_params = Some(params);
         self
     }
 }
@@ -296,33 +394,301 @@ impl InpGenerator {
         for material in &self.model.materials {
             writeln!(output, "*MATERIAL, NAME={}", material.name)?;
             
-            // Elastic properties
-            writeln!(output, "*ELASTIC")?;
-            writeln!(output, "{}, POISSON={:.6}", material.youngs_modulus, material.poisson_ratio)?;
+            // Get material type or default to elastic
+            let mat_type = material.material_type.as_deref().unwrap_or("elastic");
             
-            // Density
-            if material.density > 0.0 {
-                writeln!(output, "*DENSITY")?;
-                writeln!(output, "{:.6}", material.density)?;
-            }
-            
-            // Thermal properties
-            if let (Some(k), Some(alpha), Some(cp)) = (
-                material.thermal_conductivity,
-                material.expansion_coefficient,
-                material.specific_heat,
-            ) {
-                writeln!(output, "*CONDUCTIVITY")?;
-                writeln!(output, "{:.6}", k)?;
-                writeln!(output, "*EXPANSION")?;
-                writeln!(output, "{:.6}", alpha)?;
-                writeln!(output, "*SPECIFIC HEAT")?;
-                writeln!(output, "{:.6}", cp)?;
+            match mat_type {
+                "plastic" => {
+                    self.write_plastic_material(output, material)?;
+                }
+                "viscoelastic" => {
+                    self.write_viscoelastic_material(output, material)?;
+                }
+                "hyperelastic" => {
+                    self.write_hyperelastic_material(output, material)?;
+                }
+                _ => {
+                    // Default: Linear elastic
+                    self.write_elastic_material(output, material)?;
+                }
             }
             
             writeln!(output)?;
         }
 
+        Ok(())
+    }
+    
+    /// Write linear elastic material (*ELASTIC, *DENSITY)
+    fn write_elastic_material(&self, output: &mut String, material: &Material) -> Result<(), InputError> {
+        writeln!(output, "*ELASTIC")?;
+        writeln!(output, "{}, POISSON={:.6}", material.youngs_modulus, material.poisson_ratio)?;
+        
+        if material.density > 0.0 {
+            writeln!(output, "*DENSITY")?;
+            writeln!(output, "{:.6}", material.density)?;
+        }
+        
+        // Thermal properties
+        if let (Some(k), Some(alpha), Some(cp)) = (
+            material.thermal_conductivity,
+            material.expansion_coefficient,
+            material.specific_heat,
+        ) {
+            writeln!(output, "*CONDUCTIVITY")?;
+            writeln!(output, "{:.6}", k)?;
+            writeln!(output, "*EXPANSION")?;
+            writeln!(output, "{:.6}", alpha)?;
+            writeln!(output, "*SPECIFIC HEAT")?;
+            writeln!(output, "{:.6}", cp)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Write elasto-plastic material (*ELASTIC, *PLASTIC)
+    fn write_plastic_material(&self, output: &mut String, material: &Material) -> Result<(), InputError> {
+        // Base elastic properties
+        writeln!(output, "*ELASTIC")?;
+        writeln!(output, "{}, POISSON={:.6}", material.youngs_modulus, material.poisson_ratio)?;
+        
+        if material.density > 0.0 {
+            writeln!(output, "*DENSITY")?;
+            writeln!(output, "{:.6}", material.density)?;
+        }
+        
+        // Get plastic parameters
+        if let Some(ref plastic) = material.plastic_params {
+            // Determine yield criterion
+            let criterion = plastic.yield_criterion.as_deref().unwrap_or("von_mises");
+            let hardening = plastic.hardening_type.as_deref().unwrap_or("isotropic");
+            let model = plastic.model.as_deref().unwrap_or("bilinear");
+            
+            // Write *PLASTIC card
+            writeln!(output, "*PLASTIC")?;
+            
+            if model == "bilinear" {
+                // Bilinear plastic: yield strength and tangent modulus
+                let sigma_y = plastic.yield_strength.unwrap_or(250.0);
+                let e_t = plastic.tangent_modulus.unwrap_or(20000.0);
+                
+                // Table format: strain increment, stress
+                // For bilinear, we have two points: (0, sigma_y) and (ep_max, sigma_y + E_t*ep_max)
+                // Simplified: just yield stress and hardening parameter
+                if hardening == "isotropic" {
+                    writeln!(output, "{:.6}, {:.6}", sigma_y, e_t / material.youngs_modulus)?;
+                } else {
+                    // Kinematic or combined hardening
+                    writeln!(output, "{:.6}, {:.6}", sigma_y, e_t / material.youngs_modulus)?;
+                }
+            } else if model == "multilinear" {
+                // Multilinear plastic: use stress-strain table
+                if let Some(ref table) = plastic.plastic_table {
+                    for point in table {
+                        writeln!(output, "{:.6}, {:.6}", point.x, point.y)?;
+                    }
+                } else {
+                    // Default if no table provided
+                    let sigma_y = plastic.yield_strength.unwrap_or(250.0);
+                    let e_t = plastic.tangent_modulus.unwrap_or(20000.0);
+                    writeln!(output, "{:.6}, {:.6}", 0.0, sigma_y)?;
+                    writeln!(output, "{:.6}, {:.6}", 0.02, sigma_y + e_t * 0.02)?;
+                }
+            } else {
+                // Exponential or default
+                let sigma_y = plastic.yield_strength.unwrap_or(250.0);
+                writeln!(output, "{:.6}, {:.6}", sigma_y, 0.0)?;
+            }
+            
+            // Write yield criterion if not von Mises
+            if criterion != "von_mises" {
+                // CalculiX supports: CRUSHING, MISE, MRTECH, TRIAX
+                let criterion_code = match criterion {
+                    "tresca" => "TRIAX",
+                    "drucker_prager" => "DRUCKER",
+                    _ => "MISE",
+                };
+                writeln!(output, "*YIELD STRESS, YIELD CRITERION={}", criterion_code)?;
+                if let Some(ref table) = plastic.plastic_table {
+                    for point in table {
+                        writeln!(output, "{:.6}", point.y)?;
+                    }
+                }
+            }
+        } else {
+            // Default plastic parameters
+            writeln!(output, "250., 0.0")?;
+        }
+        
+        // Thermal properties
+        if let (Some(k), Some(alpha), Some(cp)) = (
+            material.thermal_conductivity,
+            material.expansion_coefficient,
+            material.specific_heat,
+        ) {
+            writeln!(output, "*CONDUCTIVITY")?;
+            writeln!(output, "{:.6}", k)?;
+            writeln!(output, "*EXPANSION")?;
+            writeln!(output, "{:.6}", alpha)?;
+            writeln!(output, "*SPECIFIC HEAT")?;
+            writeln!(output, "{:.6}", cp)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Write viscoelastic material (*ELASTIC, *VISCOELASTIC)
+    fn write_viscoelastic_material(&self, output: &mut String, material: &Material) -> Result<(), InputError> {
+        // Base elastic properties (instantaneous modulus)
+        let e0 = material.viscoelastic_params
+            .as_ref()
+            .and_then(|v| v.elastic_modulus)
+            .unwrap_or(material.youngs_modulus);
+        
+        writeln!(output, "*ELASTIC")?;
+        writeln!(output, "{}, POISSON={:.6}", e0, material.poisson_ratio)?;
+        
+        if material.density > 0.0 {
+            writeln!(output, "*DENSITY")?;
+            writeln!(output, "{:.6}", material.density)?;
+        }
+        
+        // Get viscoelastic parameters
+        if let Some(ref visco) = material.viscoelastic_params {
+            let model = visco.model.as_deref().unwrap_or("generalized_maxwell");
+            
+            match model {
+                "maxwell" | "kelvin" => {
+                    // Single mode Maxwell/Kelvin
+                    let eta = visco.viscosity.unwrap_or(1000.0);
+                    let e = visco.elastic_modulus.unwrap_or(e0);
+                    
+                    writeln!(output, "*VISCOELASTIC, TIME=PRONY")?;
+                    // For single mode: g1, tau1
+                    let g1 = eta / (eta + e * 1.0); // Simplified calculation
+                    writeln!(output, "{:.6}, {:.6}", 1.0 - g1, 1.0)?;
+                }
+                "standard_linear" => {
+                    // Standard linear solid (2-parameter)
+                    writeln!(output, "*VISCOELASTIC, TIME=PRONY")?;
+                    writeln!(output, "0.5, 1.0")?;
+                }
+                "generalized_maxwell" => {
+                    // Generalized Maxwell (Prony series)
+                    writeln!(output, "*VISCOELASTIC, TIME=PRONY")?;
+                    
+                    if let Some(ref prony) = visco.prony_series {
+                        for term in prony {
+                            writeln!(output, "{:.6}, {:.6}", term.relative_modulus, term.relaxation_time)?;
+                        }
+                    } else {
+                        // Default Prony terms
+                        writeln!(output, "0.2, 1.0")?;
+                        writeln!(output, "0.1, 10.0")?;
+                    }
+                }
+                _ => {
+                    writeln!(output, "*VISCOELASTIC, TIME=PRONY")?;
+                    writeln!(output, "0.2, 1.0")?;
+                }
+            }
+        } else {
+            // Default viscoelastic
+            writeln!(output, "*VISCOELASTIC, TIME=PRONY")?;
+            writeln!(output, "0.2, 1.0")?;
+            writeln!(output, "0.1, 10.0")?;
+        }
+        
+        // Thermal properties
+        if let (Some(k), Some(alpha), Some(cp)) = (
+            material.thermal_conductivity,
+            material.expansion_coefficient,
+            material.specific_heat,
+        ) {
+            writeln!(output, "*CONDUCTIVITY")?;
+            writeln!(output, "{:.6}", k)?;
+            writeln!(output, "*EXPANSION")?;
+            writeln!(output, "{:.6}", alpha)?;
+            writeln!(output, "*SPECIFIC HEAT")?;
+            writeln!(output, "{:.6}", cp)?;
+        }
+        
+        Ok(())
+    }
+    
+    /// Write hyperelastic material (*HYPERELASTIC)
+    fn write_hyperelastic_material(&self, output: &mut String, material: &Material) -> Result<(), InputError> {
+        // Get hyperelastic parameters
+        if let Some(ref hyper) = material.hyperelastic_params {
+            let model = hyper.model.as_deref().unwrap_or("neo_hookean");
+            
+            match model {
+                "neo_hookean" => {
+                    let c10 = hyper.c10.unwrap_or(0.5);
+                    let d = hyper.d.unwrap_or(0.001);
+                    
+                    writeln!(output, "*HYPERELASTIC, MODEL=NH")?;
+                    writeln!(output, "{:.6}, {:.6}", c10, d)?;
+                }
+                "mooney_rivlin" | "mooney_rivlin_3" => {
+                    let c10 = hyper.c10.unwrap_or(0.3);
+                    let c01 = hyper.c01.unwrap_or(0.0);
+                    let c20 = hyper.c20.unwrap_or(0.0);
+                    let d = hyper.d.unwrap_or(0.001);
+                    
+                    if model == "mooney_rivlin" {
+                        writeln!(output, "*HYPERELASTIC, MODEL=MR")?;
+                        writeln!(output, "{:.6}, {:.6}, {:.6}", c10, c01, d)?;
+                    } else {
+                        writeln!(output, "*HYPERELASTIC, MODEL=MR3")?;
+                        writeln!(output, "{:.6}, {:.6}, {:.6}, {:.6}", c10, c01, c20, d)?;
+                    }
+                }
+                "ogden" => {
+                    writeln!(output, "*HYPERELASTIC, MODEL=OGDEN")?;
+                    
+                    if let Some(ref terms) = hyper.ogden_terms {
+                        let d = hyper.d.unwrap_or(0.001);
+                        // First line: number of terms and D
+                        writeln!(output, "{}, {:.6}", terms.len(), d)?;
+                        for term in terms {
+                            writeln!(output, "{:.6}, {:.6}", term.mu, term.alpha)?;
+                        }
+                    } else {
+                        // Default Ogden term
+                        writeln!(output, "1, {:.6}", hyper.d.unwrap_or(0.001))?;
+                        writeln!(output, "1.0, 2.0")?;
+                    }
+                }
+                "yeoh" => {
+                    let c10 = hyper.c10.unwrap_or(0.5);
+                    let c01 = hyper.c01.unwrap_or(0.0);
+                    let c20 = hyper.c20.unwrap_or(0.0);
+                    let d = hyper.d.unwrap_or(0.001);
+                    
+                    writeln!(output, "*HYPERELASTIC, MODEL=YEOH")?;
+                    writeln!(output, "{:.6}, {:.6}, {:.6}, {:.6}", c10, c01, c20, d)?;
+                }
+                _ => {
+                    // Default to Neo-Hookean
+                    let c10 = hyper.c10.unwrap_or(0.5);
+                    let d = hyper.d.unwrap_or(0.001);
+                    writeln!(output, "*HYPERELASTIC, MODEL=NH")?;
+                    writeln!(output, "{:.6}, {:.6}", c10, d)?;
+                }
+            }
+        } else {
+            // Default hyperelastic
+            writeln!(output, "*HYPERELASTIC, MODEL=NH")?;
+            writeln!(output, "0.5, 0.001")?;
+        }
+        
+        // Density
+        if material.density > 0.0 {
+            writeln!(output, "*DENSITY")?;
+            writeln!(output, "{:.6}", material.density)?;
+        }
+        
         Ok(())
     }
 
@@ -434,10 +800,62 @@ impl InpGenerator {
                 step.minimum_time_increment,
                 step.maximum_time_increment)?;
             
+            // Write contact pairs in step
+            self.write_contact_pairs(output)?;
+            
             writeln!(output, "*END STEP")?;
             writeln!(output)?;
         }
 
+        Ok(())
+    }
+
+    fn write_contact_pairs(&self, output: &mut String) -> Result<(), InputError> {
+        for contact in &self.model.contact_pairs {
+            let contact_type_upper = contact.contact_type.to_uppercase();
+            
+            match contact_type_upper.as_str() {
+                "tie" | "TIE" => {
+                    // Tie constraint (bonded contact)
+                    writeln!(output, "*TIE, NAME={}", contact.master_surface)?;
+                    writeln!(output, "{}, {}", contact.slave_surface, contact.master_surface)?;
+                }
+                "bolt" | "BOLT" | "BOLT_PRELOAD" => {
+                    // Bolt preload contact
+                    writeln!(output, "*SURFACE INTERACTION, NAME={}", contact.master_surface)?;
+                    writeln!(output, "*FRICTION")?;
+                    writeln!(output, "{:.6}", contact.friction)?;
+                    writeln!(output, "*CONTACT PAIR, INTERACTION={}", contact.master_surface)?;
+                    writeln!(output, "{}, {}", contact.slave_surface, contact.master_surface)?;
+                }
+                _ => {
+                    // Standard surface-to-surface contact
+                    writeln!(output, "*SURFACE INTERACTION, NAME={}", contact.master_surface)?;
+                    
+                    // Contact properties - adjust based on algorithm
+                    let behavior = if contact_type_upper.contains("LAGRANGE") {
+                        "EXPONENTIAL"
+                    } else if contact_type_upper.contains("AUGMENTED") {
+                        "TIED"
+                    } else {
+                        "LINEAR"  // penalty or default
+                    };
+                    writeln!(output, "*SURFACE BEHAVIOR, PRESSURE-OVERCLOSURE={}", behavior)?;
+                    
+                    // Friction if specified
+                    if contact.friction > 0.0 {
+                        writeln!(output, "*FRICTION")?;
+                        writeln!(output, "{:.6}", contact.friction)?;
+                    }
+                    
+                    writeln!(output, "*CONTACT PAIR, INTERACTION={}", contact.master_surface)?;
+                    writeln!(output, "{}, {}", contact.slave_surface, contact.master_surface)?;
+                }
+            }
+            
+            writeln!(output)?;
+        }
+        
         Ok(())
     }
 

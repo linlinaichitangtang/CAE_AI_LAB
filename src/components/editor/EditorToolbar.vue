@@ -64,6 +64,9 @@
       <button @click="emit('insertEmbed')" class="toolbar-btn" title="嵌入对象">
         📦
       </button>
+      <button @click="emit('insertNoteLink')" class="toolbar-btn" title="引用笔记">
+        📝
+      </button>
     </div>
   </div>
 </template>
@@ -80,6 +83,7 @@ interface Props {
     blockquote: boolean
     codeBlock: boolean
   }
+  hasLinks?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
@@ -92,7 +96,8 @@ withDefaults(defineProps<Props>(), {
     orderedList: false,
     blockquote: false,
     codeBlock: false
-  })
+  }),
+  hasLinks: false
 })
 
 const emit = defineEmits<{
@@ -112,6 +117,7 @@ const emit = defineEmits<{
   (e: 'insertMath'): void
   (e: 'insertHandwriting'): void
   (e: 'insertEmbed'): void
+  (e: 'insertNoteLink'): void
 }>()
 </script>
 

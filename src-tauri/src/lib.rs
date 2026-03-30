@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 
 mod commands;
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, solver, ai, materials, parametric, transient_dynamics, contact, cfd};
 mod db;
 mod models;
 pub mod solver;
@@ -50,6 +51,19 @@ pub fn run() {
             commands::file::delete_file,
             commands::file::read_file_content,
             commands::file::write_file_content,
+            // Version history commands
+            commands::file::save_note_version,
+            commands::file::get_note_versions,
+            commands::file::get_note_version,
+            commands::file::restore_note_version,
+            commands::file::delete_note_version,
+            // Note link commands
+            commands::file::create_note_link,
+            commands::file::get_note_links,
+            commands::file::get_note_backlinks,
+            commands::file::delete_note_link,
+            // Search commands
+            commands::file::search_notes,
             // Settings commands
             commands::settings::save_settings,
             commands::settings::get_settings,
@@ -86,6 +100,42 @@ pub fn run() {
             commands::ai::ai_chat,
             commands::ai::ai_chat_stream,
             commands::ai::test_ai_connection,
+            // Material commands
+            commands::materials::list_materials,
+            commands::materials::get_material,
+            commands::materials::create_material,
+            commands::materials::update_material,
+            commands::materials::delete_material,
+            commands::materials::get_builtin_material_names,
+            // Parametric analysis commands
+            commands::parametric::run_parametric_scan,
+            commands::parametric::run_parametric_scan_async,
+            // Transient dynamics commands
+            commands::transient_dynamics::get_tutorial_examples,
+            commands::transient_dynamics::generate_transient_inp_file,
+            commands::transient_dynamics::run_transient_simulation,
+            commands::transient_dynamics::calculate_rayleigh_coefficients,
+            commands::transient_dynamics::get_load_curve_template,
+            // Thermal coupling commands
+            commands::thermal_coupling::generate_thermal_coupling_inp,
+            commands::thermal_coupling::get_thermal_coupling_templates,
+            commands::thermal_coupling::generate_sequential_coupling_inp_files,
+            commands::thermal_coupling::parse_thermal_result_file,
+            commands::thermal_coupling::get_face_nodes,
+            // Contact analysis commands
+            commands::contact::create_contact_config,
+            commands::contact::generate_contact_inp,
+            commands::contact::diagnose_contact_pairs,
+            commands::contact::get_contact_template_inp,
+            commands::contact::generate_surface_def,
+            commands::contact::get_contact_algorithm_recommendations,
+            commands::contact::get_convergence_suggestions,
+            // CFD commands
+            commands::cfd::generate_openfoam_case,
+            commands::cfd::parse_openfoam_log,
+            commands::cfd::download_openfoam_case,
+            commands::cfd::import_cfd_geometry,
+            commands::cfd::generate_cfd_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -13,43 +13,24 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-interface SimulationResult {
+interface ThermalResult {
   nodes: Array<{ id: number; x: number; y: number; z: number }>
   elements: Array<{ id: number; type: string; nodeIds: number[] }>
-  displacement?: { step: number; data: Record<string, Record<string, number>> }
-  stress?: { step: number; data: Record<string, Record<string, number>> }
-  vonMises?: { step: number; data: Record<string, number> }
-  deformationScale?: number
-}
-
-interface ModeShapeData {
-  node_id: number
-  x: number
-  y: number
-  z: number
-  ux: number
-  uy: number
-  uz: number
-  magnitude: number
+  temperature?: { step: number; data: Record<string, number> }  // 节点温度
+  heatFlux?: { step: number; data: Record<string, { x: number; y: number; z: number }> }  // 热流矢量
 }
 
 const props = withDefaults(defineProps<{
-  result?: SimulationResult | null
-  modeShape?: ModeShapeData[] | null  // For modal animation
-  densityField?: number[] | null  // For topology optimization density visualization
-  displayMode?: 'displacement' | 'stress' | 'vonMises'
-  showDeformed?: boolean
-  deformationScale?: number
+  result?: ThermalResult | null
+  displayMode?: 'temperature' | 'heatFlux'
+  showStreamlines?: boolean
   colormap?: 'viridis' | 'plasma' | 'inferno' | 'jet' | 'rainbow'
   showWireframe?: boolean
 }>(), {
-  displayMode: 'vonMises',
-  showDeformed: false,
-  deformationScale: 1.0,
+  displayMode: 'temperature',
+  showStreamlines: false,
   colormap: 'viridis',
-  showWireframe: false,
-  modeShape: null,
-  densityField: null
+  showWireframe: false
 })
 
 const emit = defineEmits<{
@@ -67,10 +48,9 @@ let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 let controls: OrbitControls
 let mesh: THREE.Mesh
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let wireframeMesh: any = null
+let wireframeMesh: THREE.LineSegments | null = null
 
-// Colormap definitions (RGB values 0-255)
+// Colormap definitions (RGB values 0-255) - 热力图专用
 const colormaps: Record<string, Array<[number, number, number]>> = {
   viridis: [
     [68, 1, 84], [72, 35, 116], [64, 67, 135], [52, 94, 141],
@@ -114,11 +94,9 @@ function interpolateColor(value: number, colormapName: string): THREE.Color {
 function initScene() {
   if (!canvasRef.value || !containerRef.value) return
 
-  // Scene
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0xf0f0f0)
 
-  // Camera
   camera = new THREE.PerspectiveCamera(
     60,
     containerRef.value.clientWidth / containerRef.value.clientHeight,
@@ -127,7 +105,6 @@ function initScene() {
   )
   camera.position.set(5, 5, 5)
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: canvasRef.value,
     antialias: true
@@ -135,12 +112,10 @@ function initScene() {
   renderer.setSize(containerRef.value.clientWidth, containerRef.value.clientHeight)
   renderer.setPixelRatio(window.devicePixelRatio)
 
-  // Controls
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = 0.05
 
-  // Lights
   const ambient = new THREE.AmbientLight(0xffffff, 0.6)
   scene.add(ambient)
 
@@ -148,23 +123,19 @@ function initScene() {
   directional.position.set(5, 10, 5)
   scene.add(directional)
 
-  // Grid helper
   const grid = new THREE.GridHelper(10, 20, 0xcccccc, 0xe0e0e0)
   scene.add(grid)
 
-  // Axes helper
   const axes = new THREE.AxesHelper(1)
   scene.add(axes)
 }
 
-function buildGeometry(result: SimulationResult) {
-  // Build node map
+function buildGeometry(result: ThermalResult) {
   const nodeMap = new Map<number, THREE.Vector3>()
   result.nodes.forEach(n => {
     nodeMap.set(n.id, new THREE.Vector3(n.x, n.y, n.z))
   })
 
-  // Build geometry from elements
   const positions: number[] = []
   const normals: number[] = []
   const indices: number[] = []
@@ -183,12 +154,8 @@ function buildGeometry(result: SimulationResult) {
       }
     })
 
-    // Triangulate based on element type
     if (el.type === 'TET4' || el.type === 'TETRA') {
-      // Tetrahedron: 4 nodes -> 4 triangles
-      const faces = [
-        [0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]
-      ]
+      const faces = [[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]]
       faces.forEach(f => {
         const a = positionsLocal[f[0]]
         const b = positionsLocal[f[1]]
@@ -206,15 +173,14 @@ function buildGeometry(result: SimulationResult) {
         idx += 3
       })
     } else if (el.type === 'HEX8' || el.type === 'BRICK') {
-      // Hexahedron: 8 nodes -> 12 triangles (2 per face, 6 faces)
       const v = positionsLocal
       const faces = [
-        [0, 1, 2], [0, 2, 3], // bottom
-        [4, 6, 5], [4, 7, 6], // top
-        [0, 3, 7], [0, 7, 4], // left
-        [1, 5, 6], [1, 6, 2], // right
-        [0, 4, 5], [0, 5, 1], // front
-        [3, 2, 6], [3, 6, 7]  // back
+        [0, 1, 2], [0, 2, 3],
+        [4, 6, 5], [4, 7, 6],
+        [0, 3, 7], [0, 7, 4],
+        [1, 5, 6], [1, 6, 2],
+        [0, 4, 5], [0, 5, 1],
+        [3, 2, 6], [3, 6, 7]
       ]
       faces.forEach(fi => {
         const a = v[fi[0]]
@@ -233,7 +199,6 @@ function buildGeometry(result: SimulationResult) {
         idx += 3
       })
     } else {
-      // TRI3, QUAD4, etc - triangulate directly
       for (let i = 1; i < nodeIds.length - 1; i++) {
         const a = positionsLocal[0]
         const b = positionsLocal[i]
@@ -256,65 +221,29 @@ function buildGeometry(result: SimulationResult) {
   return { positions, normals, indices, nodeIndexMap }
 }
 
-function applyDisplacement(result: SimulationResult, scale: number, positions: number[], nodeIndexMap: Map<number, number>) {
-  if (!result.displacement) return positions
-
-  const disp = result.displacement.data
-  const nodes = result.nodes
-
-  nodes.forEach(n => {
-    const mapIdx = nodeIndexMap.get(n.id)
-    if (mapIdx === undefined) return
-
-    const ux = (disp['ux']?.[n.id] || 0) * scale
-    const uy = (disp['uy']?.[n.id] || 0) * scale
-    const uz = (disp['uz']?.[n.id] || 0) * scale
-
-    positions[mapIdx * 3] += ux
-    positions[mapIdx * 3 + 1] += uy
-    positions[mapIdx * 3 + 2] += uz
-  })
-
-  return positions
-}
-
-function computeVertexValues(result: SimulationResult, nodeIndexMap: Map<number, number>, _indices: number[]): Map<number, number> {
+function computeVertexValues(result: ThermalResult, nodeIndexMap: Map<number, number>): Map<number, number> {
   const values = new Map<number, number>()
 
-  if (props.displayMode === 'vonMises' && result.vonMises) {
-    Object.entries(result.vonMises.data).forEach(([nid, val]) => {
+  if (props.displayMode === 'temperature' && result.temperature) {
+    Object.entries(result.temperature.data).forEach(([nid, val]) => {
       const idx = nodeIndexMap.get(parseInt(nid))
       if (idx !== undefined) values.set(idx, val)
     })
-  } else if (props.displayMode === 'displacement' && result.displacement) {
-    const ux = result.displacement.data['ux'] || {}
-    const uy = result.displacement.data['uy'] || {}
-    const uz = result.displacement.data['uz'] || {}
-    result.nodes.forEach(n => {
-      const idx = nodeIndexMap.get(n.id)
+  } else if (props.displayMode === 'heatFlux' && result.heatFlux) {
+    // 热流模长
+    Object.entries(result.heatFlux.data).forEach(([nid, flux]) => {
+      const idx = nodeIndexMap.get(parseInt(nid))
       if (idx !== undefined) {
-        const dx = ux[String(n.id)] || 0
-        const dy = uy[String(n.id)] || 0
-        const dz = uz[String(n.id)] || 0
-        values.set(idx, Math.sqrt(dx*dx + dy*dy + dz*dz))
+        const magnitude = Math.sqrt(flux.x ** 2 + flux.y ** 2 + flux.z ** 2)
+        values.set(idx, magnitude)
       }
     })
-  } else if (props.displayMode === 'stress' && result.stress) {
-    // Use first stress component as example
-    const keys = Object.keys(result.stress.data)
-    if (keys.length > 0) {
-      const component = result.stress.data[keys[0]]
-      Object.entries(component).forEach(([nid, val]) => {
-        const idx = nodeIndexMap.get(parseInt(nid))
-        if (idx !== undefined) values.set(idx, Math.abs(val))
-      })
-    }
   }
 
   return values
 }
 
-function updateMesh(result: SimulationResult) {
+function updateMesh(result: ThermalResult) {
   if (!result || result.nodes.length === 0) {
     if (mesh) scene.remove(mesh)
     if (wireframeMesh) scene.remove(wireframeMesh)
@@ -323,16 +252,8 @@ function updateMesh(result: SimulationResult) {
 
   const { positions, normals, indices, nodeIndexMap } = buildGeometry(result)
 
-  // Apply deformation if enabled
-  let finalPositions = [...positions]
-  if (props.showDeformed && result.displacement) {
-    finalPositions = applyDisplacement(result, props.deformationScale, finalPositions, nodeIndexMap)
-  }
+  const vertexValues = computeVertexValues(result, nodeIndexMap)
 
-  // Compute values for coloring
-  const vertexValues = computeVertexValues(result, nodeIndexMap, indices)
-
-  // Find min/max for normalization
   let minVal = Infinity, maxVal = -Infinity
   vertexValues.forEach(v => {
     if (v < minVal) minVal = v
@@ -341,39 +262,32 @@ function updateMesh(result: SimulationResult) {
 
   const range = maxVal - minVal || 1
 
-  // Create colors array
   const colors: number[] = []
-  const colorValues: number[] = []
 
-  for (let i = 0; i < finalPositions.length / 3; i++) {
+  for (let i = 0; i < positions.length / 3; i++) {
     const val = vertexValues.get(i) || 0
     const normalized = (val - minVal) / range
-    colorValues.push(val)
     const color = interpolateColor(normalized, props.colormap)
     colors.push(color.r, color.g, color.b)
   }
 
-  // Build geometry
   const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(finalPositions, 3))
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
 
-  // Material with vertex colors
   const material = new THREE.MeshPhongMaterial({
     vertexColors: true,
     side: THREE.DoubleSide,
     shininess: 30
   })
 
-  // Remove old mesh
   if (mesh) scene.remove(mesh)
   mesh = new THREE.Mesh(geometry, material)
   scene.add(mesh)
 
-  // Wireframe overlay
   if (props.showWireframe) {
     const wireGeo = new THREE.WireframeGeometry(geometry)
     const wireMat = new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.3, transparent: true })
@@ -382,11 +296,10 @@ function updateMesh(result: SimulationResult) {
     scene.add(wireframeMesh)
   } else if (wireframeMesh) {
     scene.remove(wireframeMesh)
-    wireframeMesh = undefined as any
+    wireframeMesh = null
   }
 
-  // Store info for colorbar
-  mesh.userData = { minVal, maxVal, colorValues }
+  mesh.userData = { minVal, maxVal }
 }
 
 function animate() {
@@ -431,134 +344,12 @@ watch(() => props.result, (newResult) => {
   }
 }, { deep: true })
 
-watch([() => props.displayMode, () => props.showDeformed, () => props.deformationScale, () => props.colormap, () => props.showWireframe], () => {
+watch([() => props.displayMode, () => props.colormap, () => props.showWireframe], () => {
   if (props.result) {
     updateMesh(props.result)
   }
 })
 
-// Watch for mode shape changes (modal animation)
-watch(() => props.modeShape, (newModeShape) => {
-  if (newModeShape && props.result) {
-    updateMeshWithModeShape(props.result, newModeShape)
-  }
-}, { deep: true })
-
-// Update mesh with mode shape animation
-function updateMeshWithModeShape(result: SimulationResult, modeShapeData: ModeShapeData[]) {
-  if (!result || result.nodes.length === 0) return
-
-  // Build node position map with displacement applied
-  const nodePositions = new Map<number, { x: number; y: number; z: number }>()
-  const nodeMagnitudes = new Map<number, number>()
-
-  modeShapeData.forEach(d => {
-    nodePositions.set(d.node_id, { x: d.x + d.ux, y: d.y + d.uy, z: d.z + d.uz })
-    nodeMagnitudes.set(d.node_id, d.magnitude)
-  })
-
-  // Build positions and vertex values from mode shape data
-  const positions: number[] = []
-  const normals: number[] = []
-  const indices: number[] = []
-  const vertexValues: number[] = []
-
-  let idx = 0
-
-  result.elements.forEach(el => {
-    const nodeIds = el.nodeIds
-
-    // Get displaced positions for this element's nodes
-    const positionsLocal: Array<{ x: number; y: number; z: number }> = []
-    const valuesLocal: number[] = []
-
-    nodeIds.forEach(nid => {
-      const pos = nodePositions.get(nid)
-      if (pos) {
-        positionsLocal.push(pos)
-        valuesLocal.push(nodeMagnitudes.get(nid) || 0)
-      } else {
-        const node = result.nodes.find(n => n.id === nid)
-        if (node) {
-          positionsLocal.push({ x: node.x, y: node.y, z: node.z })
-          valuesLocal.push(0)
-        }
-      }
-    })
-
-    // Triangulate
-    for (let i = 1; i < nodeIds.length - 1; i++) {
-      const a = positionsLocal[0]
-      const b = positionsLocal[i]
-      const c = positionsLocal[i + 1]
-
-      const ab = new THREE.Vector3().subVectors(
-        new THREE.Vector3(b.x, b.y, b.z),
-        new THREE.Vector3(a.x, a.y, a.z)
-      )
-      const ac = new THREE.Vector3().subVectors(
-        new THREE.Vector3(c.x, c.y, c.z),
-        new THREE.Vector3(a.x, a.y, a.z)
-      )
-      const normal = new THREE.Vector3().crossVectors(ab, ac).normalize()
-
-      const valA = valuesLocal[0]
-      const valB = valuesLocal[i]
-      const valC = valuesLocal[i + 1]
-
-      ;[a, b, c].forEach(v => {
-        positions.push(v.x, v.y, v.z)
-        normals.push(normal.x, normal.y, normal.z)
-      })
-
-      const avgVal = (valA + valB + valC) / 3
-      vertexValues.push(avgVal, avgVal, avgVal)
-
-      indices.push(idx, idx + 1, idx + 2)
-      idx += 3
-    }
-  })
-
-  // Find min/max for normalization
-  let minVal = Infinity, maxVal = -Infinity
-  vertexValues.forEach(v => {
-    if (v < minVal) minVal = v
-    if (v > maxVal) maxVal = v
-  })
-
-  const range = maxVal - minVal || 1
-
-  // Create colors
-  const colors: number[] = []
-  for (let i = 0; i < vertexValues.length; i++) {
-    const normalized = Math.max(0, Math.min(1, (vertexValues[i] - minVal) / range))
-    const color = interpolateColor(normalized, props.colormap)
-    colors.push(color.r, color.g, color.b)
-  }
-
-  // Build geometry
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-  geometry.setIndex(indices)
-
-  // Material
-  const material = new THREE.MeshPhongMaterial({
-    vertexColors: true,
-    side: THREE.DoubleSide,
-    shininess: 30
-  })
-
-  // Update scene
-  if (mesh) scene.remove(mesh)
-  mesh = new THREE.Mesh(geometry, material)
-  scene.add(mesh)
-
-  mesh.userData = { minVal, maxVal, colorValues: vertexValues }
-}
-
-// Expose color data for legend
 defineExpose({
   getColorData: () => mesh?.userData
 })

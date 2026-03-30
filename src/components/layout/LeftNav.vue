@@ -35,6 +35,7 @@ const navItems = [
   { path: '/modeling', icon: '🎨', label: '建模' },
   { path: '/code', icon: '💻', label: '代码' },
   { path: '/simulation', icon: '🔬', label: '仿真' },
+  { path: '/fatigue', icon: '🔄', label: '疲劳' },
   { path: '/ai', icon: '🤖', label: 'AI聊天' }
 ]
 </script>
