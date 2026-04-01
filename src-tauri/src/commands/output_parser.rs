@@ -159,7 +159,7 @@ impl FrdParser {
                         // Node line: 1node x y z
                         let parts: Vec<&str> = line.split_whitespace().collect();
                         if parts.len() >= 4 {
-                            if let (Ok(node_id), (Ok(x), (Ok(y)), (Ok(z))) = (
+                            if let (Ok(node_id), Ok(x), Ok(y), z) = (
                                 parts[1].parse::<usize>(),
                                 parts[2].parse::<f64>(),
                                 parts[3].parse::<f64>(),
@@ -180,9 +180,9 @@ impl FrdParser {
                     if line.starts_with("1") {
                         let parts: Vec<&str> = line.split_whitespace().collect();
                         if parts.len() >= 3 {
-                            if let (Ok(elem_id), Ok(elem_type)) = (
+                            if let (Ok(elem_id), Some(elem_type)) = (
                                 parts[1].parse::<usize>(),
-                                Ok(parts[2].to_string()),
+                                parts.get(2).map(|s| s.to_string()),
                             ) {
                                 let nodes: Vec<usize> = parts[3..]
                                     .iter()
@@ -190,7 +190,7 @@ impl FrdParser {
                                     .collect();
                                 results.elements.push(ElementData {
                                     id: elem_id,
-                                    element_type,
+                                    element_type: elem_type,
                                     nodes,
                                 });
                             }
@@ -329,7 +329,7 @@ impl DatParser {
             if reading && line.starts_with("1") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 8 {
-                    if let (Ok(elem_id), (Ok(s11), (Ok(s22), (Ok(s33)), (Ok(s12)), (Ok(s13)), (Ok(s23))) = (
+                    if let (Ok(elem_id), Ok(s11), Ok(s22), Ok(s33), Ok(s12), Ok(s13), Ok(s23)) = (
                         parts[0].parse::<usize>(),
                         parts[1].parse::<f64>(),
                         parts[2].parse::<f64>(),
@@ -340,8 +340,7 @@ impl DatParser {
                     ) {
                         // Calculate Von Mises equivalent stress
                         let s_eqv = ((0.5 * ((s11 - s22).powi(2) + (s22 - s33).powi(2) + (s33 - s11).powi(2))
-                            + 3.0 * (s12.powi(2) + s13.powi(2) + s23.powi(2)))
-                            .sqrt();
+                            + 3.0 * (s12.powi(2) + s13.powi(2) + s23.powi(2)))).sqrt();
 
                         stresses.push(ElementStress {
                             element_id: elem_id,

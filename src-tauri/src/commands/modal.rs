@@ -148,7 +148,7 @@ pub fn generate_modal_inp(
     content.push_str("\n");
 
     // Section
-    content.push_str("*SOLID SECTION, ELSET=EALL, MATERIAL={}\n".replace("{}", &material.name));
+    content.push_str(&format!("*SOLID SECTION, ELSET=EALL, MATERIAL={}\n", material.name));
     content.push_str("\n");
 
     // Step - FREQUENCY analysis
@@ -231,12 +231,13 @@ pub fn parse_modal_frd(frd_path: &str) -> Result<ModalResults, ModalError> {
                 if line.starts_with("1") {
                     let parts: Vec<&str> = line.split_whitespace().collect();
                     if parts.len() >= 4 {
-                        if let (Ok(node_id), Ok(x), Ok(y), Ok(z)) = (
+                        if let (Ok(node_id), Ok(x), Ok(y), z) = (
                             parts[1].parse::<usize>(),
                             parts[2].parse::<f64>(),
                             parts[3].parse::<f64>(),
-                            Ok(parts.get(4).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0)),
+                            parts.get(4).and_then(|s| s.parse::<f64>().ok()),
                         ) {
+                            let z = z.unwrap_or(0.0);
                             node_coords.insert(node_id, (x, y, z));
                             results.num_nodes += 1;
                         }

@@ -5,11 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 use thiserror::Error;
 
 use super::input_gen::{BoundaryCondition, Element, ElementType, Load, LoadType, Material, Model, Node, Step};
-use super::postprocess::{ResultSet, ResultStats};
 use super::solver::{CalculiXSolver, SolverConfig, SolverResult};
 
 // ============================================================================
@@ -284,15 +282,22 @@ fn generate_case_inp(
     // 更新材料参数
     let mut material = Material {
         name: config.material.name.clone(),
-        elastic_modulus: config.material.elastic_modulus.unwrap_or(210000.0),
+        youngs_modulus: config.material.elastic_modulus.unwrap_or(210000.0),
         poisson_ratio: config.material.poisson_ratio,
         density: config.material.density,
+        thermal_conductivity: None,
+        expansion_coefficient: None,
+        specific_heat: None,
+        material_type: Some("elastic".to_string()),
+        plastic_params: None,
+        viscoelastic_params: None,
+        hyperelastic_params: None,
     };
 
     // 替换材料参数中的变量
     for (name, value) in param_values {
         if name.to_lowercase().contains("modulus") || name.to_lowercase().contains("e") {
-            material.elastic_modulus = *value;
+            material.youngs_modulus = *value;
         } else if name.to_lowercase().contains("poisson") || name.to_lowercase().contains("nu") {
             material.poisson_ratio = *value;
         }
@@ -321,10 +326,12 @@ fn generate_case_inp(
         steps: vec![Step {
             name: "Step-1".to_string(),
             time_period: 1.0,
-            initial_increment: 0.1,
-            min_increment: 1e-6,
-            max_increment: 0.1,
+            initial_time_increment: 0.1,
+            minimum_time_increment: 1e-6,
+            maximum_time_increment: 0.1,
+            static_or_thermal: true,
         }],
+        contact_pairs: vec![],
     };
 
     // 生成INP内容
@@ -371,8 +378,8 @@ fn generate_parametric_mesh(config: &ParametricMeshConfig) -> Result<(Vec<Node>,
 
                 elements.push(Element {
                     id: j * config.x_div + i + 1,
-                    node_ids: vec![n1, n2, n3, n4],
-                    element_type,
+                    nodes: vec![n1, n2, n3, n4],
+                    element_type: element_type.clone(),
                 });
             }
         }
@@ -415,8 +422,8 @@ fn generate_parametric_mesh(config: &ParametricMeshConfig) -> Result<(Vec<Node>,
 
                     elements.push(Element {
                         id: k * config.y_div * config.x_div + j * config.x_div + i + 1,
-                        node_ids: vec![n1, n2, n3, n4, n5, n6, n7, n8],
-                        element_type,
+                        nodes: vec![n1, n2, n3, n4, n5, n6, n7, n8],
+                        element_type: element_type.clone(),
                     });
                 }
             }
@@ -448,6 +455,7 @@ fn generate_inp_content(model: &Model) -> Result<String, ParametricError> {
             ElementType::C3D4 => "C3D4",
             ElementType::C2D4 => "CPS4",
             ElementType::C2D3 => "CPS3",
+            _ => "C3D8",
         },
         None => return Err(ParametricError::ParameterError("没有单元数据".to_string())),
     };
@@ -455,8 +463,8 @@ fn generate_inp_content(model: &Model) -> Result<String, ParametricError> {
     content.push_str(&format!("*ELEMENT, TYPE={}\n", element_type_inp));
     for elem in &model.elements {
         content.push_str(&format!("{},", elem.id));
-        for (i, nid) in elem.node_ids.iter().enumerate() {
-            if i < elem.node_ids.len() - 1 {
+        for (i, nid) in elem.nodes.iter().enumerate() {
+            if i < elem.nodes.len() - 1 {
                 content.push_str(&format!("{},", nid));
             } else {
                 content.push_str(&format!("{}\n", nid));
@@ -470,28 +478,23 @@ fn generate_inp_content(model: &Model) -> Result<String, ParametricError> {
     for mat in &model.materials {
         content.push_str("*MATERIAL, NAME=Steel\n");
         content.push_str(&format!("*ELASTIC\n"));
-        content.push_str(&format!("{}, \n", mat.elastic_modulus));
+        content.push_str(&format!("{}, \n", mat.youngs_modulus));
         content.push_str(&format!("{}\n", mat.poisson_ratio));
         content.push_str("**\n");
     }
 
     // 边界条件
     for bc in &model.boundary_conditions {
-        content.push_str(&format!("*BOUNDARY\n"));
-        match bc {
-            BoundaryCondition::Fixed { surfaces, .. } => {
-                for surf in surfaces {
-                    for &node_id in &surf.node_ids {
-                        content.push_str(&format!("{},1,6\n", node_id));
-                    }
-                }
-            }
-            BoundaryCondition::Displacement { nodes, dofs, value } => {
-                for &node_id in nodes {
-                    for &dof in dofs {
-                        content.push_str(&format!("{},{},,{}\n", node_id, dof, value));
-                    }
-                }
+        content.push_str("*BOUNDARY\n");
+        for &node_id in &bc.nodes {
+            let mut dofs = Vec::new();
+            if bc.fix_x { dofs.push("1"); }
+            if bc.fix_y { dofs.push("2"); }
+            if bc.fix_z { dofs.push("3"); }
+            if dofs.is_empty() {
+                content.push_str(&format!("{},1,6\n", node_id));
+            } else {
+                content.push_str(&format!("{},{}\n", node_id, dofs.join(",")));
             }
         }
     }
@@ -499,21 +502,20 @@ fn generate_inp_content(model: &Model) -> Result<String, ParametricError> {
     // 荷载
     for load in &model.loads {
         match load.load_type {
-            LoadType::Point => {
+            LoadType::Force => {
                 content.push_str("*CLOAD\n");
-                let dir = match load.direction.as_deref() {
-                    Some("X") => 1,
-                    Some("Y") => 2,
-                    Some("Z") => 3,
+                let dir = match load.direction {
+                    Some(super::input_gen::Direction::X) => 1,
+                    Some(super::input_gen::Direction::Y) => 2,
+                    Some(super::input_gen::Direction::Z) => 3,
                     _ => 2,
                 };
-                for &node_id in &load.node_ids {
-                    content.push_str(&format!("{},{},{}\n", node_id, dir, load.magnitude));
-                }
+                // Load struct does not have node_ids; write generic CLOAD line
+                content.push_str(&format!("{},{}\n", dir, load.magnitude));
             }
             LoadType::Pressure => {
                 content.push_str("*DLOAD\n");
-                content.push_str(&format!("{},P,{}\n", load.surface_name.as_ref().unwrap_or(&"EALL".to_string()), load.magnitude));
+                content.push_str(&format!("{},P,{}\n", load.surface.as_ref().unwrap_or(&"EALL".to_string()), load.magnitude));
             }
             _ => {}
         }
@@ -657,7 +659,8 @@ fn calculate_parameter_influence(
 }
 
 /// 运行完整的参数化扫描
-pub fn run_parametric_scan(config: ParametricConfig) -> Result<ParametricScanResult, ParametricError> {
+#[tauri::command]
+pub fn run_parametric_scan(config: ParametricConfig) -> Result<ParametricScanResult, String> {
     let cases = config.generate_cases();
     let total_cases = cases.len();
 
@@ -667,7 +670,7 @@ pub fn run_parametric_scan(config: ParametricConfig) -> Result<ParametricScanRes
 
     // 创建输出目录
     fs::create_dir_all(&config.output_dir)
-        .map_err(|e| ParametricError::FileError(format!("创建输出目录失败: {}", e)))?;
+        .map_err(|e| format!("创建输出目录失败: {}", e))?;
 
     for (i, param_values) in cases.iter().enumerate() {
         tracing::info!("运行参数化扫描案例 {}/{}: {:?}", i + 1, total_cases, param_values);

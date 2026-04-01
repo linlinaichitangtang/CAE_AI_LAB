@@ -2,7 +2,7 @@
 //! Generates INP format files for CalculiX solver
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as FmtWrite;
+use std::fmt::Write;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -10,6 +10,8 @@ use thiserror::Error;
 pub enum InputError {
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
+    #[error("Format error: {0}")]
+    FormatError(#[from] std::fmt::Error),
     #[error("Invalid node: {0}")]
     InvalidNode(usize),
     #[error("Invalid element: {0}")]
@@ -40,6 +42,8 @@ pub enum ElementType {
     C3D8R,     // 8-node brick with reduced integration
     C3D20,     // 20-node brick
     C3D6,      // 6-node wedge
+    C2D3,      // 2D Triangle (3-node)
+    C2D4,      // 2D Quadrilateral (4-node)
     S3,        // 3-node shell
     S4R,       // 4-node shell with reduced integration
     S4,        // 4-node shell
@@ -56,6 +60,8 @@ impl ElementType {
             ElementType::C3D8R => "C3D8R",
             ElementType::C3D20 => "C3D20",
             ElementType::C3D6 => "C3D6",
+            ElementType::C2D3 => "C2D3",
+            ElementType::C2D4 => "C2D4",
             ElementType::S3 => "S3",
             ElementType::S4R => "S4R",
             ElementType::S4 => "S4",
@@ -72,6 +78,8 @@ impl ElementType {
             "C3D8R" => Some(ElementType::C3D8R),
             "C3D20" => Some(ElementType::C3D20),
             "C3D6" => Some(ElementType::C3D6),
+            "C2D3" => Some(ElementType::C2D3),
+            "C2D4" => Some(ElementType::C2D4),
             "S3" => Some(ElementType::S3),
             "S4R" => Some(ElementType::S4R),
             "S4" => Some(ElementType::S4),
@@ -350,7 +358,7 @@ impl InpGenerator {
         Ok(output)
     }
 
-    fn write_nodes(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_nodes(&self, output: &mut String) -> Result<(), InputError> {
         writeln!(output, "*NODE")?;
         
         for node in &self.model.nodes {
@@ -361,7 +369,7 @@ impl InpGenerator {
         Ok(())
     }
 
-    fn write_elements(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_elements(&self, output: &mut String) -> Result<(), InputError> {
         // Group elements by type
         let mut elements_by_type: std::collections::HashMap<String, Vec<&Element>> = std::collections::HashMap::new();
         
@@ -390,7 +398,7 @@ impl InpGenerator {
         Ok(())
     }
 
-    fn write_materials(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_materials(&self, output: &mut String) -> Result<(), InputError> {
         for material in &self.model.materials {
             writeln!(output, "*MATERIAL, NAME={}", material.name)?;
             
@@ -692,7 +700,7 @@ impl InpGenerator {
         Ok(())
     }
 
-    fn write_sections(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_sections(&self, output: &mut String) -> Result<(), InputError> {
         // Group elements by material
         let mut elem_by_mat: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
         
@@ -724,7 +732,7 @@ impl InpGenerator {
         Ok(())
     }
 
-    fn write_boundary_conditions(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_boundary_conditions(&self, output: &mut String) -> Result<(), InputError> {
         for bc in &self.model.boundary_conditions {
             writeln!(output, "*BOUNDARY")?;
             
@@ -749,7 +757,7 @@ impl InpGenerator {
         Ok(())
     }
 
-    fn write_loads(&self, output: &mut String) -> Result<(), InputError> {
+    pub fn write_loads(&self, output: &mut String) -> Result<(), InputError> {
         for load in &self.model.loads {
             match load.load_type {
                 LoadType::Force => {

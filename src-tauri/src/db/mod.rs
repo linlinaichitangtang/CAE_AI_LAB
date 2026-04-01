@@ -1,7 +1,7 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 /// Database manager for SQLite operations
 pub struct Database {
@@ -50,12 +50,29 @@ impl Database {
                 file_name TEXT NOT NULL,
                 content TEXT,
                 file_path TEXT NOT NULL,
+                category TEXT DEFAULT '未分类',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             )",
             [],
         )?;
+
+        // Migration: add category column if it doesn't exist (for existing databases)
+        let has_category: Result<bool, _> = conn
+            .prepare("SELECT COUNT(*) FROM pragma_table_info('project_files') WHERE name = 'category'")
+            .and_then(|mut stmt| {
+                stmt.query_row([], |row| {
+                    let count: i32 = row.get(0)?;
+                    Ok(count > 0)
+                })
+            });
+        if has_category.unwrap_or(false) == false {
+            conn.execute(
+                "ALTER TABLE project_files ADD COLUMN category TEXT DEFAULT '未分类'",
+                [],
+            ).ok();
+        }
 
         // Project settings table
         conn.execute(
@@ -85,6 +102,55 @@ impl Database {
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )",
+            [],
+        )?;
+
+        // CFD settings table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS cfd_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL UNIQUE,
+                config_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // CFD results stats table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS cfd_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL UNIQUE,
+                iterations INTEGER,
+                converged INTEGER,
+                cl REAL,
+                cd REAL,
+                cm REAL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Embed records table (embedded targets in notes)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS embed_records (
+                id TEXT PRIMARY KEY,
+                note_id TEXT NOT NULL,
+                target_type TEXT NOT NULL,
+                target_id TEXT NOT NULL,
+                target_name TEXT NOT NULL,
+                config TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (note_id) REFERENCES project_files(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        // Index for embed records lookups by note_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_embed_records_note_id ON embed_records(note_id)",
             [],
         )?;
 

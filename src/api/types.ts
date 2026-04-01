@@ -20,6 +20,7 @@ export interface ProjectFile {
   file_name: string
   content: string | null
   file_path: string
+  category: string
   created_at: string
   updated_at: string
 }

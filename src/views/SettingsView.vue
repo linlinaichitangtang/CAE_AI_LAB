@@ -140,7 +140,7 @@
       <h3 class="text-lg font-medium mb-3">ℹ️ 关于</h3>
       <div class="bg-[var(--bg-surface)] rounded-lg p-4">
         <p class="text-sm"><strong>CAELab</strong> - 创作驱动的科研与工程一体化平台</p>
-        <p class="text-sm text-[var(--text-secondary)] mt-1">版本: 1.0.0</p>
+        <p class="text-sm text-[var(--text-secondary)] mt-1">版本: 0.3.0</p>
       </div>
     </div>
   </div>

@@ -184,7 +184,7 @@ impl Optimizer {
             iteration: self.iteration,
             objective_value: current_compliance,
             volume_fraction: current_volume,
-            max_stress: structural_result.max_von_mises,
+            max_stress: None,
             density_field: Some(self.density_field.clone()),
             converged,
         })
@@ -273,7 +273,11 @@ impl Optimizer {
 /// Calculate compliance from structural results
 fn calculate_compliance(result: &super::output_parser::AnalysisResults) -> f64 {
     // Simplified: use sum of displacement squared as compliance measure
-    result.displacements.values().map(|d| d.magnitude().powi(2)).sum()
+    result.nodal_results.iter()
+        .filter(|nr| nr.result_type == super::output_parser::NodalResultType::Displacement)
+        .flat_map(|nr| nr.results.iter())
+        .map(|nr| nr.values.iter().map(|v| v * v).sum::<f64>())
+        .sum()
 }
 
 /// Calculate volume fraction from density field
@@ -301,8 +305,8 @@ fn estimate_element_count(domain: &DesignDomain) -> usize {
 
 /// Generate optimization INP file for current iteration
 pub fn generate_optimization_inp(
-    nodes: &[super::mesh::MeshNode],
-    elements: &[super::mesh::MeshElement],
+    nodes: &[crate::commands::postprocess::MeshNode],
+    elements: &[crate::commands::postprocess::MeshElement],
     density_field: &[f64],
     config: &OptimizationConfig,
     output_path: &PathBuf,
@@ -317,7 +321,7 @@ pub fn generate_optimization_inp(
     // Nodes
     content.push_str("*NODE\n");
     for node in nodes {
-        content.push_str(&format!("{},{},{},{}\n", node.id, node.x, node.y, node.z));
+        content.push_str(&format!("{},{},{},{}\n", node.id, node.position.x, node.position.y, node.position.z));
     }
     
     // Elements with density-based properties

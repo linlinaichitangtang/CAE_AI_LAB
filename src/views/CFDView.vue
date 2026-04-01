@@ -1,3 +1,26 @@
+<!--
+  CFDView.vue - 计算流体动力学(CFD)仿真视图组件
+  =============================================================================
+  文件功能说明:
+  - 提供完整的CFD仿真工作流界面，支持流体域定义、材料选择、边界条件设置
+  - 集成OpenFOAM求解器，可生成并下载OpenFOAM案例文件
+  - 支持三种结果可视化模式: 速度矢量、压力云图、流线
+  - 支持多工具联动，可将CFD仿真嵌入到笔记中
+  
+  核心功能:
+  1. 流体域定义与标记 (Step 1)
+  2. 流体材料选择与自定义 (Step 2)
+  3. 边界条件配置 (Step 3)
+  4. 湍流模型选择 (Step 4)
+  5. 求解器控制参数 (Step 5)
+  3. 边界条件配置 (Step 3)
+  4. 湍流模型选择 (Step 4)
+  5. 求解器控制参数 (Step 5)
+  6. OpenFOAM案例生成与下载
+  7. Three.js 3D可视化(速度矢量/压力云图/流线)
+  8. 结果统计与报告生成
+  9. 嵌入笔记功能
+-->
 <template>
   <div class="cfd-view h-full flex flex-col bg-[var(--bg-base)]">
     <!-- Header -->
@@ -42,7 +65,7 @@
                     <button
                       v-for="type in domainTypes"
                       :key="type.value"
-                      @click="currentDomainType = type.value"
+                      @click="currentDomainType = type.value as 'fluid' | 'solid'"
                       :class="['px-2 py-1 rounded text-[10px] transition', currentDomainType === type.value ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg-base)] text-[var(--text-secondary)]']"
                     >
                       {{ type.label }}
@@ -287,7 +310,7 @@
             <select v-model="embedTargetNoteId" class="input w-full text-sm">
               <option value="">选择笔记...</option>
               <option v-for="note in projectStore.notes" :key="note.id" :value="note.id">
-                {{ note.name }}
+                {{ note.title }}
               </option>
             </select>
           </div>
@@ -314,26 +337,72 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, inject } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+// =============================================================================
+// 导入依赖模块 - Vue响应式、Three.js、项目状态管理
+// =============================================================================
+
 import * as THREE from 'three'
 import { useProjectStore } from '@/stores/project'
 
+// =============================================================================
+// 全局状态管理 - 获取项目store用于数据共享和笔记联动
+// =============================================================================
 const projectStore = useProjectStore()
 
-// Props and state
+// =============================================================================
+// Section 1: 仿真设置参数 - 流体域定义相关状态
+// =============================================================================
+// domainMarkingEnabled: 是否启用流体域标记功能
+// currentDomainType: 当前选择的域类型(fluid-流体域/solid-固体域)
+// markedRegions: 已标记的区域列表
 const domainMarkingEnabled = ref(false)
 const currentDomainType = ref<'fluid' | 'solid'>('fluid')
 const markedRegions = ref<any[]>([])
+// =============================================================================
+// Section 2: 材料设置 - 流体物性参数
+// =============================================================================
+// selectedMaterial: 当前选择的流体材料(air空气/water水/oil机油/custom自定义)
+// customDensity/customViscosity: 自定义材料的密度和粘度
 const selectedMaterial = ref('')
 const customDensity = ref(1.225)
 const customViscosity = ref(1.81e-5)
+// =============================================================================
+// Section 3: 边界条件设置
+// =============================================================================
+// boundaryConditions: 边界条件列表
 const boundaryConditions = ref<any[]>([])
+
+// =============================================================================
+// Section 4: 湍流模型选择
+// =============================================================================
+// turbulenceModel: 湍流模型(kepsilon/komegaSST/laminar)
 const turbulenceModel = ref('kepsilon')
+// =============================================================================
+// Section 5: 求解器控制参数
+// =============================================================================
+// convergenceTolerance: 残差收敛标准(10的-n次方)
+// maxIterations: 最大迭代步数
 const convergenceTolerance = ref(6)
 const maxIterations = ref(1000)
+// =============================================================================
+// Section 6: 运行状态 - CFD任务执行状态跟踪
+// =============================================================================
+// running: 正在执行CFD生成任务
+// caseGenerated: OpenFOAM案例是否已生成
+// hasResults: 是否有计算结果
+// resultStats: 计算结果统计数据
 const running = ref(false)
 const caseGenerated = ref(false)
 const hasResults = ref(false)
 const resultStats = ref<any>(null)
+// =============================================================================
+// Section 7: UI交互状态 - 对话框和显示开关
+// =============================================================================
+// showAddBoundaryDialog: 添加边界条件对话框
+// showEmbedDialog: 嵌入笔记对话框
+// showVelocityVectors/PressureContour/Streamlines: 可视化显示开关
+// canvasContainer: Three.js画布容器引用
 const showAddBoundaryDialog = ref(false)
 const showEmbedDialog = ref(false)
 const showVelocityVectors = ref(true)
@@ -341,7 +410,16 @@ const showPressureContour = ref(true)
 const showStreamlines = ref(false)
 const canvasContainer = ref<HTMLElement | null>(null)
 
-// New boundary
+// =============================================================================
+// Section 8: 新建边界条件 - 添加边界时的临时数据
+// =============================================================================
+// newBoundaryType: 边界类型
+// newVelocity: 速度入口值(m/s)
+// newTurbulenceIntensity: 湍流强度(%)
+// newHydraulicDiameter: 水力直径(m)
+// newGaugePressure: 表压(Pa)
+// newWallSlip: 滑移壁面标记 = ref<HTMLElement | null>(null)
+
 const newBoundaryType = ref('velocityInlet')
 const newVelocity = ref(10.0)
 const newTurbulenceIntensity = ref(5.0)
@@ -349,16 +427,21 @@ const newHydraulicDiameter = ref(0.1)
 const newGaugePressure = ref(0)
 const newWallSlip = ref(false)
 
-// Embed
+// =============================================================================
+// Section 9: 嵌入笔记功能 - 目标笔记选择
+// =============================================================================
+// embedTargetNoteId: 嵌入目标笔记的ID
 const embedTargetNoteId = ref('')
 
-// Domain types
+// =============================================================================
+// 常量定义 - 域类型、材料选项、湍流模型选项
+// =============================================================================
 const domainTypes = [
   { value: 'fluid', label: '流体域' },
   { value: 'solid', label: '固体域' },
 ]
 
-// Fluid materials
+// Fluid materials: 流体材料选项(空气/水/机油/自定义)
 const fluidMaterials = [
   { value: 'air', label: '空气 (1.225 kg/m³, 1.81e-5 Pa·s)' },
   { value: 'water', label: '水 (1000 kg/m³, 0.001 Pa·s)' },
@@ -366,14 +449,17 @@ const fluidMaterials = [
   { value: 'custom', label: '自定义...' },
 ]
 
-// Turbulence models
+// Turbulence models: 湍流模型选项(层流/k-epsilon/k-omega SST)
 const turbulenceModels = [
   { value: 'laminar', label: '层流 (无湍流)' },
   { value: 'kepsilon', label: 'k-epsilon RANS' },
   { value: 'komegaSST', label: 'k-omega SST' },
 ]
 
-// Computed
+// =============================================================================
+// 计算属性 - 判断是否可以运行CFD仿真
+// =============================================================================
+// canRun: 当满足所有必需条件时返回true
 const canRun = computed(() => {
   if (!selectedMaterial.value) return false
   if (boundaryConditions.value.length === 0) return false
@@ -381,7 +467,15 @@ const canRun = computed(() => {
   return true
 })
 
-// Methods
+// =============================================================================
+// 方法函数 - 边界条件管理
+// =============================================================================
+
+/**
+ * 获取边界类型的中文名称
+ * @param type - 边界类型英文标识
+ * @returns 中文名称
+ */
 function getBoundaryTypeName(type: string): string {
   const names: Record<string, string> = {
     velocityInlet: '速度入口',
@@ -393,14 +487,25 @@ function getBoundaryTypeName(type: string): string {
   return names[type] || type
 }
 
+
+/**
+ * 打开添加边界条件对话框
+ */
 function addBoundary() {
   showAddBoundaryDialog.value = true
 }
 
+/**
+ * 取消添加边界条件,关闭对话框
+ */
 function cancelAddBoundary() {
   showAddBoundaryDialog.value = false
 }
 
+
+/**
+ * 确认添加边界条件,将新边界添加到列表并重置表单
+ */
 function confirmAddBoundary() {
   boundaryConditions.value.push({
     id: Date.now(),
@@ -413,7 +518,7 @@ function confirmAddBoundary() {
     faces: 0, // Will be updated when user selects faces
   })
   showAddBoundaryDialog.value = false
-  // Reset
+  // Reset form fields to default values
   newBoundaryType.value = 'velocityInlet'
   newVelocity.value = 10.0
   newTurbulenceIntensity.value = 5.0
@@ -422,14 +527,19 @@ function confirmAddBoundary() {
   newWallSlip.value = false
 }
 
-function removeBoundary(id: number) {
+/**
+ * 删除指定ID的边界条件
+ * @param id - 要删除的边界条件ID
+ */function removeBoundary(id: number) {
   const idx = boundaryConditions.value.findIndex(bc => bc.id === id)
   if (idx >= 0) {
     boundaryConditions.value.splice(idx, 1)
   }
 }
 
-function resetSetup() {
+/**
+ * 重置所有仿真设置,恢复到初始状态
+ */function resetSetup() {
   domainMarkingEnabled.value = false
   markedRegions.value = []
   selectedMaterial.value = ''
@@ -442,11 +552,17 @@ function resetSetup() {
   resultStats.value = null
 }
 
+/**
+ * 运行CFD仿真 - 调用后端API生成OpenFOAM案例
+ * 1. 将前端参数映射为后端格式
+ * 2. 调用Tauri命令执行仿真
+ * 3. 解析返回结果并更新状态
+ */
 async function runCFD() {
   running.value = true
   try {
     // Call backend to generate OpenFOAM case
-    const result = await window.__TAURI__.invoke('generate_openfoam_case', {
+    const result = await invoke('generate_openfoam_case', {
       domainMarking: markedRegions.value,
       material: selectedMaterial.value === 'custom'
         ? { density: customDensity.value, viscosity: customViscosity.value }
@@ -458,8 +574,8 @@ async function runCFD() {
     })
     caseGenerated.value = true
     // If we have results, parse them
-    if (result && result.stats) {
-      resultStats.value = result.stats
+    if (result && (result as any).stats) {
+      resultStats.value = (result as any).stats
       hasResults.value = true
     }
   } catch (e) {
@@ -471,15 +587,15 @@ async function runCFD() {
 
 function downloadCase() {
   // Trigger download of generated case
-  window.__TAURI__.invoke('download_openfoam_case')
+  invoke('download_openfoam_case')
 }
 
 function importGeometry() {
-  window.__TAURI__.invoke('import_cfd_geometry')
+  invoke('import_cfd_geometry')
 }
 
 function generateReport() {
-  window.__TAURI__.invoke('generate_cfd_report')
+  invoke('generate_cfd_report')
 }
 
 // ========== 嵌入到笔记功能 ==========
@@ -488,11 +604,16 @@ function cancelEmbed() {
   embedTargetNoteId.value = ''
 }
 
+
+/**
+ * 确认嵌入 - 将CFD仿真配置作为嵌入记录添加到目标笔记
+ * 嵌入信息包含:仿真类型、材料、湍流模型、边界条件数量
+ */
 async function confirmEmbed() {
   if (!embedTargetNoteId.value) return
 
   const embedRecord = {
-    type: 'cfd',
+    type: 'cfd' as const,
     name: `CFD仿真: ${projectStore.projectName}`,
     config: {
       material: selectedMaterial.value,
@@ -500,9 +621,12 @@ async function confirmEmbed() {
       boundaries: boundaryConditions.value.length,
     },
     timestamp: Date.now(),
+    noteId: embedTargetNoteId.value,
+    targetId: '',
+    targetName: `CFD仿真: ${projectStore.projectName}`,
   }
 
-  await projectStore.addEmbedToNote(embedTargetNoteId.value, embedRecord)
+  await projectStore.addEmbedToNote(embedRecord)
   console.log('CFD仿真已嵌入到笔记:', embedRecord)
   alert('✓ CFD仿真已成功嵌入到笔记！\n\n在笔记中点击嵌入卡片可跳转到CFD界面。')
   showEmbedDialog.value = false

@@ -145,6 +145,22 @@ export const useAiStore = defineStore('ai', {
       })
     },
 
+    /** 发送消息并获取AI响应 */
+    async sendMessage(prompt: string): Promise<{ response: string }> {
+      this.addUserMessage(prompt)
+      try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        const response = await invoke('ai_chat', { message: prompt, context: this.context })
+        const text = typeof response === 'string' ? response : JSON.stringify(response)
+        this.addAssistantMessage(text)
+        return { response: text }
+      } catch (error) {
+        const errorMsg = String(error)
+        this.addAssistantMessage(`错误: ${errorMsg}`)
+        return { response: '' }
+      }
+    },
+
     /** 开始流式生成 */
     startGeneration() {
       this.isGenerating = true

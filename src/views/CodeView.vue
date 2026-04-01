@@ -56,6 +56,17 @@
 
         <!-- Tab Actions -->
         <div class="ml-auto px-2 flex items-center gap-1">
+          <!-- 返回笔记 -->
+          <button
+            v-if="projectStore.currentNoteId"
+            @click="goBackToNote"
+            class="p-1 text-[#858585] hover:text-[#d4d4d4] transition-colors border border-[#3c3c3c] rounded px-2 flex items-center gap-1 text-xs"
+            title="返回笔记"
+          >
+            <span>&larr;</span>
+            <span>返回笔记</span>
+          </button>
+          <div class="w-px h-4 bg-[#3c3c3c] mx-1"></div>
           <!-- 🔗 嵌入到笔记 -->
           <button 
             @click="showEmbedToNoteDialog"
@@ -73,6 +84,26 @@
           </button>
           <button @click="openAiOptimizeDialog" :disabled="!activeTabId" class="p-1 text-blue-400 hover:text-blue-300 transition-colors" title="AI优化代码">
             🤖 优化
+          </button>
+          <div class="w-px h-4 bg-[#3c3c3c] mx-1"></div>
+          <!-- 运行代码 -->
+          <button
+            @click="runCode"
+            :disabled="!activeTabId || isRunning"
+            class="p-1 transition-colors border rounded px-2 flex items-center gap-1 text-xs"
+            :class="isRunning
+              ? 'text-yellow-400 border-yellow-400/50 cursor-wait'
+              : 'text-green-400 border-green-400 hover:text-green-300 hover:border-green-300'"
+            :title="isRunning ? '运行中...' : '运行代码 (Ctrl+Enter)'"
+          >
+            <svg v-if="isRunning" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <svg v-else class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <span>{{ isRunning ? '运行中...' : '运行' }}</span>
           </button>
           <div class="w-px h-4 bg-[#3c3c3c] mx-1"></div>
           <button class="p-1 text-[#858585] hover:text-[#d4d4d4] transition-colors" @click="toggleTerminal" title="终端">
@@ -108,17 +139,40 @@
         class="terminal-panel h-48 bg-[#1e1e1e] border-t border-[#3c3c3c] flex flex-col"
       >
         <div class="terminal-header px-3 py-1.5 flex items-center justify-between border-b border-[#3c3c3c]">
-          <span class="text-xs text-[#858585]">终端</span>
-          <button class="text-[#858585] hover:text-[#d4d4d4] transition-colors" @click="showTerminal = false">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-[#858585]">终端</span>
+            <span v-if="isRunning" class="text-xs text-yellow-400 animate-pulse">运行中...</span>
+            <span v-else-if="lastRunExitCode !== null" class="text-xs" :class="lastRunExitCode === 0 ? 'text-green-400' : 'text-red-400'">
+              退出码: {{ lastRunExitCode }}
+            </span>
+          </div>
+          <div class="flex items-center gap-1">
+            <button class="text-[#858585] hover:text-[#d4d4d4] transition-colors text-xs px-1" @click="clearTerminal" title="清空终端">
+              清空
+            </button>
+            <button class="text-[#858585] hover:text-[#d4d4d4] transition-colors" @click="showTerminal = false">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <div class="terminal-content flex-1 p-3 font-mono text-xs text-[#d4d4d4] overflow-y-auto">
-          <div class="text-[#4ec9b0]">$ caelab dev</div>
-          <div class="text-[#858585] mt-1">VITE v5.2.0 ready in 342ms</div>
-          <div class="mt-1">➜ <span class="text-[#569cd6]">Local:</span> <span class="text-[#4ec9b0]">http://localhost:1420/</span></div>
+        <div ref="terminalContent" class="terminal-content flex-1 p-3 font-mono text-xs text-[#d4d4d4] overflow-y-auto">
+          <template v-if="terminalOutput.length === 0 && !isRunning">
+            <div class="text-[#4ec9b0]">$ caelab dev</div>
+            <div class="text-[#858585] mt-1">VITE v5.2.0 ready in 342ms</div>
+            <div class="mt-1">+-- <span class="text-[#569cd6]">Local:</span> <span class="text-[#4ec9b0]">http://localhost:1420/</span></div>
+            <div class="text-[#858585] mt-2">点击上方 "运行" 按钮或按 Ctrl+Enter 执行代码</div>
+          </template>
+          <template v-else>
+            <div
+              v-for="(line, index) in terminalOutput"
+              :key="index"
+              class="whitespace-pre-wrap"
+              :class="line.type === 'command' ? 'text-[#4ec9b0]' : line.type === 'error' ? 'text-red-400' : line.type === 'info' ? 'text-[#569cd6]' : 'text-[#d4d4d4]'"
+            >{{ line.text }}</div>
+            <div v-if="isRunning" class="text-yellow-400 animate-pulse mt-1">_</div>
+          </template>
         </div>
       </div>
     </div>
@@ -273,12 +327,21 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCodeEditor, type FileTreeNode } from '@/composables/useCodeEditor'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
+import { executeCode, type CodeOutput } from '@/api'
 import { useAiStore } from '@/stores/ai'
 import { useProjectStore } from '@/stores/project'
 const aiStore = useAiStore()
 const projectStore = useProjectStore()
+const router = useRouter()
+
+function goBackToNote() {
+  if (projectStore.currentNoteId) {
+    router.push({ path: '/notes', query: { noteId: projectStore.currentNoteId } })
+  }
+}
 
 // Dynamic worker import for Monaco
 let monacoLoaded = false
@@ -398,6 +461,119 @@ const FileTreeItem = defineComponent({
 // Main component
 const editorContainer = ref<HTMLElement | null>(null)
 const showTerminal = ref(false)
+const terminalContent = ref<HTMLElement | null>(null)
+
+// 代码运行状态
+interface TerminalLine {
+  type: 'command' | 'stdout' | 'error' | 'info'
+  text: string
+}
+const terminalOutput = ref<TerminalLine[]>([])
+const isRunning = ref(false)
+const lastRunExitCode = ref<number | null>(null)
+
+// 支持运行的语言映射
+const runnableLanguages: Record<string, string> = {
+  'python': 'python',
+  'javascript': 'javascript',
+  'typescript': 'typescript',
+}
+
+function getRunnableLanguage(lang: string): string | null {
+  return runnableLanguages[lang] || null
+}
+
+function clearTerminal() {
+  terminalOutput.value = []
+  lastRunExitCode.value = null
+}
+
+function scrollTerminalToBottom() {
+  nextTick(() => {
+    if (terminalContent.value) {
+      terminalContent.value.scrollTop = terminalContent.value.scrollHeight
+    }
+  })
+}
+
+async function runCode() {
+  const activeTab = tabs.value.find(t => t.id === activeTabId.value)
+  if (!activeTab) return
+
+  // 获取当前编辑器中的最新代码
+  const code = editorRef.value?.getValue() || activeTab.content
+  const language = getRunnableLanguage(activeTab.language)
+
+  if (!language) {
+    // 不支持的语言，自动打开终端并提示
+    showTerminal.value = true
+    terminalOutput.value.push({
+      type: 'error',
+      text: `不支持运行 ${activeTab.language} 代码。支持的语言: Python, JavaScript, TypeScript`
+    })
+    scrollTerminalToBottom()
+    return
+  }
+
+  // 自动打开终端面板
+  showTerminal.value = true
+  isRunning.value = true
+  lastRunExitCode.value = null
+
+  // 添加命令行
+  const cmdPrefix = language === 'python' ? 'python3 -c' : language === 'javascript' ? 'node -e' : 'npx ts-node -e'
+  terminalOutput.value.push({
+    type: 'command',
+    text: `$ ${cmdPrefix} "${activeTab.name}"`
+  })
+  terminalOutput.value.push({
+    type: 'info',
+    text: `[${new Date().toLocaleTimeString()}] 正在运行 ${activeTab.name}...`
+  })
+  scrollTerminalToBottom()
+
+  try {
+    const result: CodeOutput = await executeCode(language, code)
+
+    // 输出 stdout
+    if (result.stdout) {
+      for (const line of result.stdout.split('\n')) {
+        terminalOutput.value.push({ type: 'stdout', text: line })
+      }
+    }
+
+    // 输出 stderr
+    if (result.stderr) {
+      for (const line of result.stderr.split('\n')) {
+        terminalOutput.value.push({ type: 'error', text: line })
+      }
+    }
+
+    lastRunExitCode.value = result.exit_code
+
+    // 退出状态
+    if (result.exit_code === 0) {
+      terminalOutput.value.push({
+        type: 'info',
+        text: `[${new Date().toLocaleTimeString()}] 运行完成 (退出码: 0)`
+      })
+    } else {
+      terminalOutput.value.push({
+        type: 'error',
+        text: `[${new Date().toLocaleTimeString()}] 运行失败 (退出码: ${result.exit_code})`
+      })
+    }
+  } catch (e: any) {
+    terminalOutput.value.push({
+      type: 'error',
+      text: `[${new Date().toLocaleTimeString()}] 执行错误: ${String(e)}`
+    })
+    lastRunExitCode.value = -1
+  } finally {
+    isRunning.value = false
+    scrollTerminalToBottom()
+  }
+}
 
 // AI 功能状态
 const showAiExplain = ref(false)
@@ -488,6 +664,13 @@ const toggleTerminal = () => {
 
 // Keyboard shortcuts
 const handleKeydown = (e: KeyboardEvent) => {
+  // Ctrl+Enter: Run code
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault()
+    if (activeTabId.value && !isRunning.value) {
+      runCode()
+    }
+  }
   // Ctrl+P: Quick open
   if (e.ctrlKey && e.key === 'p') {
     e.preventDefault()

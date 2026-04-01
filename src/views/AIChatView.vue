@@ -153,7 +153,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useAiStore } from '@/stores/ai'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 const aiStore = useAiStore()
 const messagesContainer = ref<HTMLDivElement | null>(null)

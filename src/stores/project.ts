@@ -12,14 +12,24 @@ import type { Project } from '@/api/types'
 import type { Node, Element, MeshApiResult, FixedBc, PointLoad, UniformLoad, ResultSet } from '@/api/cae'
 import type { BucklingResult } from '@/api/cae'
 import type { TransientResults } from '@/api/transient_dynamics'
+import { addEmbedRecord as apiAddEmbedRecord, getEmbedRecords as apiGetEmbedRecords, deleteEmbedRecord as apiDeleteEmbedRecord } from '@/api'
 
 interface EmbedRecord {
   id: string
-  type: 'model' | 'code' | 'simulation'
+  type: 'model' | 'code' | 'simulation' | 'fatigue' | 'cfd'
   targetId: string
   targetName: string
   noteId: string
   createdAt: string
+}
+
+interface Note {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  tags: string[]
 }
 
 interface ProjectState {
@@ -46,8 +56,16 @@ interface ProjectState {
   activeTool: 'notes' | 'modeling' | 'code' | 'simulation'
   // 嵌入记录列表
   embedRecords: EmbedRecord[]
+  // 嵌入列表（alias for embedRecords for compatibility）
+  embeddings: EmbedRecord[]
   // 当前打开的笔记ID（用于嵌入操作）
   currentNoteId: string | null
+  // 笔记列表
+  notes: Note[]
+  // 项目名称（computed alias for currentProject.name）
+  projectName: string
+  // 代码文件最后修改时间戳（用于嵌入卡片实时更新检测）
+  codeLastModified: string | null
 }
 
 export const useProjectStore = defineStore('project', {
@@ -64,7 +82,11 @@ export const useProjectStore = defineStore('project', {
     lastTransientResult: null,
     activeTool: 'notes',
     embedRecords: [],
-    currentNoteId: null
+    embeddings: [],
+    currentNoteId: null,
+    notes: [],
+    projectName: '',
+    codeLastModified: null
   }),
 
   getters: {
@@ -75,7 +97,8 @@ export const useProjectStore = defineStore('project', {
       state.boundaryConditions.uniformLoads.length > 0,
     hasResult: (state) => state.lastResult !== null,
     hasBucklingResult: (state) => state.lastBucklingResult !== null,
-    hasTransientResult: (state) => state.lastTransientResult !== null
+    hasTransientResult: (state) => state.lastTransientResult !== null,
+    projectName: (state) => state.currentProject?.name || ''
   },
 
   actions: {
@@ -185,6 +208,11 @@ export const useProjectStore = defineStore('project', {
       this.lastTransientResult = null
     },
 
+    /** 更新代码文件最后修改时间戳（用于嵌入卡片实时更新检测） */
+    updateCodeLastModified() {
+      this.codeLastModified = new Date().toISOString()
+    },
+
     /** 设置当前活跃工具 */
     setActiveTool(tool: ProjectState['activeTool']) {
       this.activeTool = tool
@@ -202,20 +230,67 @@ export const useProjectStore = defineStore('project', {
       // 结果数据已经在store里了，3D视图直接读取显示云图
     },
 
-    /** 设置当前笔记ID（用于嵌入操作） */
-    setCurrentNoteId(noteId: string | null) {
+    /** 设置当前笔记ID（用于嵌入操作），同时自动加载该笔记的嵌入记录 */
+    async setCurrentNoteId(noteId: string | null) {
       this.currentNoteId = noteId
+      if (noteId) {
+        await this.loadEmbedRecords(noteId)
+      }
     },
 
-    /** 嵌入对象到笔记 */
-    addEmbedRecord(record: Omit<EmbedRecord, 'id' | 'createdAt'>) {
+    /** 从后端加载嵌入记录 */
+    async loadEmbedRecords(noteId: string) {
+      try {
+        const records = await apiGetEmbedRecords(noteId)
+        // 将后端记录映射到本地 EmbedRecord 格式
+        const mapped: EmbedRecord[] = records.map(r => ({
+          id: r.id,
+          type: r.target_type as EmbedRecord['type'],
+          targetId: r.target_id,
+          targetName: r.target_name,
+          noteId: r.note_id,
+          createdAt: r.created_at
+        }))
+        // 替换该笔记的嵌入记录（保留其他笔记的记录）
+        this.embedRecords = this.embedRecords.filter(r => r.noteId !== noteId)
+        this.embedRecords.push(...mapped)
+        this.embeddings = [...this.embedRecords]
+      } catch (e) {
+        console.error('加载嵌入记录失败:', e)
+      }
+    },
+
+    /** 嵌入对象到笔记（同时持久化到后端） */
+    async addEmbedRecord(record: Omit<EmbedRecord, 'id' | 'createdAt'>) {
       const newRecord: EmbedRecord = {
         ...record,
         id: `embed-${Date.now()}`,
         createdAt: new Date().toISOString()
       }
       this.embedRecords.push(newRecord)
+      this.embeddings.push(newRecord)
+      // 异步持久化到后端
+      try {
+        const saved = await apiAddEmbedRecord(
+          record.noteId,
+          record.type,
+          record.targetId,
+          record.targetName
+        )
+        // 用后端返回的真实 ID 替换临时 ID
+        if (saved && saved.id) {
+          newRecord.id = saved.id
+          newRecord.createdAt = saved.created_at
+        }
+      } catch (e) {
+        console.error('持久化嵌入记录失败:', e)
+      }
       return newRecord
+    },
+
+    /** 嵌入对象到笔记（别名 for compatibility） */
+    addEmbedToNote(record: Omit<EmbedRecord, 'id' | 'createdAt'>) {
+      return this.addEmbedRecord(record)
     },
 
     /** 获取指定笔记的所有嵌入记录 */
@@ -228,11 +303,18 @@ export const useProjectStore = defineStore('project', {
       return this.embedRecords.filter(r => r.type === type)
     },
 
-    /** 删除嵌入记录 */
-    removeEmbedRecord(id: string) {
+    /** 删除嵌入记录（同时从后端删除） */
+    async removeEmbedRecord(id: string) {
       const index = this.embedRecords.findIndex(r => r.id === id)
       if (index !== -1) {
         this.embedRecords.splice(index, 1)
+        this.embeddings = [...this.embedRecords]
+      }
+      // 异步从后端删除
+      try {
+        await apiDeleteEmbedRecord(id)
+      } catch (e) {
+        console.error('删除嵌入记录失败:', e)
       }
     },
 

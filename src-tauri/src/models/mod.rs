@@ -19,6 +19,7 @@ pub struct ProjectFile {
     pub file_name: String,
     pub content: Option<String>,
     pub file_path: String,
+    pub category: String,
     pub created_at: String,
     pub updated_at: String,
 }

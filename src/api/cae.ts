@@ -3,7 +3,8 @@
  * 封装所有CAE仿真相关的后端API
  */
 
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 
 // ============ 类型定义 ============
 
@@ -190,6 +191,20 @@ export interface CfdSimulationConfig {
 
 // ============ 网格生成 API ============
 
+/** 局部加密配置 */
+export interface RefinementConfig {
+  /** 加密区域类型 */
+  region_type: 'edge' | 'face' | 'volume'
+  /** 加密方向（用于边/面选择） */
+  axis?: 'x' | 'y' | 'z'
+  /** 加密区域最小坐标 */
+  min_coord?: number
+  /** 加密区域最大坐标 */
+  max_coord?: number
+  /** 加密比例（1.0 ~ 4.0，表示该区域网格密度为全局的多少倍） */
+  refinement_ratio: number
+}
+
 /** 生成2D结构化网格 */
 export async function generate2dMesh(
   x_min: number, x_max: number, x_div: number,
@@ -226,6 +241,15 @@ export async function generateStructuredMesh(config: StructuredMeshConfig): Prom
 /** 导出网格到INP文件 */
 export async function exportMeshToInp(nodes: Node[], elements: Element[], path: string): Promise<string> {
   return await invoke<string>('export_mesh_to_inp', { nodes, elements, output_path: path })
+}
+
+/** 对已有网格进行局部加密 */
+export async function refineMesh(
+  nodes: Node[],
+  elements: Element[],
+  refinements: RefinementConfig[]
+): Promise<MeshApiResult> {
+  return await invoke<MeshApiResult>('refine_mesh', { nodes, elements, refinements })
 }
 
 // ============ 边界条件 & 荷载 API ============
@@ -336,6 +360,48 @@ export async function parseFrdFile(path: string): Promise<ResultSet> {
 /** 运行求解器 */
 export async function runSolver(inputPath: string, workingDir: string, config?: {executable_path?: string, num_threads?: number, memory_limit_mb?: number}): Promise<any> {
   return await invoke<any>('run_solver', { input_path: inputPath, working_dir: workingDir, config })
+}
+
+// ============ 求解器进度事件 API ============
+
+/** 求解器事件类型 */
+export interface SolverEvent {
+  type: 'Progress' | 'Log' | 'Completed' | 'Cancelled' | 'Error'
+  percent?: number
+  message?: string
+  level?: string
+  success?: boolean
+  job_id?: string
+  elapsed_time_seconds?: number
+  warnings?: string[]
+  errors?: string[]
+  output_file?: string
+  frd_file?: string
+}
+
+/** 运行求解器（带进度反馈） */
+export async function runSolverWithProgress(
+  inputPath: string,
+  workingDir: string,
+  numThreads?: number
+): Promise<any> {
+  return await invoke<any>('run_solver_with_progress', {
+    input_file: inputPath,
+    working_dir: workingDir,
+    num_threads: numThreads
+  })
+}
+
+/** 取消正在运行的求解器 */
+export async function cancelSolver(): Promise<boolean> {
+  return await invoke<boolean>('cancel_solver')
+}
+
+/** 监听求解器事件 */
+export function onSolverEvent(callback: (event: SolverEvent) => void): Promise<() => void> {
+  return listen<any>('solver-event', (e) => {
+    callback(e.payload as SolverEvent)
+  })
 }
 
 // ============ 热传导分析 API ============
@@ -1249,5 +1315,49 @@ export async function getFaceNodes(
   return await invoke<number[]>('get_face_nodes', {
     x_min, x_max, y_min, y_max, z_min, z_max,
     x_div, y_div, z_div, face
+  })
+}
+
+// ============ 网格质量检查 API ============
+
+/** 单个单元的质量指标 */
+export interface ElementQuality {
+  element_id: number
+  aspect_ratio: number       // 长宽比 (越接近1越好)
+  jacobian_ratio: number     // 雅可比比 (0~1, 越接近1越好)
+  skewness: number           // 偏斜度 (0~1, 越接近0越好)
+  warp_angle: number         // 翘曲角 (度, 越接近0越好)
+  overall_quality: number    // 综合质量 (0~1, 1为最佳)
+}
+
+/** 网格质量指标汇总 */
+export interface MeshQualityMetrics {
+  total_elements: number
+  avg_quality: number
+  min_quality: number
+  max_quality: number
+  excellent_count: number    // > 0.8
+  good_count: number         // 0.6 ~ 0.8
+  fair_count: number         // 0.4 ~ 0.6
+  poor_count: number         // 0.2 ~ 0.4
+  bad_count: number          // < 0.2
+  element_qualities: ElementQuality[]
+}
+
+/** 检查网格质量 */
+export async function checkMeshQuality(
+  nodes: Node[],
+  elements: Element[],
+  elementType: string
+): Promise<MeshQualityMetrics> {
+  // 将 Node[] 转换为 Vec<Vec<f64>> 格式
+  const nodesVec = nodes.map(n => [n.x, n.y, n.z])
+  // 将 Element[] 转换为 Vec<Vec<usize>> 格式
+  const elementsVec = elements.map(e => e.node_ids)
+
+  return await invoke<MeshQualityMetrics>('check_mesh_quality', {
+    nodes: nodesVec,
+    elements: elementsVec,
+    element_type: elementType
   })
 }

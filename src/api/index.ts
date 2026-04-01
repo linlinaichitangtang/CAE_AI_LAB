@@ -3,7 +3,7 @@
  * 与后端Tauri命令对接的API封装 (Tauri v1)
  */
 
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 // ============ 类型导出 ============
 
@@ -214,3 +214,142 @@ export type {
   ImportOptions,
   ProjectTemplate
 } from './share'
+
+// ============ CFD API ============
+
+export interface CfdSetup {
+  project_id: number
+  domain_regions: DomainRegion[]
+  material: FluidMaterial
+  boundary_conditions: BoundaryCondition[]
+  turbulence_model: TurbulenceModel
+  convergence_tolerance: number
+  max_iterations: number
+}
+
+export interface DomainRegion {
+  region_type: 'Fluid' | 'Solid'
+  face_ids: number[]
+}
+
+export type FluidMaterial = 
+  | { Air: null }
+  | { Water: null }
+  | { Oil: null }
+  | { Custom: { density: number; viscosity: number } }
+
+export interface BoundaryCondition {
+  id: number
+  boundary_type: 'VelocityInlet' | 'PressureOutlet' | 'Wall' | 'Symmetry' | 'Outlet'
+  velocity?: number
+  turbulence_intensity?: number
+  hydraulic_diameter?: number
+  gauge_pressure?: number
+  wall_slip?: boolean
+  face_ids: number[]
+}
+
+export type TurbulenceModel = 'Laminar' | 'KEpsilon' | 'KOmegaSST'
+
+export interface CfdResultStats {
+  iterations: number
+  converged: boolean
+  cl?: number
+  cd?: number
+  cm?: number
+}
+
+/** 生成OpenFOAM案例 */
+export async function generateOpenfoamCase(setup: CfdSetup): Promise<string> {
+  return await invoke<string>('generate_openfoam_case', { setup })
+}
+
+/** 解析OpenFOAM日志获取结果统计 */
+export async function parseOpenfoamLog(logPath: string): Promise<CfdResultStats> {
+  return await invoke<CfdResultStats>('parse_openfoam_log', { logPath })
+}
+
+/** 下载OpenFOAM案例（zip格式） */
+export async function downloadOpenfoamCase(projectId: number): Promise<string> {
+  return await invoke<string>('download_openfoam_case', { projectId })
+}
+
+/** 导入CFD几何文件（STL） */
+export async function importCfdGeometry(projectId: number, filePath: string): Promise<string> {
+  return await invoke<string>('import_cfd_geometry', { projectId, filePath })
+}
+
+/** 生成CFD报告 */
+export async function generateCfdReport(projectId: number): Promise<string> {
+  return await invoke<string>('generate_cfd_report', { projectId })
+}
+
+// ============ 动力学瞬态分析 API ============
+
+export * from './transient_dynamics'
+
+// ============ 疲劳分析 API ============
+
+export * from './fatigue'
+
+// ============ 显式动力学 API ============
+
+export * from './explicit_dynamics'
+
+// ============ 电子封装分析 API ============
+
+export * from './electronics'
+
+// ============ 嵌入记录 API ============
+
+export interface EmbedRecord {
+  id: string
+  note_id: string
+  target_type: string
+  target_id: string
+  target_name: string
+  config: string | null
+  created_at: string
+}
+
+export async function addEmbedRecord(noteId: string, targetType: string, targetId: string, targetName: string, config?: string) {
+  return invoke<EmbedRecord>('add_embed_record', { noteId, targetType, targetId, targetName, config: config || null })
+}
+
+export async function getEmbedRecords(noteId: string) {
+  return invoke<EmbedRecord[]>('get_embed_records', { noteId })
+}
+
+export async function deleteEmbedRecord(id: string) {
+  return invoke('delete_embed_record', { id })
+}
+
+export async function updateEmbedRecord(id: string, targetName: string, config?: string) {
+  return invoke('update_embed_record', { id, targetName, config: config || null })
+}
+
+// ============ 分类管理 API ============
+
+export async function updateFileCategory(fileId: string, category: string) {
+  return invoke('update_file_category', { fileId, category })
+}
+
+export async function getFileCategories(projectId: string) {
+  return invoke<string[]>('get_file_categories', { projectId })
+}
+
+// ============ 生物力学分析 API ============
+
+export * from './biomechanics'
+
+// ============ 代码执行 API ============
+
+export interface CodeOutput {
+  stdout: string
+  stderr: string
+  exit_code: number
+}
+
+export async function executeCode(language: string, code: string, workingDir?: string): Promise<CodeOutput> {
+  return invoke<CodeOutput>('execute_code', { language, code, workingDir: workingDir || null })
+}

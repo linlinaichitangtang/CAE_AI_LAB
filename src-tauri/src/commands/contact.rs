@@ -155,7 +155,7 @@ pub enum ContactIssueType {
     LargeSliding,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DiagnosticSeverity {
     None,
     Info,
@@ -537,24 +537,24 @@ pub fn suggest_convergence_improvements(
     let mut suggestions = Vec::new();
     
     if iterations > 50 {
-        suggestions.push("High iteration count detected. Consider:");
-        suggestions.push("- Increasing contact stiffness (normal stiffness * 2-5)");
-        suggestions.push("- Using Augmented Lagrange algorithm");
-        suggestions.push("- Refining mesh at contact interface");
+        suggestions.push("High iteration count detected. Consider:".to_string());
+        suggestions.push("- Increasing contact stiffness (normal stiffness * 2-5)".to_string());
+        suggestions.push("- Using Augmented Lagrange algorithm".to_string());
+        suggestions.push("- Refining mesh at contact interface".to_string());
     }
     
     if max_penetration > 0.01 {
-        suggestions.push("Significant penetration detected:");
-        suggestions.push("- Increase contact stiffness");
-        suggestions.push("- Reduce time increment for first few steps");
-        suggestions.push("- Consider using Lagrange multiplier method");
+        suggestions.push("Significant penetration detected:".to_string());
+        suggestions.push("- Increase contact stiffness".to_string());
+        suggestions.push("- Reduce time increment for first few steps".to_string());
+        suggestions.push("- Consider using Lagrange multiplier method".to_string());
     }
     
     if contact_force_error > 0.05 {
-        suggestions.push("Contact force error is high:");
-        suggestions.push("- Check that contact surfaces are properly defined");
-        suggestions.push("- Verify master/slave surface assignment");
-        suggestions.push("- Consider adjusting search distance tolerance");
+        suggestions.push("Contact force error is high:".to_string());
+        suggestions.push("- Check that contact surfaces are properly defined".to_string());
+        suggestions.push("- Verify master/slave surface assignment".to_string());
+        suggestions.push("- Consider adjusting search distance tolerance".to_string());
     }
     
     if suggestions.is_empty() {

@@ -2,12 +2,12 @@
 //! 生成OpenFOAM格式输入文件并解析结果
 
 use std::fs;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use tauri::State;
-use crate::db::DbConnection;
-use crate::errors::AppError;
+use crate::db::Database;
 
 /// CFD边界条件类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -109,16 +109,16 @@ pub struct PressurePoint {
 #[tauri::command]
 pub fn generate_openfoam_case(
     setup: CfdSetup,
-    db: State<'_, DbConnection>,
-) -> Result<String, AppError> {
+    db: State<'_, Database>,
+) -> Result<String, String> {
     // 创建案例目录结构
     let project_dir = get_project_dir(setup.project_id)?;
     let case_dir = Path::new(&project_dir).join("openfoam_case");
 
-    fs::create_dir_all(&case_dir)?;
-    fs::create_dir_all(case_dir.join("0"))?");
-    fs::create_dir_all(case_dir.join("constant"))?;
-    fs::create_dir_all(case_dir.join("system"))?;
+    fs::create_dir_all(&case_dir).map_err(|e| e.to_string())?;
+    fs::create_dir_all(case_dir.join("0")).map_err(|e| e.to_string())?;
+    fs::create_dir_all(case_dir.join("constant")).map_err(|e| e.to_string())?;
+    fs::create_dir_all(case_dir.join("system")).map_err(|e| e.to_string())?;
 
     // 生成controlDict
     generate_control_dict(&case_dir, setup.convergence_tolerance, setup.max_iterations)?;
@@ -141,7 +141,7 @@ pub fn generate_openfoam_case(
     // 保存setup到数据库
     save_cfd_setup_to_db(&db, &setup)?;
 
-    Ok(format!("OpenFOAM case generated at: {}", case_dir.display())
+    Ok(format!("OpenFOAM case generated at: {}", case_dir.display()))
 }
 
 /// 获取材料属性
@@ -159,7 +159,7 @@ fn generate_control_dict(
     case_dir: &Path,
     tolerance: f64,
     max_iter: u32,
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     let content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
@@ -196,18 +196,18 @@ runTimeModifiable yes;
 maxCo           1;
 maxDeltaT       1;
 
-convergenceResidual {
-    U           {tolerance {};}
-    p           {tolerance {};}
-    k           {tolerance {};}
-    epsilon     {tolerance {};}
-    omega       {tolerance {};}
-}
+convergenceResidual {{
+    U           {{tolerance {};}}
+    p           {{tolerance {};}}
+    k           {{tolerance {};}}
+    epsilon     {{tolerance {};}}
+    omega       {{tolerance {};}}
+}}
 
 maxIter        {};
 "#, tolerance, tolerance, tolerance, tolerance, tolerance, max_iter);
 
-    fs::write(case_dir.join("system/controlDict"), content)?;
+    fs::write(case_dir.join("system/controlDict"), content).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -215,7 +215,7 @@ maxIter        {};
 fn generate_transport_properties(
     case_dir: &Path,
     material: &FluidMaterial,
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     let (rho, nu) = get_material_properties(material);
 
     let content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
@@ -233,7 +233,7 @@ nu              [0 2 -1 0 0 0 0] {};
 rho             [1 -3 0 0 0 0 0] {};
 "#, nu, rho);
 
-    fs::write(case_dir.join("constant/transportProperties"), content)?;
+    fs::write(case_dir.join("constant/transportProperties"), content).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -241,7 +241,7 @@ rho             [1 -3 0 0 0 0 0] {};
 fn generate_turbulence_properties(
     case_dir: &Path,
     model: &TurbulenceModel,
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     let content = match model {
         TurbulenceModel::Laminar => r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
@@ -293,7 +293,7 @@ RAS
 "#,
     };
 
-    fs::write(case_dir.join("constant/turbulenceProperties"), content)?;
+    fs::write(case_dir.join("constant/turbulenceProperties"), content).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -301,7 +301,7 @@ RAS
 fn generate_block_mesh_dict(
     case_dir: &Path,
     _regions: &[DomainRegion],
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     // 对于导入的STL，这里生成snappyHexMesh配置
     let content = r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
@@ -321,7 +321,7 @@ convertToMeters 1;
 // User should import STL and the surface will be processed by snappyHexMesh
 "#;
 
-    fs::write(case_dir.join("system/blockMeshDict"), content)?;
+    fs::write(case_dir.join("system/blockMeshDict"), content).map_err(|e| e.to_string())?;
 
     // Generate snappyHexMeshDict
     let shm_content = r#"/*--------------------------------*- C++ -*----------------------------------*\
@@ -360,8 +360,8 @@ snapControls
 }
 "#;
 
-    fs::write(case_dir.join("system/snappyHexMeshDict"), shm_content)?;
-    fs::create_dir_all(case_dir.join("constant/triSurface"))?;
+    fs::write(case_dir.join("system/snappyHexMeshDict"), shm_content).map_err(|e| e.to_string())?;
+    fs::create_dir_all(case_dir.join("constant/triSurface")).map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -370,7 +370,7 @@ snapControls
 fn generate_0_files(
     case_dir: &Path,
     boundaries: &[BoundaryCondition],
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     // 生成U文件（速度）
     let mut u_content = String::from(
 r#"/*--------------------------------*- C++ -*----------------------------------*\
@@ -442,7 +442,7 @@ boundaryField
     }
 
     u_content.push_str("}\n");
-    fs::write(case_dir.join("0/U"), u_content)?;
+    fs::write(case_dir.join("0/U"), u_content).map_err(|e| e.to_string())?;
 
     // 生成p文件（压力）
     let mut p_content = String::from(
@@ -502,10 +502,10 @@ boundaryField
     }
 
     p_content.push_str("}\n");
-    fs::write(case_dir.join("0/p"), p_content)?;
+    fs::write(case_dir.join("0/p"), p_content).map_err(|e| e.to_string())?;
 
     // 生成k文件（湍动能）- 仅湍流模型需要
-    let k_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
+    let mut k_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
@@ -521,7 +521,7 @@ boundaryField
 {{
 "#);
 
-    let epsilon_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
+    let mut epsilon_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
@@ -567,8 +567,8 @@ boundaryField
 
     k_content.push_str("}\n");
     epsilon_content.push_str("}\n");
-    fs::write(case_dir.join("0/k"), k_content)?;
-    fs::write(case_dir.join("0/epsilon"), epsilon_content)?;
+    fs::write(case_dir.join("0/k"), k_content).map_err(|e| e.to_string())?;
+    fs::write(case_dir.join("0/epsilon"), epsilon_content).map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -577,7 +577,7 @@ boundaryField
 fn generate_fv_files(
     case_dir: &Path,
     _model: &TurbulenceModel,
-) -> Result<(), AppError> {
+) -> Result<(), String> {
     let schemes_content = r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
@@ -599,7 +599,7 @@ interpolationSchemes default     linear;
 sngradSchemes    default         corrected;
 "#;
 
-    fs::write(case_dir.join("system/fvSchemes"), schemes_content)?;
+    fs::write(case_dir.join("system/fvSchemes"), schemes_content).map_err(|e| e.to_string())?;
 
     let solution_content = r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
@@ -695,7 +695,7 @@ relaxationFactors
 }
 "#;
 
-    fs::write(case_dir.join("system/fvSolution"), solution_content)?;
+    fs::write(case_dir.join("system/fvSolution"), solution_content).map_err(|e| e.to_string())?;
 
     // 生成Allclean脚本
     let allclean_content = r#"#!/bin/sh
@@ -714,16 +714,16 @@ cleanTimeDirectories()
 }
 "#;
 
-    fs::write(case_dir.join("Allclean"), allclean_content)?;
+    fs::write(case_dir.join("Allclean"), allclean_content).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 /// 获取项目目录
-fn get_project_dir(project_id: u64) -> Result<PathBuf, AppError> {
-    let app_data = dirs_next().ok_or_else(|| AppError::Internal("Cannot determine app data directory".to_string()))?;
+fn get_project_dir(project_id: u64) -> Result<PathBuf, String> {
+    let app_data = dirs_next::data_dir().ok_or_else(|| "Cannot determine app data directory".to_string())?;
     let project_dir = app_data.join(format!("projects/{}", project_id));
-    fs::create_dir_all(&project_dir)?;
+    fs::create_dir_all(&project_dir).map_err(|e| e.to_string())?;
     Ok(project_dir)
 }
 
@@ -733,16 +733,16 @@ fn get_boundary_name(id: u64) -> String {
 }
 
 /// 保存CFD设置到数据库
-fn save_cfd_setup_to_db(_db: &DbConnection, _setup: &CfdSetup) -> Result<(), AppError> {
+fn save_cfd_setup_to_db(_db: &Database, _setup: &CfdSetup) -> Result<(), String> {
     // TODO: 保存到数据库的cfd_setups表
     Ok(())
 }
 
 /// 解析OpenFOAM日志文件获取结果统计
 #[tauri::command]
-pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, AppError> {
+pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, String> {
     let content = fs::read_to_string(&log_path)
-        .map_err(|e| AppError::Internal(format!("Failed to read log file: {}", e)))?;
+        .map_err(|e| format!("Failed to read log file: {}", e))?;
 
     let mut iterations = 0u32;
     let mut converged = false;
@@ -786,12 +786,12 @@ pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, AppError> 
 
 /// 下载生成的OpenFOAM案例（打包为zip）
 #[tauri::command]
-pub fn download_openfoam_case(project_id: u64) -> Result<String, AppError> {
+pub fn download_openfoam_case(project_id: u64) -> Result<String, String> {
     let project_dir = get_project_dir(project_id)?;
     let case_dir = project_dir.join("openfoam_case");
 
     if !case_dir.exists() {
-        return Err(AppError::Internal("OpenFOAM case not generated yet".to_string()));
+        return Err("OpenFOAM case not generated yet".to_string());
     }
 
     let zip_path = project_dir.join("openfoam_case.zip");
@@ -799,69 +799,68 @@ pub fn download_openfoam_case(project_id: u64) -> Result<String, AppError> {
     // 使用zip crate压缩
     // 注意：需要添加zip依赖到Cargo.toml
     use std::fs::File;
-    use std::io::Write;
 
-    let file = File::create(&zip_path)?;
+    let file = File::create(&zip_path).map_err(|e| e.to_string())?;
     let mut zip = zip::ZipWriter::new(file);
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
     fn add_dir_to_zip(
-        zip: &mut zip::ZipWriter<File>,
+        zip: &mut zip::ZipWriter<std::fs::File>,
         dir: &Path,
         base: &Path,
         options: zip::write::SimpleFileOptions,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), String> {
         if !dir.is_dir() {
             return Ok(());
         }
 
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
+        for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+            let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
             let relative = path.strip_prefix(base).unwrap_or(&path);
 
             if path.is_dir() {
-                let name = relative.to_string_lossy().replace('\\", "/");
-                zip.add_directory(&name, options)?;
+                let name = relative.to_string_lossy().replace('\\', "/");
+                zip.add_directory(&name, options).map_err(|e| e.to_string())?;
                 add_dir_to_zip(zip, &path, base, options)?;
             } else {
                 let name = relative.to_string_lossy().replace('\\', "/");
-                zip.start_file(&name, options)?;
-                let content = fs::read(&path)?;
-                zip.write_all(&content)?;
+                zip.start_file(&name, options).map_err(|e| e.to_string())?;
+                let content = fs::read(&path).map_err(|e| e.to_string())?;
+                zip.write_all(&content).map_err(|e: std::io::Error| e.to_string())?;
             }
         }
         Ok(())
     }
 
-    add_dir_to_zip(&mut zip, &case_dir, &case_dir, options)?;
+    add_dir_to_zip(&mut zip, &case_dir, &case_dir, options).map_err(|e| e.to_string())?;
 
-    zip.finish()?;
+    zip.finish().map_err(|e| e.to_string())?;
 
     Ok(zip_path.to_string_lossy().to_string())
 }
 
 /// 导入CFD几何文件（STL）
 #[tauri::command]
-pub fn import_cfd_geometry(project_id: u64, file_path: String) -> Result<String, AppError> {
+pub fn import_cfd_geometry(project_id: u64, file_path: String) -> Result<String, String> {
     let project_dir = get_project_dir(project_id)?;
     let tri_surface_dir = project_dir.join("openfoam_case/constant/triSurface");
-    fs::create_dir_all(&tri_surface_dir)?;
+    fs::create_dir_all(&tri_surface_dir).map_err(|e| e.to_string())?;
 
     let file_name = Path::new(&file_path)
         .file_name()
-        .ok_or_else(|| AppError::InvalidInput("Invalid file path".to_string()))?;
+        .ok_or_else(|| "Invalid file path".to_string())?;
 
     let dest_path = tri_surface_dir.join(file_name);
-    fs::copy(&file_path, &dest_path)?;
+    fs::copy(&file_path, &dest_path).map_err(|e| e.to_string())?;
 
     // 更新snappyHexMeshDict以引用正确的文件名
     let shm_dict_path = project_dir.join("openfoam_case/system/snappyHexMeshDict");
     if shm_dict_path.exists() {
-        let content = fs::read_to_string(&shm_dict_path)?;
+        let content = fs::read_to_string(&shm_dict_path).map_err(|e| e.to_string())?;
         let new_content = content.replace("geometry.stl", &file_name.to_string_lossy());
-        fs::write(&shm_dict_path, new_content)?;
+        fs::write(&shm_dict_path, new_content).map_err(|e| e.to_string())?;
     }
 
     Ok(dest_path.to_string_lossy().to_string())
@@ -869,7 +868,7 @@ pub fn import_cfd_geometry(project_id: u64, file_path: String) -> Result<String,
 
 /// 生成CFD报告
 #[tauri::command]
-pub fn generate_cfd_report(project_id: u64) -> Result<String, AppError> {
+pub fn generate_cfd_report(project_id: u64) -> Result<String, String> {
     let project_dir = get_project_dir(project_id)?;
     let report_path = project_dir.join("cfd_report.md");
 
@@ -909,33 +908,6 @@ pub fn generate_cfd_report(project_id: u64) -> Result<String, AppError> {
 OpenFOAM案例已导出至: openfoam_case/
 "#, project_id, chrono::Local::now());
 
-    fs::write(&report_path, content)?;
+    fs::write(&report_path, content).map_err(|e| e.to_string())?;
     Ok(report_path.to_string_lossy().to_string())
 }
-
-// ========== 工具函数 ==========
-
-// 简单的目录复制函数
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), AppError> {
-    if !dst.exists() {
-        fs::create_dir_all(dst)?;
-    }
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
-        } else {
-            fs::copy(&entry.path(), dst.join(entry.file_name()))?;
-        }
-    }
-    Ok(())
-}
-
-/// 添加必要的模块导入
-use zip::ZipWriter;
-
-/// 引入所需的crate
-use std::io::Write;
-use std::io::Read;
-"

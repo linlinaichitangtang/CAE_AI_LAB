@@ -214,8 +214,9 @@ pub struct ResultSet {
     pub errors: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum AnalysisType {
+    #[default]
     Static,
     Dynamic,
     Thermal,
@@ -370,7 +371,7 @@ impl ColorMap {
 
     fn jet_color(&self, t: f64) -> (u8, u8, u8) {
         // Classic jet colormap
-        let r = if t < 0.5 { 0.0 } else { ((t - 0.5) * 2.0 * 255.0) as u8 };
+        let r: f64 = if t < 0.5 { 0.0 } else { ((t - 0.5) * 2.0 * 255.0) as u8 as f64 };
         let g = if t < 0.25 {
             (t * 4.0 * 255.0) as u8
         } else if t < 0.75 {
@@ -380,7 +381,7 @@ impl ColorMap {
         };
         let b = if t < 0.5 { ((0.5 - t) * 2.0 * 255.0) as u8 } else { 0u8 };
 
-        (r, g, b)
+        (r as u8, g, b)
     }
 
     fn viridis_color(&self, t: f64) -> (u8, u8, u8) {

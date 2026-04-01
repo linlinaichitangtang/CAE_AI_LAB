@@ -1,6 +1,6 @@
 {
   "name": "caelab",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "科研与工程创作一体化工作台",
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.5.0",
+    "@tauri-apps/api": "^2.10.1",
     "@tiptap/extension-code-block-lowlight": "^2.2.4",
     "@tiptap/extension-collaboration": "^2.2.4",
     "@tiptap/extension-image": "^2.2.4",

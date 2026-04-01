@@ -1,11 +1,13 @@
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, solver, ai, materials, parametric, transient_dynamics, contact, cfd};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec};
+pub mod solver;
 mod db;
 mod models;
-pub mod solver;
 
 use db::Database;
 
@@ -31,6 +33,10 @@ pub fn run() {
             
             let database = Database::new(db_path).expect("Failed to initialize database");
             app.manage(database);
+
+            // Initialize global cancel flag for solver
+            let cancel_flag = Arc::new(AtomicBool::new(false));
+            app.manage(commands::cae_api::GlobalCancelFlag(cancel_flag));
             
             tracing::info!("Database initialized successfully");
             
@@ -64,6 +70,14 @@ pub fn run() {
             commands::file::delete_note_link,
             // Search commands
             commands::file::search_notes,
+            // Embed record commands
+            commands::file::add_embed_record,
+            commands::file::get_embed_records,
+            commands::file::delete_embed_record,
+            commands::file::update_embed_record,
+            // Category commands
+            commands::file::update_file_category,
+            commands::file::get_file_categories,
             // Settings commands
             commands::settings::save_settings,
             commands::settings::get_settings,
@@ -72,6 +86,8 @@ pub fn run() {
             commands::cae_api::check_solver,
             commands::cae_api::generate_input,
             commands::cae_api::run_solver,
+            commands::cae_api::run_solver_with_progress,
+            commands::cae_api::cancel_solver,
             commands::cae_api::parse_results,
             commands::cae_api::get_mesh_data,
             commands::cae_api::create_beam_model,
@@ -136,6 +152,74 @@ pub fn run() {
             commands::cfd::download_openfoam_case,
             commands::cfd::import_cfd_geometry,
             commands::cfd::generate_cfd_report,
+            // Topology optimization commands
+            commands::optimization_commands::run_topology_optimization_full,
+            commands::optimization_commands::run_topology_optimization,
+            commands::optimization_commands::run_shape_optimization,
+            commands::optimization_commands::run_size_optimization,
+            commands::optimization_commands::export_topology_to_stl,
+            commands::optimization_commands::export_stl_ascii,
+            commands::optimization_commands::export_optimization_results,
+            commands::optimization_commands::load_optimization_template,
+            commands::optimization_commands::get_optimization_templates,
+            commands::optimization_commands::get_topology_tutorial_examples,
+            commands::optimization_commands::get_iteration_density_field,
+            commands::optimization_commands::reset_optimizer,
+            commands::optimization_commands::calculate_simp_stiffness,
+            commands::optimization_commands::calculate_oc_sensitivity,
+            commands::optimization_commands::generate_optimization_inp_file,
+            commands::optimization_commands::generate_optimization_inp,
+            // Fatigue analysis commands
+            commands::fatigue::fatigue_analysis,
+            commands::fatigue::rainflow_analysis,
+            commands::fatigue::fit_sn_curve,
+            commands::fatigue::calculate_node_damage,
+            commands::fatigue::generate_fatigue_inp_file,
+            commands::fatigue::run_fatigue_simulation,
+            commands::fatigue::get_fatigue_templates,
+            // Electronics analysis commands
+            commands::electronics::get_material_library,
+            commands::electronics::get_analysis_templates,
+            commands::electronics::run_electronics_analysis,
+            // Biomechanics analysis commands
+            commands::biomechanics::get_bio_material_library,
+            commands::biomechanics::get_bio_templates,
+            commands::biomechanics::run_biomechanics_analysis,
+            commands::biomechanics::import_stl_geometry,
+            // Explicit dynamics commands
+            commands::explicit_dynamics::get_explicit_dynamics_templates,
+            commands::explicit_dynamics::get_explicit_dynamics_template,
+            commands::explicit_dynamics::generate_explicit_dynamics_inp_cmd,
+            commands::explicit_dynamics::generate_explicit_animation_inp_cmd,
+            commands::explicit_dynamics::calculate_critical_time_step,
+            commands::explicit_dynamics::calculate_mass_scaling_suggestion,
+            // Buckling analysis commands
+            commands::cae_api::generate_buckling_inp,
+            commands::cae_api::generate_nonlinear_buckling_inp,
+            commands::cae_api::run_buckling_solver,
+            commands::cae_api::parse_buckling_result,
+            commands::cae_api::calculate_buckling_safety,
+            commands::cae_api::generate_buckling_inp_compat,
+            // Contact analysis commands (cae_api)
+            commands::cae_api::generate_inp_with_contact,
+            commands::cae_api::get_contact_settings,
+            commands::cae_api::validate_contact_surfaces,
+            commands::cae_api::get_contact_result_fields,
+            // Frequency response commands
+            commands::cae_api::generate_frequency_response_inp,
+            commands::cae_api::run_frequency_response_solver,
+            commands::cae_api::parse_frequency_response_result,
+            // Thermal coupling commands (cae_api)
+            commands::cae_api::run_sequential_coupling,
+            commands::cae_api::run_fully_coupled,
+            commands::cae_api::parse_thermal_stress_result,
+            commands::cae_api::get_coupling_templates,
+            // Mesh quality check command
+            commands::cae_api::check_mesh_quality,
+            // Code execution commands
+            commands::code_exec::execute_code,
+            // Mesh refinement commands
+            commands::cae_api::refine_mesh,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

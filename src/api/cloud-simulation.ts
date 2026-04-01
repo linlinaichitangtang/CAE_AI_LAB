@@ -2,7 +2,7 @@
  * Cloud Simulation API - 云端仿真任务提交与状态管理
  */
 
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 // ============ 类型定义 ============
 

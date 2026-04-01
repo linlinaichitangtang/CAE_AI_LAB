@@ -161,6 +161,68 @@
             </div>
           </div>
 
+          <!-- 分类标签栏 -->
+          <div v-if="currentProjectId" class="mb-3">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button
+                @click="activeCategory = ''"
+                :class="activeCategory === '' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'"
+                class="px-2.5 py-1 text-xs rounded-full transition-colors"
+              >
+                全部
+              </button>
+              <button
+                @click="activeCategory = '未分类'"
+                :class="activeCategory === '未分类' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'"
+                class="px-2.5 py-1 text-xs rounded-full transition-colors"
+              >
+                未分类
+              </button>
+              <button
+                v-for="cat in dbCategories"
+                :key="cat"
+                @click="activeCategory = cat"
+                :class="activeCategory === cat ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'"
+                class="px-2.5 py-1 text-xs rounded-full transition-colors"
+              >
+                {{ cat }}
+              </button>
+              <!-- 新建分类按钮 -->
+              <button
+                @click="showNewCategoryInput = true"
+                class="px-2 py-1 text-xs rounded-full border border-dashed border-gray-400 dark:border-gray-500 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                title="新建分类"
+              >
+                +
+              </button>
+            </div>
+            <!-- 新建分类输入框 -->
+            <div v-if="showNewCategoryInput" class="mt-2 flex items-center gap-2">
+              <input
+                v-model="newCategoryName"
+                type="text"
+                placeholder="输入分类名称..."
+                class="flex-1 px-2 py-1 text-xs border rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                @keyup.enter="createCategory"
+                @keyup.escape="showNewCategoryInput = false"
+                ref="newCategoryInputRef"
+              />
+              <button
+                @click="createCategory"
+                :disabled="!newCategoryName.trim()"
+                class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                确定
+              </button>
+              <button
+                @click="showNewCategoryInput = false; newCategoryName = ''"
+                class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+
           <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">笔记列表</h3>
           <div v-if="!currentProjectId" class="text-sm text-gray-400 text-center py-4">
             请先选择一个项目
@@ -173,6 +235,7 @@
               v-for="file in displayFiles"
               :key="file.id"
               @click="selectFile(file)"
+              @contextmenu="onNoteContextMenu($event, file)"
               :class="currentFileId === file.id ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300' : ''"
               class="p-2 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border border-transparent"
             >
@@ -180,8 +243,16 @@
                 <span>{{ getFileTypeIcon(file.file_type) }}</span>
                 <span>{{ file.file_name || '无标题' }}</span>
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {{ formatDate(file.updated_at) }}
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatDate(file.updated_at) }}
+                </span>
+                <span
+                  v-if="file.category && file.category !== '未分类'"
+                  class="inline-block px-1.5 py-0.5 text-[10px] rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
+                >
+                  {{ file.category }}
+                </span>
               </div>
             </div>
           </div>
@@ -217,31 +288,12 @@
                 <span>已嵌入对象</span>
               </h4>
               <div class="grid grid-cols-2 gap-2">
-                <div
+                <EmbedCard
                   v-for="record in currentEmbedRecords"
                   :key="record.id"
-                  @click="navigateToEmbedItem(record)"
-                  class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition"
-                >
-                  <span class="text-2xl">
-                    {{ record.type === 'model' ? '📐' : record.type === 'code' ? '📄' : '📊' }}
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-800 dark:text-white truncate">
-                      {{ record.targetName }}
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ record.type === 'model' ? '3D建模' : record.type === 'code' ? '代码' : '仿真结果' }}
-                    </div>
-                  </div>
-                  <button 
-                    @click.stop="removeEmbedRecord(record.id)"
-                    class="text-gray-400 hover:text-red-500 text-xs"
-                    title="移除嵌入"
-                  >
-                    ✕
-                  </button>
-                </div>
+                  :record="record"
+                  @remove="removeEmbedRecord"
+                />
               </div>
             </div>
 
@@ -422,19 +474,32 @@
         </div>
       </div>
     </div>
+    <!-- 右键菜单 -->
+    <ContextMenu
+      :items="contextMenu.items.value"
+      :x="contextMenu.x.value"
+      :y="contextMenu.y.value"
+      :visible="contextMenu.visible.value"
+      @close="contextMenu.hide()"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TipTapEditor from '@/components/editor/TipTapEditor.vue'
+import EmbedCard from '@/components/editor/EmbedCard.vue'
+import ContextMenu from '@/components/common/ContextMenu.vue'
+import type { MenuItem } from '@/components/common/ContextMenu.vue'
+import { useContextMenu } from '@/composables/useContextMenu'
 import type { EmbedItem, Project, ProjectFile } from '@/api'
 import { 
   listProjects, listFiles, createFile, updateFile, deleteFile, readFileContent, getFileTypeIcon,
   saveNoteVersion, getNoteVersions, restoreNoteVersion,
   createNoteLink, getNoteLinks, getNoteBacklinks, deleteNoteLink,
-  searchNotes, type NoteVersion, type NoteLink, type SearchResult
+  searchNotes, updateFileCategory, getFileCategories,
+  type NoteVersion, type NoteLink, type SearchResult
 } from '@/api'
 import { formatProjectDate } from '@/api'
 import { useProjectStore } from '@/stores/project'
@@ -442,6 +507,112 @@ import { useProjectStore } from '@/stores/project'
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+
+// ============ 右键菜单 ============
+const contextMenu = useContextMenu()
+let contextMenuTargetFile: ProjectFile | null = null
+
+function onNoteContextMenu(event: MouseEvent, file: ProjectFile) {
+  contextMenuTargetFile = file
+
+  // Build category submenu items
+  const categoryItems: MenuItem[] = [
+    {
+      label: '未分类',
+      action: () => moveNoteToCategory(file, '未分类')
+    },
+    ...dbCategories.value
+      .filter(c => c !== '未分类')
+      .map(c => ({
+        label: c,
+        action: () => moveNoteToCategory(file, c)
+      }))
+  ]
+
+  const menuItems: MenuItem[] = [
+    {
+      label: '新建笔记',
+      icon: '\u270F',
+      action: () => createNewNote()
+    },
+    { label: '', divider: true, action: () => {} },
+    {
+      label: '移动到分类',
+      icon: '\uD83D\uDCC1',
+      children: categoryItems
+    },
+    {
+      label: '重命名',
+      icon: '\u270E',
+      shortcut: 'F2',
+      action: () => renameNote(file)
+    },
+    {
+      label: '复制标题',
+      icon: '\uD83D\uDCCB',
+      shortcut: 'Ctrl+C',
+      action: () => copyNoteTitle(file)
+    },
+    { label: '', divider: true, action: () => {} },
+    {
+      label: '删除',
+      icon: '\uD83D\uDDD1',
+      danger: true,
+      action: () => deleteNoteByFile(file)
+    }
+  ]
+  contextMenu.show(event, menuItems)
+}
+
+async function renameNote(file: ProjectFile) {
+  const newName = prompt('请输入新名称：', file.file_name)
+  if (newName === null || newName.trim() === '') return
+
+  try {
+    await updateFile({ id: file.id, file_name: newName.trim(), content: '' })
+    await loadFiles()
+    // 如果重命名的是当前编辑的笔记，更新标题
+    if (currentFileId.value === file.id) {
+      noteTitle.value = newName.trim()
+    }
+  } catch (error) {
+    console.error('重命名失败:', error)
+    alert('重命名失败: ' + (error as Error).message)
+  }
+}
+
+function copyNoteTitle(file: ProjectFile) {
+  const title = file.file_name || '无标题'
+  navigator.clipboard.writeText(title).then(() => {
+    // 复制成功
+  }).catch(() => {
+    // fallback
+    const textarea = document.createElement('textarea')
+    textarea.value = title
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  })
+}
+
+async function deleteNoteByFile(file: ProjectFile) {
+  if (!confirm(`确定要删除笔记 "${file.file_name || '无标题'}" 吗？`)) return
+
+  try {
+    await deleteFile(file.id)
+    // 如果删除的是当前编辑的笔记，清空编辑器
+    if (currentFileId.value === file.id) {
+      currentFileId.value = null
+      noteTitle.value = ''
+      noteContent.value = ''
+    }
+    await loadFiles()
+  } catch (error) {
+    console.error('删除失败:', error)
+    alert('删除失败: ' + (error as Error).message)
+  }
+}
 
 // ============ 双向链接状态 ============
 const links = ref<NoteLink[]>([])
@@ -459,6 +630,13 @@ const searchQuery = ref('')
 const searchResults = ref<SearchResult[]>([])
 const isSearching = ref(false)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+// ============ 分类状态 ============
+const dbCategories = ref<string[]>([])
+const activeCategory = ref('')
+const showNewCategoryInput = ref(false)
+const newCategoryName = ref('')
+const newCategoryInputRef = ref<HTMLInputElement | null>(null)
 
 // 获取当前笔记的嵌入记录
 const currentEmbedRecords = computed(() => {
@@ -480,18 +658,28 @@ const notesForEditor = computed(() => {
   }))
 })
 
-// 显示的文件列表（搜索模式/普通模式）
+// 显示的文件列表（搜索模式/普通模式 + 分类过滤）
 const displayFiles = computed(() => {
+  let result = files.value
+  
+  // 分类过滤
+  if (activeCategory.value) {
+    result = result.filter(f => {
+      const cat = f.category || '未分类'
+      return cat === activeCategory.value
+    })
+  }
+  
   if (isSearching.value && searchResults.value.length > 0) {
     // 搜索模式下显示匹配的文件
     const matchedIds = new Set(searchResults.value.map(r => r.note_id))
-    return files.value.filter(f => matchedIds.has(f.id))
+    result = result.filter(f => matchedIds.has(f.id))
   }
-  return files.value
+  return result
 })
 
 // 跳转到嵌入对象
-function navigateToEmbedItem(record: { type: 'model' | 'code' | 'simulation'; targetId: string; noteId: string }) {
+function navigateToEmbedItem(record: { type: 'model' | 'code' | 'simulation' | 'fatigue' | 'cfd'; targetId: string; noteId: string }) {
   const routes: Record<string, string> = {
     model: '/modeling',
     code: '/code',
@@ -649,6 +837,78 @@ function clearSearch() {
   searchResults.value = []
 }
 
+// ============ 分类方法 ============
+async function loadCategories() {
+  if (!currentProjectId.value) {
+    dbCategories.value = []
+    return
+  }
+  try {
+    const cats = await getFileCategories(currentProjectId.value)
+    // 过滤掉"未分类"，因为已经单独显示
+    dbCategories.value = cats.filter(c => c !== '未分类')
+  } catch (e) {
+    console.error('Failed to load categories:', e)
+    dbCategories.value = []
+  }
+}
+
+async function moveNoteToCategory(file: ProjectFile, category: string) {
+  try {
+    await updateFileCategory(file.id, category)
+    await loadFiles()
+    await loadCategories()
+  } catch (e) {
+    console.error('Failed to move note to category:', e)
+    alert('移动分类失败: ' + (e as Error).message)
+  }
+}
+
+async function createCategory() {
+  const name = newCategoryName.value.trim()
+  if (!name) return
+
+  // Check if category already exists
+  if (dbCategories.value.includes(name) || name === '未分类') {
+    alert('该分类已存在')
+    return
+  }
+
+  // Create category by assigning it to current file (if one is selected)
+  // or just add it to the list by creating a dummy entry
+  // The simplest approach: if a note is selected, move it to the new category
+  // Otherwise, just add the category name to the display
+  if (currentFileId.value) {
+    try {
+      await updateFileCategory(currentFileId.value, name)
+      await loadFiles()
+      await loadCategories()
+    } catch (e) {
+      console.error('Failed to create category:', e)
+      alert('创建分类失败: ' + (e as Error).message)
+    }
+  } else {
+    // No file selected, we still want to create the category
+    // We'll create it by temporarily assigning and unassigning
+    // Actually, categories only exist when assigned to files
+    // So we just add it to the local list for now - it will persist when used
+    dbCategories.value.push(name)
+    dbCategories.value.sort()
+  }
+
+  showNewCategoryInput.value = false
+  newCategoryName.value = ''
+  activeCategory.value = name
+}
+
+// Watch for new category input visibility to auto-focus
+watch(showNewCategoryInput, async (val) => {
+  if (val) {
+    await nextTick()
+    newCategoryInputRef.value?.focus()
+  }
+})
+
 // 状态
 const projects = ref<Project[]>([])
 const files = ref<ProjectFile[]>([])
@@ -700,6 +960,8 @@ async function loadFiles() {
     noteContent.value = ''
     links.value = []
     backlinks.value = []
+    // 加载分类列表
+    await loadCategories()
   } catch (error) {
     console.error('Failed to load files:', error)
   } finally {
@@ -747,6 +1009,7 @@ async function createNewNote() {
     noteContent.value = newFile.content || ''
     
     await loadFiles()
+    await loadCategories()
   } catch (error) {
     console.error('Failed to create note:', error)
     alert('创建笔记失败: ' + (error as Error).message)
@@ -838,7 +1101,7 @@ function formatDate(dateStr: string) {
   return formatProjectDate(dateStr)
 }
 
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 import { useAiStore } from '@/stores/ai'
 
 const aiStore = useAiStore()
@@ -899,13 +1162,26 @@ function applyOptimizedContent() {
 
 // 监听项目变化
 watch(currentProjectId, () => {
+  activeCategory.value = ''
   if (currentProjectId.value) {
     loadFiles()
   }
 })
 
-onMounted(() => {
-  loadProjects()
+onMounted(async () => {
+  await loadProjects()
+  // 检查 URL 是否有 noteId 参数，如果有则自动打开对应笔记
+  const urlNoteId = route.query.noteId as string
+  if (urlNoteId && currentProjectId.value) {
+    // 确保文件列表已加载
+    if (files.value.length === 0) {
+      await loadFiles()
+    }
+    const targetFile = files.value.find(f => f.id === urlNoteId)
+    if (targetFile) {
+      await selectFile(targetFile)
+    }
+  }
   // Update AI context
   aiStore.updateContext({
     currentTool: 'notes',

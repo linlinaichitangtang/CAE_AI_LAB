@@ -2,15 +2,32 @@
 //! Exposes CAE solver functionality to the Tauri frontend
 
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::path::PathBuf;
-use tauri::command;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use tauri::{command, AppHandle, Emitter, Manager};
 
 // Re-export types from other modules
-use crate::commands::input_gen::{BoundaryCondition, Element, ElementType, Load, LoadType, Material, Model, Node, Step};
+use crate::commands::input_gen::{BoundaryCondition, Direction, Element, ElementType, InpGenerator, Load, LoadType, Material, Model, Node, Step};
 use crate::commands::output_parser::FrdParser;
 use crate::commands::postprocess::{ColorMap, ResultSet, ResultStats};
-use crate::commands::solver::{CalculiXSolver, GridConfig, MeshElementType, MeshGenerator, MeshError, SolverConfig, SolverResult, StructuredMesh};
+use crate::commands::solver::{CalculiXSolver, GridConfig, MeshElementType, MeshGenerator, MeshError, MeshQualityMetrics, RefinementConfig, RefinementRegionType, SolverConfig, SolverResult, SolverEvent, StructuredMesh};
+use crate::commands::solver::mesh::check_mesh_quality as check_mesh_quality_impl;
 use crate::commands::solver::bc::{BcContainer, Dof, FixedBc, LoadDirection, PointLoad, UniformLoad, UniformLoadType};
+
+// ============================================================================
+// Global Cancel Flag Management
+// ============================================================================
+
+/// 全局取消标志 - 用于取消正在运行的求解器
+pub struct GlobalCancelFlag(pub Arc<AtomicBool>);
+
+/// 获取全局取消标志
+pub fn get_cancel_flag(app: &AppHandle) -> Arc<AtomicBool> {
+    app.state::<GlobalCancelFlag>().0.clone()
+}
 
 // ============================================================================
 // Data Structures
@@ -137,6 +154,64 @@ pub fn run_solver(
     
     calc_solver.solve(&input_path, &work_dir)
         .map_err(|e| e.to_string())
+}
+
+/// Run CalculiX solver with progress reporting (async with events)
+#[command]
+pub fn run_solver_with_progress(
+    app: AppHandle,
+    input_file: String,
+    working_dir: String,
+    num_threads: Option<usize>,
+) -> Result<String, String> {
+    tracing::info!("Running solver with progress: {} in {}", input_file, working_dir);
+
+    let cancel_flag = get_cancel_flag(&app);
+    cancel_flag.store(false, Ordering::Relaxed);
+
+    let config = SolverConfig {
+        executable_path: "ccx".to_string(),
+        num_threads: num_threads.unwrap_or(4),
+        memory_limit_mb: None,
+    };
+
+    let calc_solver = CalculiXSolver::new(config);
+    let input_path = PathBuf::from(&input_file);
+    let work_dir = PathBuf::from(&working_dir);
+
+    let app_clone = app.clone();
+    let result = calc_solver.solve_with_progress(
+        &input_path,
+        &work_dir,
+        move |event| {
+            // 通过 Tauri event 系统推送到前端
+            let _ = app_clone.emit("solver-event", &event);
+        },
+        cancel_flag,
+    );
+
+    match result {
+        Ok(solver_result) => {
+            serde_json::to_string(&solver_result).map_err(|e| e.to_string())
+        }
+        Err(e) => {
+            // 如果是取消错误，返回特殊标识
+            if matches!(e, crate::commands::solver::SolverError::Cancelled) {
+                Err("SOLVER_CANCELLED".to_string())
+            } else {
+                Err(e.to_string())
+            }
+        }
+    }
+}
+
+/// Cancel the currently running solver
+#[command]
+pub fn cancel_solver(app: AppHandle) -> Result<bool, String> {
+    tracing::info!("Cancelling solver");
+    let cancel_flag = get_cancel_flag(&app);
+    cancel_flag.store(true, Ordering::Relaxed);
+    Ok(true)
 }
 
 /// Parse solver results (.frd file)
@@ -368,7 +443,9 @@ pub fn generate_2d_mesh(
 ) -> Result<StructuredMesh, String> {
     tracing::info!("Generating 2D mesh: {}x{} elements, {}x{} size", nx, ny, size_x, size_y);
     
-    CalculiXSolver::generate_2d_mesh(nx, ny, size_x, size_y)
+    let config = GridConfig::new_2d(nx, ny, size_x, size_y);
+    let generator = MeshGenerator::new(config);
+    generator.generate_2d_rect()
         .map_err(|e| e.to_string())
 }
 
@@ -384,7 +461,9 @@ pub fn generate_3d_mesh(
 ) -> Result<StructuredMesh, String> {
     tracing::info!("Generating 3D mesh: {}x{}x{} elements, {}x{}x{} size", nx, ny, nz, size_x, size_y, size_z);
     
-    CalculiXSolver::generate_3d_mesh(nx, ny, nz, size_x, size_y, size_z)
+    let config = GridConfig::new_3d(nx, ny, nz, size_x, size_y, size_z);
+    let generator = MeshGenerator::new(config);
+    generator.generate_3d_box()
         .map_err(|e| e.to_string())
 }
 
@@ -425,7 +504,8 @@ pub fn generate_structured_mesh(
         element_type: elem_type,
     };
     
-    CalculiXSolver::generate_structured_mesh(config)
+    let generator = MeshGenerator::new(config);
+    generator.generate()
         .map_err(|e| e.to_string())
 }
 
@@ -1226,10 +1306,10 @@ pub fn calculate_buckling_safety(
     let is_safe = safety_factor > 1.0;
     
     let description = if is_safe {
-        format!("结构安全。临界载荷因子为 {:.4f}，材料安全系数为 {:.2f}，安全系数为 {:.4f}。屈曲临界载荷为 {:.2f} N，大于施加的 {:.2f} N。",
+        format!("结构安全。临界载荷因子为 {}，材料安全系数为 {}，安全系数为 {}。屈曲临界载荷为 {} N，大于施加的 {} N。",
             load_factor, material_factor, safety_factor, critical_load, applied_load)
     } else {
-        format!("结构不安全。临界载荷因子为 {:.4f}，材料安全系数为 {:.2f}，安全系数为 {:.4f}。可能发生屈曲失稳。",
+        format!("结构不安全。临界载荷因子为 {}，材料安全系数为 {}，安全系数为 {}。可能发生屈曲失稳。",
             load_factor, material_factor, safety_factor)
     };
     
@@ -1326,19 +1406,6 @@ impl ContactAlgorithm {
     }
 }
 
-/// Create a contact pair configuration
-#[command]
-pub fn create_contact_pair(config: ContactConfig) -> Result<ContactPair, String> {
-    tracing::info!("Creating contact pair: {} -> {}", config.slave_surface, config.master_surface);
-    
-    Ok(ContactPair {
-        master_surface: config.master_surface,
-        slave_surface: config.slave_surface,
-        friction: config.friction,
-        contact_type: config.contact_type.as_str().to_string(),
-    })
-}
-
 /// Generate INP with contact pairs
 #[command]
 pub fn generate_inp_with_contact(
@@ -1408,17 +1475,18 @@ pub fn validate_contact_surfaces(
     
     // Simple validation - check if surfaces are referenced by elements
     // In a real implementation, we would parse surface definitions
-    for surface in surfaces {
+    let total = surfaces.len();
+    for surface in &surfaces {
         // For now, assume surfaces are valid if they appear in element data
         if surface.starts_with("S") || surface.starts_with("E") || surface.is_empty() == false {
-            valid_surfaces.push(surface);
+            valid_surfaces.push(surface.clone());
         }
     }
     
     Ok(serde_json::json!({
         "valid_surfaces": valid_surfaces,
         "warnings": warnings,
-        "total": surfaces.len(),
+        "total": total,
         "valid_count": valid_surfaces.len()
     }))
 }
@@ -1437,58 +1505,6 @@ pub fn get_contact_result_fields() -> Vec<String> {
         "BOLT_PRELOAD".to_string(),
         "MAX_FRICTION_STRESS".to_string(),
     ]
-}
-
-/// Generate contact analysis INP with advanced settings
-#[command]
-pub fn generate_contact_inp(
-    nodes: Vec<Node>,
-    elements: Vec<Element>,
-    materials: Vec<Material>,
-    boundary_conditions: Vec<BoundaryCondition>,
-    loads: Vec<Load>,
-    contact_configs: Vec<ContactConfig>,
-    solver_settings: ContactSolverSettings,
-    output_path: String,
-) -> Result<String, String> {
-    tracing::info!("Generating contact INP with {} contact pairs", contact_configs.len());
-    
-    use crate::commands::input_gen::InpGenerator;
-    
-    let contact_pairs: Vec<ContactPair> = contact_configs.iter().map(|config| {
-        ContactPair {
-            master_surface: config.master_surface.clone(),
-            slave_surface: config.slave_surface.clone(),
-            friction: config.friction,
-            contact_type: config.contact_type.as_str().to_string(),
-        }
-    }).collect();
-    
-    // Create step with contact settings
-    let mut step = Step::default();
-    step.name = "Step-Contact".to_string();
-    
-    let model = Model {
-        nodes,
-        elements,
-        materials,
-        steps: vec![step],
-        boundary_conditions,
-        loads,
-        contact_pairs,
-    };
-    
-    let generator = InpGenerator::new(model);
-    let path = PathBuf::from(&output_path);
-    
-    generator.write_file(&path)
-        .map_err(|e| e.to_string())?;
-    
-    // Return solver settings info
-    tracing::info!("Contact solver settings: max_iter={}, tol={}", 
-        solver_settings.max_iterations, solver_settings.convergence_tolerance);
-    
-    Ok(output_path)
 }
 
 /// Contact solver settings
@@ -1661,16 +1677,58 @@ pub fn generate_frequency_response_inp(
         output_path, config.start_frequency, config.end_frequency);
     
     use crate::commands::input_gen::InpGenerator;
+    use crate::commands::solver::bc::BcType;
     
-    let generator = InpGenerator::new(
-        nodes.clone(),
-        elements.clone(),
-        material,
-        Some(fixed_bc),
-        point_load,
-        uniform_loads,
-        None,
-    );
+    // Convert FixedBc to BoundaryCondition
+    let constrained_dofs = fixed_bc.bc_type.get_constrained_dofs();
+    let bc = BoundaryCondition {
+        name: fixed_bc.name.clone(),
+        nodes: fixed_bc.nodes.clone(),
+        fix_x: constrained_dofs.iter().any(|d| *d == crate::commands::solver::bc::Dof::TranslationX),
+        fix_y: constrained_dofs.iter().any(|d| *d == crate::commands::solver::bc::Dof::TranslationY),
+        fix_z: constrained_dofs.iter().any(|d| *d == crate::commands::solver::bc::Dof::TranslationZ),
+        fix_temp: constrained_dofs.iter().any(|d| *d == crate::commands::solver::bc::Dof::Temperature),
+    };
+    
+    // Convert PointLoad to Load
+    let mut loads: Vec<Load> = Vec::new();
+    if let Some(ref pl) = point_load {
+        let direction = match pl.direction {
+            crate::commands::solver::bc::LoadDirection::X => Some(Direction::X),
+            crate::commands::solver::bc::LoadDirection::Y => Some(Direction::Y),
+            crate::commands::solver::bc::LoadDirection::Z => Some(Direction::Z),
+            crate::commands::solver::bc::LoadDirection::Normal => Some(Direction::Normal),
+            crate::commands::solver::bc::LoadDirection::Custom(_, _, _) => Some(Direction::Z),
+        };
+        loads.push(Load {
+            load_type: LoadType::Force,
+            magnitude: pl.magnitude,
+            direction,
+            surface: None,
+        });
+    }
+    
+    // Convert UniformLoad to Load
+    for ul in &uniform_loads {
+        loads.push(Load {
+            load_type: LoadType::Pressure,
+            magnitude: ul.magnitude,
+            direction: None,
+            surface: Some(ul.surface_name.clone()),
+        });
+    }
+    
+    let model = Model {
+        nodes,
+        elements,
+        materials: vec![material],
+        steps: vec![Step::default()],
+        boundary_conditions: vec![bc],
+        loads,
+        contact_pairs: vec![],
+    };
+    
+    let generator = InpGenerator::new(model);
     
     let content = generate_frequency_response_inp_content(&generator, &config)?;
     
@@ -1792,7 +1850,7 @@ pub fn parse_frequency_response_result(
         }
     } else {
         // Calculate current values from parsed data
-        current_displacement = current_disp;
+        current_disp = current_disp;
     }
     
     // Find resonance frequency (max displacement)
@@ -2000,4 +2058,168 @@ pub fn get_coupling_templates() -> Vec<serde_json::Value> {
             "notes": "先热分析得到温度场，再导入结构分析读取热结果"
         }),
     ]
+}
+
+// ============================================================================
+// Mesh Quality Check API
+// ============================================================================
+
+/// Check mesh quality metrics
+#[command]
+pub fn check_mesh_quality(
+    nodes: Vec<Vec<f64>>,
+    elements: Vec<Vec<usize>>,
+    element_type: String,
+) -> Result<MeshQualityMetrics, String> {
+    tracing::info!("Checking mesh quality: {} elements, type={}", elements.len(), element_type);
+
+    let metrics = check_mesh_quality_impl(&nodes, &elements, &element_type);
+
+    tracing::info!(
+        "Mesh quality check complete: avg={:.3}, min={:.3}, max={:.3}",
+        metrics.avg_quality, metrics.min_quality, metrics.max_quality
+    );
+
+    Ok(metrics)
+}
+
+// ============================================================================
+// Local Mesh Refinement API
+// ============================================================================
+
+/// 对已有网格进行局部加密
+///
+/// 接收节点、单元和加密配置，在加密区域内对单元进行细分。
+/// 支持多个加密区域同时生效，支持按边、按面、按体加密。
+#[command]
+pub fn refine_mesh(
+    nodes: Vec<Node>,
+    elements: Vec<Element>,
+    refinements: Vec<RefinementConfig>,
+) -> Result<MeshApiResult, String> {
+    tracing::info!(
+        "Refining mesh: {} nodes, {} elements, {} refinement regions",
+        nodes.len(),
+        elements.len(),
+        refinements.len()
+    );
+
+    if refinements.is_empty() {
+        // 无加密配置，直接返回原网格
+        let api_nodes: Vec<NodeApi> = nodes
+            .iter()
+            .map(|n| NodeApi {
+                id: n.id,
+                x: n.x,
+                y: n.y,
+                z: n.z,
+                ux: None,
+                uy: None,
+                uz: None,
+                u_magnitude: None,
+            })
+            .collect();
+
+        let api_elements: Vec<ElementApi> = elements
+            .iter()
+            .map(|e| ElementApi {
+                id: e.id,
+                element_type: format!("{:?}", e.element_type),
+                node_ids: e.nodes.clone(),
+                von_mises: None,
+                s11: None,
+                s22: None,
+                s33: None,
+            })
+            .collect();
+
+        return Ok(MeshApiResult {
+            nodes: api_nodes,
+            elements: api_elements,
+            result_stats: vec![],
+        });
+    }
+
+    // 将 Node/Element 转换为 StructuredMesh 格式
+    let mesh_nodes: Vec<Vec<f64>> = nodes
+        .iter()
+        .map(|n| vec![n.x, n.y, n.z])
+        .collect();
+
+    let mesh_elements: Vec<Vec<usize>> = elements
+        .iter()
+        .map(|e| e.nodes.clone())
+        .collect();
+
+    // 判断是 2D 还是 3D
+    let max_z = nodes.iter().map(|n| n.z.abs()).fold(0.0f64, f64::max);
+    let is_3d = max_z > 1e-10;
+
+    let element_type_str = if is_3d {
+        "C3D8".to_string()
+    } else {
+        "S4".to_string()
+    };
+
+    let nz = if is_3d { 1 } else { 1 }; // refine_existing_mesh 通过 dimensions.2 判断
+
+    let mesh = StructuredMesh {
+        dimensions: (0, 0, if is_3d { 2 } else { 1 }),
+        size: (0.0, 0.0, 0.0),
+        nodes: mesh_nodes,
+        elements: mesh_elements,
+        element_type: element_type_str,
+        num_nodes: nodes.len(),
+        num_elements: elements.len(),
+    };
+
+    // 执行局部加密
+    let refined_mesh = MeshGenerator::refine_existing_mesh(&mesh, &refinements)
+        .map_err(|e| e.to_string())?;
+
+    tracing::info!(
+        "Refined mesh: {} nodes, {} elements (was {} nodes, {} elements)",
+        refined_mesh.num_nodes,
+        refined_mesh.num_elements,
+        mesh.num_nodes,
+        mesh.num_elements
+    );
+
+    // 转换为 API 格式
+    let api_nodes: Vec<NodeApi> = refined_mesh
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(i, coord)| NodeApi {
+            id: i + 1,
+            x: coord[0],
+            y: coord[1],
+            z: coord[2],
+            ux: None,
+            uy: None,
+            uz: None,
+            u_magnitude: None,
+        })
+        .collect();
+
+    let api_elements: Vec<ElementApi> = refined_mesh
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(i, elem_nodes)| ElementApi {
+            id: i + 1,
+            element_type: refined_mesh.element_type.clone(),
+            node_ids: elem_nodes.iter().map(|n| n + 1).collect(),
+            von_mises: None,
+            s11: None,
+            s22: None,
+            s33: None,
+        })
+        .collect();
+
+    Ok(MeshApiResult {
+        nodes: api_nodes,
+        elements: api_elements,
+        result_stats: vec![],
+    })
 }

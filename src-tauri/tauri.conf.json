@@ -1,27 +1,19 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CAELab",
+  "version": "0.3.0",
+  "identifier": "com.caelab.app",
   "build": {
-    "distDir": "../dist",
-    "devPath": "http://localhost:1420",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": ""
   },
-  "package": {
-    "productName": "CAELab",
-    "version": "0.1.0"
+  "bundle": {
+    "active": true,
+    "targets": "all"
   },
-  "tauri": {
-    "bundle": {
-      "active": true,
-      "targets": "all",
-      "identifier": "com.caelab.app",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ]
-    },
+  "app": {
     "windows": [
       {
         "title": "CAELab - 科研与工程创作一体化工作台",

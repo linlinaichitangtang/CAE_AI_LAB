@@ -1,58 +1,106 @@
-//! Transient Dynamics Analysis Command Module
-//! 支持动力学瞬态分析，包括载荷曲线、阻尼设置、时间步控制
+//! 瞬态动力学分析命令模块
+//! 
+//! 本模块提供动力学瞬态分析功能,支持多种载荷曲线类型、阻尼设置和时间步控制。
+//! 
+//! 主要功能：
+//! - 载荷曲线定义 (阶跃、正弦、冲击、自定义)
+//! - Rayleigh阻尼设置
+//! - 时间步自动控制
+//! - CalculiX INP文件生成
+//! - 简化时域仿真 (Newmark-β积分)
+//! - 示例案例 (单自由度振动、悬臂梁冲击)
+//! 
+//! 瞬态分析适用于:
+//! - 结构在随时间变化的荷载下的响应
+//! - 冲击载荷作用下的动态响应
+//! - 振动特性分析
 
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as FmtWrite;
+use std::fmt::Write;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
+use thiserror::Error;
 
+/// 瞬态分析错误类型
 #[derive(Debug, Error)]
 pub enum TransientError {
+    /// IO错误
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
+    /// 格式化错误
+    #[error("Format error: {0}")]
+    FormatError(#[from] std::fmt::Error),
+    /// 参数无效错误
     #[error("Invalid parameter: {0}")]
     InvalidParam(String),
+    /// 网格未生成错误
     #[error("Mesh not generated: {0}")]
     MeshNotFound(String),
 }
 
 // ============ 载荷曲线类型 ============
 
+/// 载荷-时间曲线上的数据点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadPoint {
+    /// 时间点 (秒)
     pub time: f64,
+    /// 对应载荷值
     pub value: f64,
 }
 
+/// 载荷曲线类型枚举
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LoadType {
-    Step,      // 阶跃载荷
-    Sinusoid,  // 正弦载荷
-    Impulse,   // 冲击载荷
-    Custom,    // 自定义曲线
+    /// 阶跃载荷 - 突然施加的恒定载荷
+    Step,
+    /// 正弦载荷 - 简谐变化载荷
+    Sinusoid,
+    /// 冲击载荷 - 短时脉冲载荷
+    Impulse,
+    /// 自定义曲线 - 用户定义的载荷时间历程
+    Custom,
 }
 
+/// 载荷曲线结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadCurve {
+    /// 载荷曲线ID
     pub id: String,
+    /// 载荷曲线名称
     pub name: String,
+    /// 载荷类型
     pub load_type: LoadType,
+    /// 载荷-时间数据点列表
     pub points: Vec<LoadPoint>,
-    pub amplitude: f64,  // 幅值
-    pub frequency: f64,  // 频率 (Hz)
-    pub phase: f64,      // 相位 (rad)
-    pub duration: f64,   // 持续时间
+    /// 幅值 (用于正弦/冲击载荷)
+    pub amplitude: f64,
+    /// 频率 (Hz) (用于正弦载荷)
+    pub frequency: f64,
+    /// 相位 (弧度) (用于正弦载荷)
+    pub phase: f64,
+    /// 持续时间 (秒)
+    pub duration: f64,
 }
 
 // ============ 阻尼设置 ============
 
+/// Rayleigh阻尼结构体
+/// 
+/// Rayleigh阻尼假设阻尼矩阵与质量矩阵和刚度矩阵成正比:
+/// C = α*M + β*K
+/// 其中 α 是质量阻尼系数, β 是刚度阻尼系数
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RayleighDamping {
-    pub alpha: f64,  // 质量阻尼系数 α
-    pub beta: f64,   // 刚度阻尼系数 β
-    pub frequency1: f64,  // 第一频率点 (Hz)
-    pub frequency2: f64,  // 第二频率点 (Hz)
+    /// 质量阻尼系数 α (与质量矩阵成正比)
+    pub alpha: f64,
+    /// 刚度阻尼系数 β (与刚度矩阵成正比)
+    pub beta: f64,
+    /// 第一频率点 (Hz) - 用于计算阻尼系数
+    pub frequency1: f64,
+    /// 第二频率点 (Hz) - 用于计算阻尼系数
+    pub frequency2: f64,
 }
 
 impl Default for RayleighDamping {
@@ -68,13 +116,19 @@ impl Default for RayleighDamping {
 
 // ============ 时间步控制 ============
 
+/// 时间步控制结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeStepControl {
-    pub initial_dt: f64,      // 初始时间步长
-    pub min_dt: f64,          // 最小时间步长
-    pub max_dt: f64,          // 最大时间步长
-    pub total_time: f64,      // 总分析时间
-    pub output_interval: i32, // 输出间隔（每N步输出一次）
+    /// 初始时间步长 (秒)
+    pub initial_dt: f64,
+    /// 最小时间步长 (秒)
+    pub min_dt: f64,
+    /// 最大时间步长 (秒)
+    pub max_dt: f64,
+    /// 总分析时间 (秒)
+    pub total_time: f64,
+    /// 输出间隔 (每N步输出一次结果)
+    pub output_interval: i32,
 }
 
 impl Default for TimeStepControl {
@@ -91,51 +145,84 @@ impl Default for TimeStepControl {
 
 // ============ 瞬态分析配置 ============
 
+/// 瞬态分析完整配置结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransientAnalysisConfig {
+    /// 分析名称
     pub name: String,
+    /// 网格ID
     pub mesh_id: String,
+    /// 载荷曲线列表
     pub load_curves: Vec<LoadCurve>,
+    /// Rayleigh阻尼设置
     pub damping: RayleighDamping,
+    /// 时间步控制
     pub time_control: TimeStepControl,
-    pub initial_conditions: Vec<f64>,  // 初始位移/速度
+    /// 初始条件 [初始位移, 初始速度, ...]
+    pub initial_conditions: Vec<f64>,
 }
 
 // ============ 时域结果 ============
 
+/// 单个时间步的结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransientResultStep {
+    /// 当前时间 (秒)
     pub time: f64,
-    pub displacements: Vec<f64>,      // 每个节点的位移
-    pub velocities: Vec<f64>,          // 每个节点的速度
-    pub accelerations: Vec<f64>,       // 每个节点的加速度
-    pub stresses: Vec<f64>,           // 每个单元的应力
+    /// 每个节点的位移 [u1, u2, u3, ...]
+    pub displacements: Vec<f64>,
+    /// 每个节点的速度 [v1, v2, v3, ...]
+    pub velocities: Vec<f64>,
+    /// 每个节点的加速度 [a1, a2, a3, ...]
+    pub accelerations: Vec<f64>,
+    /// 每个单元的应力
+    pub stresses: Vec<f64>,
+    /// 最大位移
     pub max_displacement: f64,
+    /// 最大应力
     pub max_stress: f64,
 }
 
+/// 完整瞬态分析结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransientResults {
+    /// 分析名称
     pub analysis_name: String,
+    /// 总分析时间
     pub total_time: f64,
+    /// 所有时间步的结果
     pub steps: Vec<TransientResultStep>,
+    /// 全过程最大位移
     pub max_displacement_overall: f64,
+    /// 全过程最大应力
     pub max_stress_overall: f64,
+    /// 结构固有频率列表
     pub natural_frequencies: Vec<f64>,
 }
 
 // ============ 示例案例 ============
 
+/// 教程示例案例结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TutorialExample {
+    /// 示例ID
     pub id: String,
+    /// 示例名称
     pub name: String,
+    /// 示例描述
     pub description: String,
+    /// 预定义的配置
     pub config: TransientAnalysisConfig,
 }
 
+/// 获取单自由度振动示例
+/// 
+/// 演示一个质量-弹簧-阻尼系统的自由振动响应
+/// 用于验证瞬态分析算法的正确性
+/// 
+/// # 返回
+/// TutorialExample 单自由度振动示例
 pub fn get_sdolf_example() -> TutorialExample {
-    // 单自由度振动示例
     TutorialExample {
         id: "sdolf".to_string(),
         name: "单自由度振动".to_string(),
@@ -176,8 +263,14 @@ pub fn get_sdolf_example() -> TutorialExample {
     }
 }
 
+/// 获取悬臂梁冲击响应示例
+/// 
+/// 演示悬臂梁受到冲击载荷时的动态响应
+/// 包含 Rayleigh 阻尼和时域后处理
+/// 
+/// # 返回
+/// TutorialExample 悬臂梁冲击示例
 pub fn get_cantilever_impact_example() -> TutorialExample {
-    // 悬臂梁冲击示例
     TutorialExample {
         id: "cantilever_impact".to_string(),
         name: "悬臂梁冲击".to_string(),
@@ -219,8 +312,21 @@ pub fn get_cantilever_impact_example() -> TutorialExample {
     }
 }
 
-// ============ CalculiX INP 生成 ============
+// ============ CalculiX INP生成 ============
 
+/// 生成CalculiX瞬态动力学分析输入文件
+/// 
+/// 根据配置生成完整的INP文件,包含节点、单元、材料、边界条件、荷载和时间步控制
+/// 
+/// # 参数
+/// - `config`: 瞬态分析配置
+/// - `nodes`: 节点列表 (ID, x, y, z)
+/// - `elements`: 单元列表 (ID, 类型, 节点ID列表)
+/// - `boundary_faces`: 边界条件面 (节点ID, 边界类型)
+/// - `output_path`: 输出文件路径
+/// 
+/// # 返回
+/// Result<(), TransientError>: 成功返回空, 失败返回错误
 pub fn generate_transient_inp(
     config: &TransientAnalysisConfig,
     nodes: &[(usize, f64, f64, f64)],
@@ -230,24 +336,24 @@ pub fn generate_transient_inp(
 ) -> Result<(), TransientError> {
     let mut content = String::new();
     
-    // Header
+    // 头部注释
     writeln!(content, "** Transient Dynamics Analysis - {}", config.name)?;
     writeln!(content, "** Generated by CAELab")?;
     writeln!(content, "**")?;
     
-    // Nodes
+    // 节点定义
     writeln!(content, "*NODE")?;
     for (id, x, y, z) in nodes {
         writeln!(content, "{}, {}, {}, {}", id, x, y, z)?;
     }
     
-    // Elements
+    // 单元定义
     writeln!(content, "\n*ELEMENT, TYPE=C3D8")?;
     for (id, _, node_ids) in elements {
         writeln!(content, "{}, {}", id, node_ids.iter().map(|n| n.to_string()).collect::<Vec<_>>().join(", "))?;
     }
     
-    // Materials
+    // 材料定义
     writeln!(content, "\n** Material - Steel")?;
     writeln!(content, "*MATERIAL, NAME=STEEL")?;
     writeln!(content, "*ELASTIC")?;
@@ -255,15 +361,15 @@ pub fn generate_transient_inp(
     writeln!(content, "*DENSITY")?;
     writeln!(content, "7850")?;
     
-    // Rayleigh Damping
+    // Rayleigh阻尼
     writeln!(content, "\n** Rayleigh Damping")?;
     writeln!(content, "*DAMPING, ALPHA={}, BETA={}", config.damping.alpha, config.damping.beta)?;
     
-    // Section
+    // 截面定义
     writeln!(content, "\n*SOLID SECTION, MATERIAL=STEEL, ELEMENT TYPE=C3D8")?;
     writeln!(content, ", 1.0")?;
     
-    // Boundary Conditions (fixed end)
+    // 边界条件 (固定端)
     writeln!(content, "\n** Boundary Conditions")?;
     writeln!(content, "*BOUNDARY")?;
     for (node_id, face_type) in boundary_faces {
@@ -272,7 +378,7 @@ pub fn generate_transient_inp(
         }
     }
     
-    // Load Curves (Amplitude definitions)
+    // 载荷曲线 (Amplitude定义)
     writeln!(content, "\n** Load Curves")?;
     for (i, curve) in config.load_curves.iter().enumerate() {
         let amp_name = format!("LOAD_{}", i + 1);
@@ -282,7 +388,7 @@ pub fn generate_transient_inp(
         }
     }
     
-    // Time Step Control
+    // 时间步控制
     writeln!(content, "\n** Time Step Control")?;
     writeln!(content, "*STEP, INC=100000, NLGEOM=YES")?;
     writeln!(content, "** DYNAMIC ANALYSIS")?;
@@ -295,12 +401,12 @@ pub fn generate_transient_inp(
         config.time_control.output_interval
     )?;
     
-    // Loads
+    // 荷载应用
     writeln!(content, "\n** Loads")?;
     for (i, curve) in config.load_curves.iter().enumerate() {
         let amp_name = format!("LOAD_{}", i + 1);
         writeln!(content, "*CLOAD")?;
-        // Apply to free end nodes
+        // 应用到自由端节点
         for (node_id, face_type) in boundary_faces {
             if face_type == "free" {
                 writeln!(content, "{}, 3, {}, 1.0", node_id, amp_name)?;
@@ -308,7 +414,7 @@ pub fn generate_transient_inp(
         }
     }
     
-    // Output requests
+    // 输出请求
     writeln!(content, "\n** Output Requests")?;
     writeln!(content, "*NODE FILE, OUTPUT=3D")?;
     writeln!(content, "U, V, A")?;
@@ -320,24 +426,37 @@ pub fn generate_transient_inp(
     Ok(())
 }
 
-// ============ 简化时域仿真（用于演示） ============
+// ============ 简化时域仿真 (用于演示) ============
 
+/// 简化时域仿真 (Newmark-β积分)
+/// 
+/// 使用简化的Newmark-β方法求解运动方程:
+/// M*a + C*v + K*u = F(t)
+/// 
+/// # 参数
+/// - `config`: 瞬态分析配置
+/// - `num_nodes`: 节点数量
+/// 
+/// # 返回
+/// TransientResults 瞬态分析结果
 pub fn simulate_transient_response(
     config: &TransientAnalysisConfig,
     num_nodes: usize,
 ) -> TransientResults {
     let mut steps = Vec::new();
     
-    // 简化的 Newmark-β 积分
+    // 简化的Newmark-β积分
     let dt = config.time_control.initial_dt;
     let t_end = config.time_control.total_time;
+    // 等效阻尼比
     let damping_ratio = config.damping.alpha / (2.0 * (config.damping.frequency1 + config.damping.frequency2) / 2.0 * 2.0 * std::f64::consts::PI);
     
+    // 初始化位移、速度、加速度
     let mut displacements = vec![0.0; num_nodes];
     let mut velocities = vec![0.0; num_nodes];
     let mut accelerations = vec![0.0; num_nodes];
     
-    // 初始条件
+    // 设置初始条件
     if !config.initial_conditions.is_empty() && config.initial_conditions.len() >= 2 {
         displacements[0] = config.initial_conditions[0];
         velocities[0] = config.initial_conditions[1];
@@ -356,13 +475,15 @@ pub fn simulate_transient_response(
         let stiffness = 1000.0;
         let mass = 1.0;
         
+        // F = ma => a = (F - cv - ku) / m
         accelerations[0] = (force - damping_ratio * velocities[0] - stiffness * displacements[0]) / mass;
         velocities[0] += accelerations[0] * dt;
         displacements[0] += velocities[0] * dt;
         
-        // 计算应力
+        // 计算应力 (简化: 应力 = 刚度 * 位移)
         let stress = stiffness * displacements[0].abs();
         
+        // 按间隔记录结果
         if step_count % config.time_control.output_interval as usize == 0 || current_time == 0.0 || current_time >= t_end - 0.001 {
             steps.push(TransientResultStep {
                 time: current_time,
@@ -378,6 +499,7 @@ pub fn simulate_transient_response(
         current_time += dt;
         step_count += 1;
         
+        // 防止无限循环
         if step_count > 10000 {
             break;
         }
@@ -396,28 +518,40 @@ pub fn simulate_transient_response(
     }
 }
 
+/// 计算给定时间点的载荷值
+/// 
+/// 根据载荷曲线类型计算当前时刻的总载荷
+/// 
+/// # 参数
+/// - `curves`: 载荷曲线列表
+/// - `time`: 当前时间 (秒)
+/// 
+/// # 返回
+/// 当前时刻的总载荷值
 fn calculate_load_at_time(curves: &[LoadCurve], time: f64) -> f64 {
     let mut total_load = 0.0;
     for curve in curves {
         match curve.load_type {
             LoadType::Step => {
+                // 阶跃载荷: t>=0时施加恒定载荷
                 if time >= 0.0 {
                     total_load += curve.amplitude;
                 }
             }
             LoadType::Sinusoid => {
+                // 正弦载荷: A * sin(2πft + φ)
                 let t = time % curve.duration;
                 total_load += curve.amplitude * (2.0 * std::f64::consts::PI * curve.frequency * t + curve.phase).sin();
             }
             LoadType::Impulse => {
-                // 计算脉冲载荷
+                // 冲击载荷: 近似高斯脉冲
                 let impulse_total: f64 = curve.points.iter().map(|p| p.value).sum::<f64>() * 0.001;
                 if time < 0.01 {
                     total_load += curve.amplitude * (-((time - 0.005) / 0.005).powi(2) + 1.0);
                 }
             }
             LoadType::Custom => {
-                // 线性插值
+                // 自定义曲线: 线性插值
                 for i in 0..curve.points.len().saturating_sub(1) {
                     let p1 = &curve.points[i];
                     let p2 = &curve.points[i + 1];
@@ -435,11 +569,25 @@ fn calculate_load_at_time(curves: &[LoadCurve], time: f64) -> f64 {
 
 // ============ Tauri Commands ============
 
+/// Tauri命令 - 获取教程示例列表
+/// 
+/// 返回预定义的示例案例供用户学习参考
+/// 
+/// # 返回
+/// Vec<TutorialExample> 示例案例列表
 #[tauri::command]
 pub fn get_tutorial_examples() -> Vec<TutorialExample> {
     vec![get_sdolf_example(), get_cantilever_impact_example()]
 }
 
+/// Tauri命令 - 生成瞬态分析INP文件
+/// 
+/// # 参数
+/// - `config_json`: JSON格式的分析配置字符串
+/// - `output_path`: 输出文件路径
+/// 
+/// # 返回
+/// Result<String, String>: 成功返回文件路径, 失败返回错误信息
 #[tauri::command]
 pub fn generate_transient_inp_file(
     config_json: String,
@@ -450,7 +598,7 @@ pub fn generate_transient_inp_file(
     
     let path = PathBuf::from(&output_path);
     
-    // 生成示例网格数据
+    // 生成示例网格数据 (简化)
     let nodes: Vec<(usize, f64, f64, f64)> = (0..10)
         .map(|i| (i + 1, i as f64 * 0.1, 0.0, 0.0))
         .collect();
@@ -470,6 +618,15 @@ pub fn generate_transient_inp_file(
     Ok(output_path)
 }
 
+/// Tauri命令 - 运行瞬态仿真
+/// 
+/// 使用简化的Newmark-β方法进行时域分析
+/// 
+/// # 参数
+/// - `config_json`: JSON格式的分析配置字符串
+/// 
+/// # 返回
+/// Result<TransientResults, String>: 瞬态分析结果
 #[tauri::command]
 pub fn run_transient_simulation(
     config_json: String,
@@ -477,12 +634,26 @@ pub fn run_transient_simulation(
     let config: TransientAnalysisConfig = serde_json::from_str(&config_json)
         .map_err(|e| format!("Failed to parse config: {}", e))?;
     
-    // 模拟计算
+    // 执行简化仿真
     let results = simulate_transient_response(&config, 10);
     
     Ok(results)
 }
 
+/// Tauri命令 - 计算Rayleigh阻尼系数
+/// 
+/// 根据两个频率点和阻尼比计算α和β
+/// 
+/// 阻尼比公式: ζ = (α/(2ω)) + (βω/2)
+/// 解联立方程组得到α和β
+/// 
+/// # 参数
+/// - `frequency1`: 第一频率点 (Hz)
+/// - `frequency2`: 第二频率点 (Hz)
+/// - `damping_ratio`: 目标阻尼比
+/// 
+/// # 返回
+/// Result<RayleighDamping, String>: 计算得到的阻尼系数
 #[tauri::command]
 pub fn calculate_rayleigh_coefficients(
     frequency1: f64,
@@ -507,6 +678,13 @@ pub fn calculate_rayleigh_coefficients(
     })
 }
 
+/// Tauri命令 - 获取载荷曲线模板
+/// 
+/// # 参数
+/// - `template_type`: 模板类型 ("step", "sinusoid", "impulse")
+/// 
+/// # 返回
+/// Result<LoadCurve, String>: 载荷曲线模板
 #[tauri::command]
 pub fn get_load_curve_template(
     template_type: String,

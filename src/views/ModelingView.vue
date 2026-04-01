@@ -7,6 +7,16 @@
         <p class="text-xs text-[var(--text-muted)]">几何建模、外部模型导入、参数化编辑</p>
       </div>
       <div class="flex items-center gap-2">
+        <!-- 返回笔记 -->
+        <button
+          v-if="projectStore.currentNoteId"
+          @click="goBackToNote"
+          class="btn btn-ghost text-xs flex items-center gap-1"
+          title="返回笔记"
+        >
+          <span>&larr;</span>
+          <span>返回笔记</span>
+        </button>
         <!-- 🔗 嵌入到笔记 -->
         <button 
           @click="showEmbedToNoteDialog"
@@ -805,7 +815,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 import { useProjectStore } from '@/stores/project'
 import { useAiStore } from '@/stores/ai'
 import type { GeometryItem } from '../types'
@@ -814,6 +824,12 @@ const aiStore = useAiStore()
 
 const router = useRouter()
 const projectStore = useProjectStore()
+
+function goBackToNote() {
+  if (projectStore.currentNoteId) {
+    router.push({ path: '/notes', query: { noteId: projectStore.currentNoteId } })
+  }
+}
 
 // Canvas and Three.js refs
 const canvasContainer = ref<HTMLDivElement | null>(null)

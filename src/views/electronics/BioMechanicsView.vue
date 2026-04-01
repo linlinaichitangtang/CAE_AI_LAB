@@ -355,7 +355,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useProjectStore } from '../stores/project'
+import { useProjectStore } from '../../stores/project'
 
 const projectStore = useProjectStore()
 

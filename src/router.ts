@@ -38,6 +38,41 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/FatigueView.vue')
   },
   {
+    path: '/transient',
+    name: 'TransientDynamics',
+    component: () => import('./views/TransientDynamicsView.vue')
+  },
+  {
+    path: '/cfd',
+    name: 'CFD',
+    component: () => import('./views/CFDView.vue')
+  },
+  {
+    path: '/thermal',
+    name: 'ThermalCoupling',
+    component: () => import('./views/ThermalCouplingView.vue')
+  },
+  {
+    path: '/topology',
+    name: 'TopologyOptimization',
+    component: () => import('./views/TopologyOptimizationView.vue')
+  },
+  {
+    path: '/explicit',
+    name: 'ExplicitDynamics',
+    component: () => import('./views/ExplicitDynamicsView.vue')
+  },
+  {
+    path: '/electronics',
+    name: 'ElectronicsPackage',
+    component: () => import('./views/ElectronicsPackageView.vue')
+  },
+  {
+    path: '/biomechanics',
+    name: 'BioMechanics',
+    component: () => import('./views/BioMechanicsView.vue')
+  },
+  {
     path: '/comparison',
     name: 'Comparison',
     component: () => import('./views/ComparisonView.vue')

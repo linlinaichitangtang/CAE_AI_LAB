@@ -99,7 +99,7 @@ Returns list of all projects.
 Create a new project.`,
   '/package.json': JSON.stringify({
     name: "caelab",
-    version: "0.1.0",
+    version: "0.3.0",
     description: "科研与工程创作一体化工作台",
     scripts: {
       dev: "vite",

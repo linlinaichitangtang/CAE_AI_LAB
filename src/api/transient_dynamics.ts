@@ -1,5 +1,5 @@
 // API for Transient Dynamics Analysis
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/core'
 
 // ============ Types ============
 

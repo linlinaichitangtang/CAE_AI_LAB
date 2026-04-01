@@ -1,23 +1,30 @@
 [package]
 name = "caelab"
-version = "0.1.0"
+version = "0.3.0"
 description = "科研与工程创作一体化工作台"
 authors = ["CAELab Team"]
 edition = "2021"
 
 [build-dependencies]
-tauri-build = "1.0"
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "=1.0.0-beta.20", features = [] }
+tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rusqlite = { version = "0.31", features = ["bundled"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+zip = "2"
+flate2 = "1"
 reqwest = { version = "0.11", features = ["json", "stream"] }
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+lazy_static = "1.4"
+thiserror = "1"
+dirs-next = "2"
 
 [features]
 default = ["custom-protocol"]

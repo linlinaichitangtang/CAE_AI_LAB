@@ -1,27 +1,33 @@
 <template>
-  <nav class="h-full bg-[var(--bg-surface)] flex flex-col items-center py-4 border-r border-[var(--border-subtle)]">
+  <nav class="h-full bg-[var(--bg-surface)] flex flex-col border-r border-[var(--border-default)]">
     <!-- Main Navigation -->
-    <div class="flex flex-col items-center gap-2 flex-1">
-      <router-link
-        v-for="item in navItems"
+    <div class="flex flex-col items-center py-3 gap-1 flex-1">
+      <router-link 
+        v-for="item in mainNavItems" 
         :key="item.path"
         :to="item.path"
         class="nav-item"
-        :class="{ 'active': $route.path === item.path }"
+        :class="{ 'active': isActive(item.path) }"
+        :title="item.label"
       >
-        <span class="nav-icon">{{ item.icon }}</span>
+        <component :is="item.icon" class="nav-icon" />
         <span class="nav-label">{{ item.label }}</span>
+        <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
       </router-link>
     </div>
-    
+
+    <!-- Divider -->
+    <div class="mx-3 h-px bg-[var(--border-subtle)]"></div>
+
     <!-- Bottom Section -->
-    <div class="mt-auto pt-4 border-t border-[var(--border-subtle)]">
-      <router-link
-        to="/settings"
+    <div class="flex flex-col items-center py-3 gap-1">
+      <router-link 
+        to="/settings" 
         class="nav-item"
         :class="{ 'active': $route.path === '/settings' }"
+        title="设置"
       >
-        <span class="nav-icon">⚙️</span>
+        <SettingsIcon class="nav-icon" />
         <span class="nav-label">设置</span>
       </router-link>
     </div>
@@ -29,33 +35,190 @@
 </template>
 
 <script setup lang="ts">
-const navItems = [
-  { path: '/', icon: '🏠', label: '首页' },
-  { path: '/notes', icon: '📝', label: '笔记' },
-  { path: '/modeling', icon: '🎨', label: '建模' },
-  { path: '/code', icon: '💻', label: '代码' },
-  { path: '/simulation', icon: '🔬', label: '仿真' },
-  { path: '/fatigue', icon: '🔄', label: '疲劳' },
-  { path: '/ai', icon: '🤖', label: 'AI聊天' }
+import { h } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// SVG Icon Components
+const HomeIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' }),
+    h('polyline', { points: '9 22 9 12 15 12 15 22' })
+  ])
+}
+
+const NotesIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+    h('polyline', { points: '14 2 14 8 20 8' }),
+    h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+    h('line', { x1: '16', y1: '17', x2: '8', y2: '17' }),
+    h('polyline', { points: '10 9 9 9 8 9' })
+  ])
+}
+
+const ModelingIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' }),
+    h('polyline', { points: '3.27 6.96 12 12.01 20.73 6.96' }),
+    h('line', { x1: '12', y1: '22.08', x2: '12', y2: '12' })
+  ])
+}
+
+const CodeIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('polyline', { points: '16 18 22 12 16 6' }),
+    h('polyline', { points: '8 6 2 12 8 18' })
+  ])
+}
+
+const SimulationIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '3' }),
+    h('path', { d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' })
+  ])
+}
+
+const FatigueIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M22 12h-4l-3 9L9 3l-3 9H2' })
+  ])
+}
+
+const TransientIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('polygon', { points: '13 2 3 14 12 14 11 22 21 10 12 10 13 2' })
+  ])
+}
+
+const ExplicitIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '10' }),
+    h('line', { x1: '12', y1: '8', x2: '12', y2: '12' }),
+    h('line', { x1: '12', y1: '16', x2: '12.01', y2: '16' })
+  ])
+}
+
+const CFDIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z' })
+  ])
+}
+
+const ThermalIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z' })
+  ])
+}
+
+const TopologyIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '3', y: '3', width: '7', height: '7' }),
+    h('rect', { x: '14', y: '3', width: '7', height: '7' }),
+    h('rect', { x: '14', y: '14', width: '7', height: '7' }),
+    h('rect', { x: '3', y: '14', width: '7', height: '7' })
+  ])
+}
+
+const SettingsIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '3' }),
+    h('path', { d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' })
+  ])
+}
+
+const mainNavItems: Array<{
+  path: string
+  icon: any
+  label: string
+  badge?: string
+}> = [
+  { path: '/', icon: HomeIcon, label: '首页' },
+  { path: '/notes', icon: NotesIcon, label: '笔记' },
+  { path: '/modeling', icon: ModelingIcon, label: '建模' },
+  { path: '/code', icon: CodeIcon, label: '代码' },
+  { path: '/simulation', icon: SimulationIcon, label: '仿真' },
+  { path: '/fatigue', icon: FatigueIcon, label: '疲劳' },
+  { path: '/transient', icon: TransientIcon, label: '瞬态' },
+  { path: '/explicit', icon: ExplicitIcon, label: '显式' },
+  { path: '/cfd', icon: CFDIcon, label: 'CFD' },
+  { path: '/thermal', icon: ThermalIcon, label: '热耦合' },
+  { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
+
+function isActive(path: string): boolean {
+  if (path === '/') {
+    return route.path === '/'
+  }
+  return route.path.startsWith(path)
+}
 </script>
 
 <style scoped>
-/* Navigation styles */
 .nav-item {
-  @apply flex flex-col items-center justify-center w-14 h-14 rounded-lg transition-colors cursor-pointer;
-  @apply text-[var(--text-secondary)] hover:bg-[var(--bg-hover)];
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+  position: relative;
+}
+
+.nav-item:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 
 .nav-item.active {
-  @apply bg-[var(--accent-primary)] bg-opacity-10 text-[var(--accent-primary)];
+  background-color: var(--primary-glow);
+  color: var(--primary);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background-color: var(--primary);
+  border-radius: 0 3px 3px 0;
 }
 
 .nav-icon {
-  @apply text-xl mb-0.5;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 2px;
 }
 
 .nav-label {
-  @apply text-xs font-medium;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.nav-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  background: var(--accent-red);
+  color: white;
+  font-size: 8px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

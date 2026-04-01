@@ -32,6 +32,18 @@ pub struct SearchResult {
     pub score: f64,
 }
 
+/// Embed record model (embedded targets in notes)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmbedRecord {
+    pub id: String,
+    pub note_id: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub target_name: String,
+    pub config: Option<String>,
+    pub created_at: String,
+}
+
 /// Create a new file in a project
 #[command]
 pub fn create_file(
@@ -54,14 +66,15 @@ pub fn create_file(
         file_name: input.file_name,
         content: input.content,
         file_path: input.file_path,
+        category: "未分类".to_string(),
         created_at: now.clone(),
         updated_at: now,
     };
 
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     conn.execute(
-        "INSERT INTO project_files (id, project_id, file_type, file_name, content, file_path, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        (&file.id, &file.project_id, file_type_str, &file.file_name, &file.content, &file.file_path, &file.created_at, &file.updated_at),
+        "INSERT INTO project_files (id, project_id, file_type, file_name, content, file_path, category, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        (&file.id, &file.project_id, file_type_str, &file.file_name, &file.content, &file.file_path, &file.category, &file.created_at, &file.updated_at),
     ).map_err(|e| format!("Failed to insert file: {}", e))?;
 
     tracing::info!("Created file: {} - {}", file.id, file.file_name);
@@ -76,7 +89,7 @@ pub fn list_files(
 ) -> Result<Vec<ProjectFile>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, project_id, file_type, file_name, content, file_path, created_at, updated_at FROM project_files WHERE project_id = ?1 ORDER BY updated_at DESC")
+        .prepare("SELECT id, project_id, file_type, file_name, content, file_path, category, created_at, updated_at FROM project_files WHERE project_id = ?1 ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
 
     let files = stmt
@@ -95,8 +108,9 @@ pub fn list_files(
                 file_name: row.get(3)?,
                 content: row.get(4)?,
                 file_path: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
+                category: row.get(6)?,
+                created_at: row.get(7)?,
+                updated_at: row.get(8)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -113,7 +127,7 @@ pub fn get_file(db: State<'_, Database>, id: String) -> Result<ProjectFile, Stri
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let file = conn
         .query_row(
-            "SELECT id, project_id, file_type, file_name, content, file_path, created_at, updated_at FROM project_files WHERE id = ?1",
+            "SELECT id, project_id, file_type, file_name, content, file_path, category, created_at, updated_at FROM project_files WHERE id = ?1",
             [&id],
             |row| {
                 let file_type_str: String = row.get(2)?;
@@ -130,8 +144,9 @@ pub fn get_file(db: State<'_, Database>, id: String) -> Result<ProjectFile, Stri
                     file_name: row.get(3)?,
                     content: row.get(4)?,
                     file_path: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
+                    category: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
                 })
             },
         )
@@ -151,7 +166,7 @@ pub fn update_file(
     // Get current file
     let current: ProjectFile = conn
         .query_row(
-            "SELECT id, project_id, file_type, file_name, content, file_path, created_at, updated_at FROM project_files WHERE id = ?1",
+            "SELECT id, project_id, file_type, file_name, content, file_path, category, created_at, updated_at FROM project_files WHERE id = ?1",
             [&input.id],
             |row| {
                 let file_type_str: String = row.get(2)?;
@@ -168,15 +183,16 @@ pub fn update_file(
                     file_name: row.get(3)?,
                     content: row.get(4)?,
                     file_path: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
+                    category: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
                 })
             },
         )
         .map_err(|e| format!("File not found: {}", e))?;
 
     let now = chrono::Utc::now().to_rfc3339();
-    let file_name = input.file_name.unwrap_or(current.file_name);
+    let file_name = input.file_name.unwrap_or_else(|| current.file_name.clone());
     let content = input.content.or(current.content.clone());
 
     // Save version history before updating (only for notes)
@@ -201,6 +217,7 @@ pub fn update_file(
         file_name,
         content,
         file_path: current.file_path,
+        category: current.category,
         created_at: current.created_at,
         updated_at: now,
     };
@@ -339,7 +356,7 @@ pub fn restore_note_version(
     version_id: String,
 ) -> Result<ProjectFile, String> {
     // First get the version
-    let version = get_note_version(db.clone(), version_id)?;
+    let version = get_note_version(db.clone(), version_id.clone())?;
     
     // Make sure it belongs to this note
     if version.note_id != note_id {
@@ -351,7 +368,7 @@ pub fn restore_note_version(
     
     let current: ProjectFile = conn
         .query_row(
-            "SELECT id, project_id, file_type, file_name, content, file_path, created_at, updated_at FROM project_files WHERE id = ?1",
+            "SELECT id, project_id, file_type, file_name, content, file_path, category, created_at, updated_at FROM project_files WHERE id = ?1",
             [&note_id],
             |row| {
                 let file_type_str: String = row.get(2)?;
@@ -368,8 +385,9 @@ pub fn restore_note_version(
                     file_name: row.get(3)?,
                     content: row.get(4)?,
                     file_path: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
+                    category: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
                 })
             },
         )
@@ -398,6 +416,7 @@ pub fn restore_note_version(
         file_name: version.title,
         content: Some(version.content),
         file_path: current.file_path,
+        category: current.category,
         created_at: current.created_at,
         updated_at: now,
     })
@@ -561,10 +580,10 @@ pub fn search_notes(
                 let mut s = content[start..end].to_string();
                 if start > 0 { s = format!("...{}", s); }
                 if end < content.len() { s = format!("{}...", s); }
-                s.replace('\n', ' ').replace('<', "&lt;").replace('>', "&gt;")
+                s.replace('\n', " ").replace('<', "&lt;").replace('>', "&gt;")
             } else {
                 content[..std::cmp::min(150, content.len())].to_string()
-                    .replace('\n', ' ').replace('<', "&lt;").replace('>', "&gt;")
+                    .replace('\n', " ").replace('<', "&lt;").replace('>', "&gt;")
             };
             
             Ok(SearchResult {
@@ -579,4 +598,140 @@ pub fn search_notes(
         .map_err(|e| e.to_string())?;
 
     Ok(results)
+}
+
+// ============ Embed Record Commands ============
+
+/// Add an embed record to a note
+#[command]
+pub fn add_embed_record(
+    db: State<'_, Database>,
+    note_id: String,
+    target_type: String,
+    target_id: String,
+    target_name: String,
+    config: Option<String>,
+) -> Result<EmbedRecord, String> {
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO embed_records (id, note_id, target_type, target_id, target_name, config, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        (&id, &note_id, &target_type, &target_id, &target_name, &config, &now),
+    ).map_err(|e| format!("Failed to insert embed record: {}", e))?;
+
+    tracing::info!("Added embed record: {} -> {} ({})", note_id, target_type, target_name);
+    Ok(EmbedRecord {
+        id,
+        note_id,
+        target_type,
+        target_id,
+        target_name,
+        config,
+        created_at: now,
+    })
+}
+
+/// Get all embed records for a note
+#[command]
+pub fn get_embed_records(
+    db: State<'_, Database>,
+    note_id: String,
+) -> Result<Vec<EmbedRecord>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, note_id, target_type, target_id, target_name, config, created_at FROM embed_records WHERE note_id = ?1 ORDER BY created_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let records = stmt
+        .query_map([&note_id], |row| {
+            Ok(EmbedRecord {
+                id: row.get(0)?,
+                note_id: row.get(1)?,
+                target_type: row.get(2)?,
+                target_id: row.get(3)?,
+                target_name: row.get(4)?,
+                config: row.get(5)?,
+                created_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(records)
+}
+
+/// Delete an embed record by ID
+#[command]
+pub fn delete_embed_record(
+    db: State<'_, Database>,
+    id: String,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM embed_records WHERE id = ?1", [&id])
+        .map_err(|e| format!("Failed to delete embed record: {}", e))?;
+
+    tracing::info!("Deleted embed record: {}", id);
+    Ok(())
+}
+
+/// Update an embed record's target_name and config
+#[command]
+pub fn update_embed_record(
+    db: State<'_, Database>,
+    id: String,
+    target_name: String,
+    config: Option<String>,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE embed_records SET target_name = ?1, config = ?2 WHERE id = ?3",
+        (&target_name, &config, &id),
+    )
+    .map_err(|e| format!("Failed to update embed record: {}", e))?;
+
+    tracing::info!("Updated embed record: {}", id);
+    Ok(())
+}
+
+// ============ Category Commands ============
+
+/// Update a file's category
+#[command]
+pub fn update_file_category(
+    db: State<'_, Database>,
+    file_id: String,
+    category: String,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE project_files SET category = ?1 WHERE id = ?2",
+        (&category, &file_id),
+    )
+    .map_err(|e| format!("Failed to update file category: {}", e))?;
+
+    tracing::info!("Updated file {} category to: {}", file_id, category);
+    Ok(())
+}
+
+/// Get all distinct categories for a project
+#[command]
+pub fn get_file_categories(
+    db: State<'_, Database>,
+    project_id: String,
+) -> Result<Vec<String>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT DISTINCT category FROM project_files WHERE project_id = ?1 AND category IS NOT NULL ORDER BY category")
+        .map_err(|e| e.to_string())?;
+
+    let categories = stmt
+        .query_map([&project_id], |row| row.get(0))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(categories)
 }
