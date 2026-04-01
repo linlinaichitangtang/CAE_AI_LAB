@@ -95,7 +95,7 @@ export interface EmbedItem {
 
 // 3D Modeling types
 export interface GeometryItem {
-  type: 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus'
+  type: 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'imported'
   name: string
   icon: string
   dimensions: string

@@ -816,6 +816,7 @@ import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import { useProjectStore } from '@/stores/project'
 import { useAiStore } from '@/stores/ai'
 import type { GeometryItem } from '../types'
@@ -1642,9 +1643,276 @@ async function performBooleanOp(op: 'union' | 'subtract' | 'intersect') {
   }
 }
 
-function importModel() {
-  // TODO: Implement model import via Tauri file dialog
-  console.log('Import model - to be implemented')
+async function importModel() {
+  try {
+    // 打开文件选择对话框
+    const selectedPath = await open({
+      multiple: false,
+      filters: [
+        {
+          name: 'CAD 文件',
+          extensions: ['step', 'stp', 'iges', 'igs', 'stl']
+        },
+        {
+          name: 'STEP 文件',
+          extensions: ['step', 'stp']
+        },
+        {
+          name: 'IGES 文件',
+          extensions: ['iges', 'igs']
+        },
+        {
+          name: 'STL 文件',
+          extensions: ['stl']
+        }
+      ]
+    })
+
+    if (!selectedPath) {
+      return // 用户取消选择
+    }
+
+    const filePath = selectedPath as string
+    const fileName = filePath.split(/[\\/]/).pop() || filePath
+
+    console.log(`Importing model from: ${filePath}`)
+
+    // 动态导入 API
+    const { importStepFile, checkStepImportAvailable } = await import('@/api/cae')
+
+    // 检查导入工具可用性
+    const ext = filePath.split('.').pop()?.toLowerCase() || ''
+    if (ext !== 'stl') {
+      const availability = await checkStepImportAvailable()
+      if (!availability.recommended_tool) {
+        alert(
+          '未找到 CAD 转换工具。\n\n' +
+          '请安装以下工具之一：\n' +
+          '1. GMSH (https://gmsh.info) - 推荐\n' +
+          '2. FreeCAD (https://freecad.org)\n\n' +
+          '安装后请重启 CAELab。'
+        )
+        return
+      }
+      console.log(`Using converter: ${availability.recommended_tool}`)
+    }
+
+    generating.value = true
+
+    // 调用后端导入文件
+    const result = await importStepFile(filePath)
+
+    if (!result.success || result.error) {
+      alert(`导入失败: ${result.error || '未知错误'}`)
+      return
+    }
+
+    // 显示警告信息
+    if (result.warnings.length > 0) {
+      console.warn('Import warnings:', result.warnings)
+    }
+
+    console.log(
+      `Imported mesh: ${result.num_nodes} nodes, ${result.num_elements} elements, type: ${result.element_type}`
+    )
+
+    // 将导入的网格数据转换为 projectStore 需要的格式
+    const meshResult = {
+      nodes: result.nodes.map((coords, idx) => ({
+        id: idx + 1,
+        x: coords[0],
+        y: coords[1],
+        z: coords[2]
+      })),
+      elements: result.elements.map((nodeIds, idx) => ({
+        id: idx + 1,
+        node_ids: nodeIds,
+        element_type: result.element_type as any
+      }))
+    }
+
+    // 保存到 projectStore
+    projectStore.setMesh(meshResult)
+
+    // 清除旧的边界条件和结果
+    projectStore.clearBoundaryConditions()
+    projectStore.clearResult()
+
+    // 在场景中创建导入网格的可视化
+    createImportedMeshVisualization(result)
+
+    // 添加到几何体列表
+    const bbox = result.bounding_box
+    const dims = bbox
+      ? `${(bbox[3] - bbox[0]).toFixed(1)} x ${(bbox[4] - bbox[1]).toFixed(1)} x ${(bbox[5] - bbox[2]).toFixed(1)}`
+      : `${result.num_nodes} nodes`
+
+    geometryItems.value.push({
+      type: 'imported',
+      name: `导入: ${fileName}`,
+      icon: '📦',
+      dimensions: `${dims} | ${result.num_elements} elements`,
+      group: importedMeshGroup,
+      params: {
+        filePath,
+        numNodes: result.num_nodes,
+        numElements: result.num_elements,
+        elementType: result.element_type
+      }
+    })
+
+    console.log('Model imported successfully')
+  } catch (error) {
+    console.error('Import model failed:', error)
+    alert(`导入模型失败: ${error}`)
+  } finally {
+    generating.value = false
+  }
+}
+
+// 存储导入网格的 Three.js Group
+let importedMeshGroup: THREE.Group | null = null
+
+/** 创建导入网格的可视化 */
+function createImportedMeshVisualization(result: any) {
+  if (!scene) return
+
+  // 移除旧的导入网格
+  if (importedMeshGroup) {
+    scene.remove(importedMeshGroup)
+  }
+
+  importedMeshGroup = new THREE.Group()
+  importedMeshGroup.name = 'imported-mesh'
+
+  const nodes = result.nodes as number[][]
+  const elements = result.elements as number[][]
+
+  if (nodes.length === 0 || elements.length === 0) return
+
+  // 判断单元类型来决定可视化方式
+  const isTriangular = elements.every(e => e.length === 3)
+  const isTetrahedral = elements.every(e => e.length === 4)
+  const isHexahedral = elements.every(e => e.length === 8)
+
+  if (isTriangular) {
+    // 三角面片 - 创建面网格
+    const geometry = new THREE.BufferGeometry()
+    const positions: number[] = []
+    const indices: number[] = []
+
+    for (const elem of elements) {
+      const baseIdx = positions.length / 3
+      for (const nodeId of elem) {
+        const node = nodes[nodeId - 1] // INP 节点ID从1开始
+        if (node) {
+          positions.push(node[0], node[1], node[2])
+        }
+      }
+      indices.push(baseIdx, baseIdx + 1, baseIdx + 2)
+    }
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    geometry.setIndex(indices)
+    geometry.computeVertexNormals()
+
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x4a90d9,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.8
+    })
+
+    const mesh = new THREE.Mesh(geometry, material)
+    importedMeshGroup.add(mesh)
+  } else if (isTetrahedral || isHexahedral) {
+    // 体单元 - 创建线框显示
+    const geometry = new THREE.BufferGeometry()
+    const positions: number[] = []
+
+    for (const elem of elements) {
+      // 绘制单元的边
+      if (isTetrahedral && elem.length === 4) {
+        // 四面体的6条边
+        const edges: [number, number][] = [
+          [0, 1], [0, 2], [0, 3],
+          [1, 2], [1, 3], [2, 3]
+        ]
+        for (const [a, b] of edges) {
+          const nA = nodes[elem[a] - 1]
+          const nB = nodes[elem[b] - 1]
+          if (nA && nB) {
+            positions.push(nA[0], nA[1], nA[2], nB[0], nB[1], nB[2])
+          }
+        }
+      } else if (isHexahedral && elem.length === 8) {
+        // 六面体的12条边
+        const edges: [number, number][] = [
+          [0, 1], [1, 2], [2, 3], [3, 0], // bottom
+          [4, 5], [5, 6], [6, 7], [7, 4], // top
+          [0, 4], [1, 5], [2, 6], [3, 7]  // vertical
+        ]
+        for (const [a, b] of edges) {
+          const nA = nodes[elem[a] - 1]
+          const nB = nodes[elem[b] - 1]
+          if (nA && nB) {
+            positions.push(nA[0], nA[1], nA[2], nB[0], nB[1], nB[2])
+          }
+        }
+      }
+    }
+
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    const material = new THREE.LineBasicMaterial({
+      color: 0x4a90d9,
+      transparent: true,
+      opacity: 0.6
+    })
+    const lineSegments = new THREE.LineSegments(geometry, material)
+    importedMeshGroup.add(lineSegments)
+
+    // 添加节点点云（仅在小网格时）
+    if (nodes.length <= 10000) {
+      const pointGeometry = new THREE.BufferGeometry()
+      const pointPositions: number[] = []
+      for (const node of nodes) {
+        pointPositions.push(node[0], node[1], node[2])
+      }
+      pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(pointPositions, 3))
+      const pointMaterial = new THREE.PointsMaterial({
+        color: 0xff6600,
+        size: 0.5,
+        sizeAttenuation: true
+      })
+      const points = new THREE.Points(pointGeometry, pointMaterial)
+      importedMeshGroup.add(points)
+    }
+  }
+
+  // 自动调整相机以适应导入的模型
+  if (result.bounding_box) {
+    const bbox = result.bounding_box
+    const center = new THREE.Vector3(
+      (bbox[0] + bbox[3]) / 2,
+      (bbox[1] + bbox[4]) / 2,
+      (bbox[2] + bbox[5]) / 2
+    )
+    const size = new THREE.Vector3(
+      bbox[3] - bbox[0],
+      bbox[4] - bbox[1],
+      bbox[5] - bbox[2]
+    )
+    const maxDim = Math.max(size.x, size.y, size.z)
+    const distance = maxDim * 2
+
+    if (camera && controls) {
+      camera.position.set(center.x + distance, center.y + distance * 0.5, center.z + distance)
+      controls.target.copy(center)
+      controls.update()
+    }
+  }
+
+  scene.add(importedMeshGroup)
 }
 
 // AI生成几何体

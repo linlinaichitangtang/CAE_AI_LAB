@@ -1,6 +1,6 @@
 [package]
 name = "caelab"
-version = "0.3.0"
+version = "0.4.0"
 description = "科研与工程创作一体化工作台"
 authors = ["CAELab Team"]
 edition = "2021"
@@ -25,6 +25,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 lazy_static = "1.4"
 thiserror = "1"
 dirs-next = "2"
+tauri-plugin-dialog = "2"
 
 [features]
 default = ["custom-protocol"]

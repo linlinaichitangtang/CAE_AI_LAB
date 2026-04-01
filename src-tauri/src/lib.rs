@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import};
 pub mod solver;
 mod db;
 mod models;
@@ -21,6 +21,7 @@ pub fn run() {
     tracing::info!("Starting CAELab application");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             tracing::info!("Application setup complete");
             
@@ -220,6 +221,9 @@ pub fn run() {
             commands::code_exec::execute_code,
             // Mesh refinement commands
             commands::cae_api::refine_mesh,
+            // STEP/IGES file import commands
+            commands::step_import::import_step_file,
+            commands::step_import::check_step_import_available,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

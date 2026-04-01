@@ -36,6 +36,56 @@ export interface Material {
   density: number
 }
 
+/** 塑性模型类型 */
+export type PlasticModelType = 'bilinear' | 'multilinear' | 'exponential'
+
+/** 屈服准则 */
+export type YieldCriterion = 'von_mises' | 'tresca' | 'drucker_prager'
+
+/** 强化类型 */
+export type HardeningType = 'isotropic' | 'kinematic' | 'mixed'
+
+/** 塑性参数 */
+export interface PlasticParams {
+  model: PlasticModelType
+  yield_criterion: YieldCriterion
+  hardening: HardeningType
+  yield_stress: number       // Pa
+  tangent_modulus: number    // Pa (双线性模型)
+  stress_strain_data?: Array<{ stress: number; strain: number }>  // 多线性模型
+  hardening_exponent?: number  // 指数模型
+}
+
+/** 粘弹性参数 */
+export interface ViscoelasticParams {
+  model: 'maxwell' | 'kelvin' | 'standard_linear' | 'generalized_maxwell'
+  prony_terms?: Array<{ g_i: number; tau_i: number }>
+}
+
+/** 超弹性参数 */
+export interface HyperelasticParams {
+  model: 'neo_hookean' | 'mooney_rivlin_2' | 'mooney_rivlin_3' | 'ogden' | 'yeoh'
+  c10?: number
+  c01?: number
+  c11?: number
+  d1?: number
+  ogden_terms?: Array<{ mu_i: number; alpha_i: number }>
+  yeoh_c10?: number
+  yeoh_c20?: number
+  yeoh_c30?: number
+}
+
+/** 扩展材料接口 */
+export interface NonlinearMaterial extends Material {
+  material_type: 'elastic' | 'plastic' | 'viscoelastic' | 'hyperelastic'
+  plastic?: PlasticParams
+  viscoelastic?: ViscoelasticParams
+  hyperelastic?: HyperelasticParams
+  thermal_expansion?: number  // 热膨胀系数
+  yield_strength?: number     // 屈服强度
+  ultimate_strength?: number  // 极限强度
+}
+
 export interface FixedBc {
   name: string
   nodes: number[]
@@ -1360,4 +1410,36 @@ export async function checkMeshQuality(
     elements: elementsVec,
     element_type: elementType
   })
+}
+
+// ============ STEP/IGES 文件导入 API ============
+
+/** STEP/IGES 文件导入结果 */
+export interface StepImportResult {
+  success: boolean
+  nodes: number[][]
+  elements: number[][]
+  element_type: string
+  num_nodes: number
+  num_elements: number
+  bounding_box: number[] | null
+  warnings: string[]
+  error: string | null
+}
+
+/** CAD 转换工具可用性 */
+export interface StepImportAvailability {
+  gmsh_available: boolean
+  freecad_available: boolean
+  recommended_tool: string | null
+}
+
+/** 导入 STEP/IGES/STL 文件 */
+export async function importStepFile(filePath: string, meshSize?: number): Promise<StepImportResult> {
+  return invoke<StepImportResult>('import_step_file', { filePath, meshSize })
+}
+
+/** 检查 STEP/IGES 导入工具可用性 */
+export async function checkStepImportAvailable(): Promise<StepImportAvailability> {
+  return invoke<StepImportAvailability>('check_step_import_available')
 }

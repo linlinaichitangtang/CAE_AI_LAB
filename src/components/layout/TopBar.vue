@@ -86,13 +86,16 @@
       </button>
 
       <!-- Help -->
-      <button class="topbar-action" title="帮助文档">
+      <button class="topbar-action" title="帮助文档" @click="router.push('/help')">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="12" cy="12" r="10"/>
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </button>
+
+      <!-- Language Switcher -->
+      <LanguageSwitcher />
 
       <!-- Settings -->
       <button class="topbar-action" title="设置">
@@ -156,8 +159,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useUndo } from '@/composables/useUndo'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const props = defineProps<{
   currentLayout: string
@@ -166,6 +170,7 @@ const props = defineProps<{
 defineEmits(['change-layout', 'toggle-sidebar', 'toggle-right-panel'])
 
 const route = useRoute()
+const router = useRouter()
 const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
 

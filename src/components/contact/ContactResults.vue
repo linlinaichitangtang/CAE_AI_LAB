@@ -2,14 +2,14 @@
   <div class="contact-results space-y-4">
     <!-- Result Type Tabs -->
     <div class="flex gap-1 bg-[var(--bg-elevated)] rounded-lg p-1">
-      <button 
-        v-for="tab in resultTabs" 
+      <button
+        v-for="tab in resultTabs"
         :key="tab.id"
         @click="activeTab = tab.id"
         :class="[
           'px-3 py-1.5 text-xs rounded transition-colors',
-          activeTab === tab.id 
-            ? 'bg-[var(--accent-blue)] text-white' 
+          activeTab === tab.id
+            ? 'bg-[var(--accent-blue)] text-white'
             : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
         ]"
       >
@@ -17,174 +17,223 @@
       </button>
     </div>
 
-    <!-- Contact Pressure -->
-    <div v-if="activeTab === 'pressure'" class="panel-section">
-      <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">接触压力分布</h4>
-      <div class="space-y-3">
-        <div class="result-summary">
-          <div class="flex justify-between items-center">
-            <span class="text-xs text-[var(--text-muted)]">最大压力</span>
-            <span class="text-sm font-medium text-[var(--accent-blue)]">
-              {{ contactPressureData.max.toFixed(2) }} MPa
-            </span>
-          </div>
-          <div class="flex justify-between items-center mt-2">
-            <span class="text-xs text-[var(--text-muted)]">平均压力</span>
-            <span class="text-sm text-[var(--text-primary)]">
-              {{ contactPressureData.avg.toFixed(2) }} MPa
-            </span>
-          </div>
-        </div>
-        
-        <!-- Pressure Distribution Bar -->
-        <div class="pressure-bar">
-          <div class="bar-track">
-            <div 
-              class="bar-fill" 
-              :style="{ width: `${(contactPressureData.max / contactPressureData.scale) * 100}%` }"
-            ></div>
-          </div>
-          <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
-            <span>0</span>
-            <span>{{ contactPressureData.scale.toFixed(1) }}</span>
-          </div>
-        </div>
-        
-        <!-- Contour Legend -->
-        <div class="contour-legend">
-          <div class="gradient-bar" :style="pressureGradientStyle"></div>
-          <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
-            <span>0 MPa</span>
-            <span>{{ contactPressureData.max.toFixed(1) }} MPa</span>
-          </div>
-        </div>
+    <!-- No Data Message -->
+    <div v-if="!contactResults" class="panel-section">
+      <div class="text-center text-xs text-[var(--text-muted)] py-4">
+        暂无接触分析结果，请运行接触分析后查看
       </div>
     </div>
 
-    <!-- Slip Distribution -->
-    <div v-if="activeTab === 'slip'" class="panel-section">
-      <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">滑移分布</h4>
-      <div class="space-y-3">
-        <div class="result-summary">
-          <div class="flex justify-between items-center">
-            <span class="text-xs text-[var(--text-muted)]">最大滑移</span>
-            <span class="text-sm font-medium text-[var(--accent-blue)]">
-              {{ slipData.max.toFixed(4) }} mm
-            </span>
-          </div>
-          <div class="flex justify-between items-center mt-2">
-            <span class="text-xs text-[var(--text-muted)]">平均滑移</span>
-            <span class="text-sm text-[var(--text-primary)]">
-              {{ slipData.avg.toFixed(4) }} mm
-            </span>
-          </div>
-        </div>
-        
-        <!-- Slip Visualization -->
-        <div class="slip-visualization">
-          <div class="slip-indicator" :style="slipIndicatorStyle"></div>
-        </div>
-        
-        <!-- Direction -->
-        <div class="text-xs text-[var(--text-muted)]">
-          主要滑移方向: {{ slipData.direction }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Penetration Check -->
-    <div v-if="activeTab === 'penetration'" class="panel-section">
-      <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">穿透检查</h4>
-      <div class="space-y-3">
-        <div class="penetration-status" :class="penetrationStatusClass">
-          <span class="status-icon">{{ penetrationStatusIcon }}</span>
-          <span class="status-text">{{ penetrationStatusText }}</span>
-        </div>
-        
-        <div class="result-summary">
-          <div class="flex justify-between items-center">
-            <span class="text-xs text-[var(--text-muted)]">最大穿透量</span>
-            <span class="text-sm font-medium" :class="penetrationValueClass">
-              {{ penetrationData.maxPenetration.toFixed(4) }} mm
-            </span>
-          </div>
-          <div class="flex justify-between items-center mt-2">
-            <span class="text-xs text-[var(--text-muted)]">穿透节点数</span>
-            <span class="text-sm text-[var(--text-primary)]">
-              {{ penetrationData.penetratedNodes }} / {{ penetrationData.totalNodes }}
-            </span>
-          </div>
-        </div>
-        
-        <div v-if="penetrationData.penetratedNodes > 0" class="penetration-warning">
-          <span class="text-xs">⚠️ 存在穿透，请检查网格或增加接触刚度</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bolt Force -->
-    <div v-if="activeTab === 'bolt'" class="panel-section">
-      <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">螺栓力输出</h4>
-      <div class="space-y-3">
-        <div class="bolt-list">
-          <div v-for="(bolt, index) in boltForces" :key="index" class="bolt-item">
+    <template v-else>
+      <!-- Contact Pressure -->
+      <div v-if="activeTab === 'pressure'" class="panel-section">
+        <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">接触压力分布</h4>
+        <div class="space-y-3">
+          <div class="result-summary">
             <div class="flex justify-between items-center">
-              <span class="text-xs font-medium">{{ bolt.name }}</span>
-              <span class="text-sm text-[var(--accent-blue)]">{{ bolt.preload.toFixed(1) }} N</span>
+              <span class="text-xs text-[var(--text-muted)]">最大压力</span>
+              <span class="text-sm font-medium text-[var(--accent-blue)]">
+                {{ (contactResults.summary.maxPressure ?? 0).toFixed(2) }} MPa
+              </span>
             </div>
-            
-            <!-- Preload Progress -->
-            <div class="bolt-progress mt-2">
-              <div class="progress-bar">
-                <div 
-                  class="progress-fill" 
-                  :style="{ width: `${(bolt.preload / bolt.targetPreload) * 100}%` }"
-                ></div>
-              </div>
-              <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
-                <span>目标: {{ bolt.targetPreload.toFixed(0) }} N</span>
-                <span>{{ ((bolt.preload / bolt.targetPreload) * 100).toFixed(0) }}%</span>
-              </div>
-            </div>
-            
-            <!-- Additional Forces -->
-            <div class="grid grid-cols-2 gap-2 mt-2 text-xs">
-              <div class="force-item">
-                <span class="text-[var(--text-muted)]">剪切力</span>
-                <span class="text-[var(--text-primary)]">{{ bolt.shearForce.toFixed(1) }} N</span>
-              </div>
-              <div class="force-item">
-                <span class="text-[var(--text-muted)]">弯矩</span>
-                <span class="text-[var(--text-primary)]">{{ bolt.moment.toFixed(1) }} N·mm</span>
-              </div>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-xs text-[var(--text-muted)]">平均压力</span>
+              <span class="text-sm text-[var(--text-primary)]">
+                {{ avgPressure.toFixed(2) }} MPa
+              </span>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Contact Force Summary -->
-    <div class="panel-section">
-      <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">接触力汇总</h4>
-      <div class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2">
-        <div v-for="pair in contactPairSummary" :key="pair.name" class="contact-pair-summary">
-          <div class="flex justify-between">
-            <span class="text-xs text-[var(--text-muted)]">{{ pair.name }}</span>
-            <span class="text-xs text-[var(--text-primary)]">{{ pair.force.toFixed(1) }} N</span>
+          <!-- Pressure Distribution Bar -->
+          <div class="pressure-bar">
+            <div class="bar-track">
+              <div
+                class="bar-fill"
+                :style="{ width: `${Math.min((contactResults.summary.maxPressure / pressureScale) * 100, 100)}%` }"
+              ></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
+              <span>0</span>
+              <span>{{ pressureScale.toFixed(1) }}</span>
+            </div>
           </div>
-          <div class="w-full bg-[var(--bg-surface)] rounded h-1 mt-1">
-            <div 
-              class="h-1 bg-[var(--accent-blue)] rounded" 
-              :style="{ width: `${(pair.force / pair.maxForce) * 100}%` }"
-            ></div>
+
+          <!-- Contour Legend -->
+          <div class="contour-legend">
+            <div class="gradient-bar" :style="pressureGradientStyle"></div>
+            <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
+              <span>0 MPa</span>
+              <span>{{ (contactResults.summary.maxPressure ?? 0).toFixed(1) }} MPa</span>
+            </div>
+          </div>
+
+          <!-- Pressure Data Table -->
+          <div v-if="contactResults.pressure && contactResults.pressure.length > 0" class="max-h-32 overflow-y-auto">
+            <table class="w-full text-[10px]">
+              <thead>
+                <tr class="text-[var(--text-muted)]">
+                  <th class="text-left py-1">节点 ID</th>
+                  <th class="text-right py-1">压力 (MPa)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in contactResults.pressure.slice(0, 20)" :key="item.nodeId">
+                  <td class="py-0.5">{{ item.nodeId }}</td>
+                  <td class="text-right py-0.5">{{ item.value.toFixed(4) }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Slip Distribution -->
+      <div v-if="activeTab === 'slip'" class="panel-section">
+        <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">滑移分布</h4>
+        <div class="space-y-3">
+          <div class="result-summary">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-[var(--text-muted)]">最大滑移</span>
+              <span class="text-sm font-medium text-[var(--accent-blue)]">
+                {{ (contactResults.summary.maxSlip ?? 0).toFixed(4) }} mm
+              </span>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-xs text-[var(--text-muted)]">平均滑移</span>
+              <span class="text-sm text-[var(--text-primary)]">
+                {{ avgSlip.toFixed(4) }} mm
+              </span>
+            </div>
+          </div>
+
+          <!-- Slip Visualization -->
+          <div class="slip-visualization">
+            <div class="slip-indicator" :style="slipIndicatorStyle"></div>
+          </div>
+
+          <!-- Slip Data Table -->
+          <div v-if="contactResults.slip && contactResults.slip.length > 0" class="max-h-32 overflow-y-auto">
+            <table class="w-full text-[10px]">
+              <thead>
+                <tr class="text-[var(--text-muted)]">
+                  <th class="text-left py-1">节点 ID</th>
+                  <th class="text-right py-1">滑移 (mm)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in contactResults.slip.slice(0, 20)" :key="item.nodeId">
+                  <td class="py-0.5">{{ item.nodeId }}</td>
+                  <td class="text-right py-0.5">{{ item.value.toFixed(6) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Penetration (Gap) Check -->
+      <div v-if="activeTab === 'penetration'" class="panel-section">
+        <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">穿透检查</h4>
+        <div class="space-y-3">
+          <div class="penetration-status" :class="penetrationStatusClass">
+            <span class="status-icon">{{ penetrationStatusIcon }}</span>
+            <span class="status-text">{{ penetrationStatusText }}</span>
+          </div>
+
+          <div class="result-summary">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-[var(--text-muted)]">最大穿透量</span>
+              <span class="text-sm font-medium" :class="penetrationValueClass">
+                {{ (contactResults.summary.maxGap ?? 0).toFixed(4) }} mm
+              </span>
+            </div>
+            <div class="flex justify-between items-center mt-2">
+              <span class="text-xs text-[var(--text-muted)]">穿透节点数</span>
+              <span class="text-sm text-[var(--text-primary)]">
+                {{ penetratedNodeCount }} / {{ totalGapNodes }}
+              </span>
+            </div>
+          </div>
+
+          <div v-if="penetratedNodeCount > 0" class="penetration-warning">
+            <span class="text-xs">存在穿透，请检查网格或增加接触刚度</span>
+          </div>
+
+          <!-- Gap Data Table -->
+          <div v-if="contactResults.gap && contactResults.gap.length > 0" class="max-h-32 overflow-y-auto">
+            <table class="w-full text-[10px]">
+              <thead>
+                <tr class="text-[var(--text-muted)]">
+                  <th class="text-left py-1">节点 ID</th>
+                  <th class="text-right py-1">间隙 (mm)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in contactResults.gap.slice(0, 20)" :key="item.nodeId">
+                  <td class="py-0.5">{{ item.nodeId }}</td>
+                  <td class="text-right py-0.5">{{ item.value.toFixed(6) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bolt Force -->
+      <div v-if="activeTab === 'bolt'" class="panel-section">
+        <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">螺栓力输出</h4>
+        <div v-if="!contactResults.boltForce || contactResults.boltForce.length === 0" class="text-xs text-[var(--text-muted)] text-center py-2">
+          无螺栓力数据
+        </div>
+        <div v-else class="space-y-3">
+          <div class="bolt-list">
+            <div v-for="bolt in contactResults.boltForce" :key="bolt.boltId" class="bolt-item">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-medium">Bolt-{{ bolt.boltId }}</span>
+                <span class="text-sm text-[var(--accent-blue)]">{{ bolt.currentForce.toFixed(1) }} N</span>
+              </div>
+
+              <!-- Preload Progress -->
+              <div class="bolt-progress mt-2">
+                <div class="progress-bar">
+                  <div
+                    class="progress-fill"
+                    :style="{ width: `${Math.min((bolt.currentForce / bolt.pretension) * 100, 100)}%` }"
+                  ></div>
+                </div>
+                <div class="flex justify-between text-[10px] text-[var(--text-muted)] mt-1">
+                  <span>预紧: {{ bolt.pretension.toFixed(0) }} N</span>
+                  <span>{{ ((bolt.currentForce / bolt.pretension) * 100).toFixed(0) }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Force Summary -->
+      <div class="panel-section">
+        <h4 class="text-xs font-medium text-[var(--text-secondary)] mb-3">接触力汇总</h4>
+        <div class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2">
+          <div class="contact-pair-summary">
+            <div class="flex justify-between">
+              <span class="text-xs text-[var(--text-muted)]">总接触力</span>
+              <span class="text-xs text-[var(--text-primary)]">{{ (contactResults.summary.totalContactForce ?? 0).toFixed(1) }} N</span>
+            </div>
+            <div class="w-full bg-[var(--bg-surface)] rounded h-1 mt-1">
+              <div
+                class="h-1 bg-[var(--accent-blue)] rounded"
+                :style="{ width: `${Math.min((contactResults.summary.totalContactForce / (contactResults.summary.totalContactForce * 1.2 || 1)) * 100, 100)}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- Export Button -->
     <div class="panel-section">
-      <button @click="exportResults" class="btn btn-secondary w-full text-xs">
+      <button @click="exportResults" class="btn btn-secondary w-full text-xs" :disabled="!contactResults">
         <span class="mr-1">📊</span> 导出接触结果
       </button>
     </div>
@@ -193,6 +242,24 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+
+/** Contact results data structure */
+export interface ContactResultData {
+  pressure: Array<{ nodeId: number; value: number }>
+  slip: Array<{ nodeId: number; value: number }>
+  gap: Array<{ nodeId: number; value: number }>
+  boltForce?: Array<{ boltId: number; pretension: number; currentForce: number }>
+  summary: {
+    maxPressure: number
+    maxSlip: number
+    maxGap: number
+    totalContactForce: number
+  }
+}
+
+const props = defineProps<{
+  contactResults?: ContactResultData
+}>();
 
 // Result tabs
 const resultTabs = [
@@ -204,50 +271,36 @@ const resultTabs = [
 
 const activeTab = ref('pressure');
 
-// Contact pressure data
-const contactPressureData = ref({
-  max: 125.5,
-  avg: 45.2,
-  scale: 200,
+// Computed: average pressure
+const avgPressure = computed(() => {
+  if (!props.contactResults?.pressure?.length) return 0;
+  const sum = props.contactResults.pressure.reduce((acc, p) => acc + p.value, 0);
+  return sum / props.contactResults.pressure.length;
 });
 
-// Slip data
-const slipData = ref({
-  max: 0.0235,
-  avg: 0.0089,
-  direction: 'X + Y',
+// Computed: pressure scale for bar visualization
+const pressureScale = computed(() => {
+  const maxP = props.contactResults?.summary?.maxPressure ?? 0;
+  return maxP > 0 ? Math.ceil(maxP / 100) * 100 : 200;
 });
 
-// Penetration data
-const penetrationData = ref({
-  maxPenetration: 0.0012,
-  penetratedNodes: 3,
-  totalNodes: 150,
+// Computed: average slip
+const avgSlip = computed(() => {
+  if (!props.contactResults?.slip?.length) return 0;
+  const sum = props.contactResults.slip.reduce((acc, s) => acc + s.value, 0);
+  return sum / props.contactResults.slip.length;
 });
 
-// Bolt forces
-const boltForces = ref([
-  {
-    name: 'Bolt-1',
-    preload: 8500,
-    targetPreload: 10000,
-    shearForce: 1250,
-    moment: 450,
-  },
-  {
-    name: 'Bolt-2',
-    preload: 8200,
-    targetPreload: 10000,
-    shearForce: 1100,
-    moment: 380,
-  },
-]);
+// Computed: penetrated node count
+const penetratedNodeCount = computed(() => {
+  if (!props.contactResults?.gap?.length) return 0;
+  return props.contactResults.gap.filter(g => g.value < 0).length;
+});
 
-// Contact pair summary
-const contactPairSummary = ref([
-  { name: '接触对 1 (法兰)', force: 4500, maxForce: 5000 },
-  { name: '接触对 2 (底座)', force: 2800, maxForce: 5000 },
-]);
+// Computed: total gap nodes
+const totalGapNodes = computed(() => {
+  return props.contactResults?.gap?.length ?? 0;
+});
 
 // Computed styles
 const pressureGradientStyle = computed(() => ({
@@ -255,44 +308,47 @@ const pressureGradientStyle = computed(() => ({
 }));
 
 const slipIndicatorStyle = computed(() => ({
-  width: `${Math.min((slipData.value.max / 0.1) * 100, 100)}%`,
+  width: `${Math.min(((props.contactResults?.summary?.maxSlip ?? 0) / 0.1) * 100, 100)}%`,
 }));
 
 // Penetration status
 const penetrationStatusClass = computed(() => {
-  if (penetrationData.value.penetratedNodes === 0) return 'status-ok';
-  if (penetrationData.value.penetratedNodes < 10) return 'status-warning';
+  if (penetratedNodeCount.value === 0) return 'status-ok';
+  if (penetratedNodeCount.value < 10) return 'status-warning';
   return 'status-error';
 });
 
 const penetrationStatusIcon = computed(() => {
-  if (penetrationData.value.penetratedNodes === 0) return '✓';
-  if (penetrationData.value.penetratedNodes < 10) return '⚠';
+  if (penetratedNodeCount.value === 0) return '✓';
+  if (penetratedNodeCount.value < 10) return '⚠';
   return '✕';
 });
 
 const penetrationStatusText = computed(() => {
-  if (penetrationData.value.penetratedNodes === 0) return '无穿透';
-  if (penetrationData.value.penetratedNodes < 10) return '轻微穿透';
+  if (penetratedNodeCount.value === 0) return '无穿透';
+  if (penetratedNodeCount.value < 10) return '轻微穿透';
   return '严重穿透';
 });
 
 const penetrationValueClass = computed(() => {
-  if (penetrationData.value.maxPenetration < 0.01) return 'text-green-400';
-  if (penetrationData.value.maxPenetration < 0.1) return 'text-yellow-400';
+  const maxGap = props.contactResults?.summary?.maxGap ?? 0;
+  if (maxGap < 0.01) return 'text-green-400';
+  if (maxGap < 0.1) return 'text-yellow-400';
   return 'text-red-400';
 });
 
 // Methods
 const exportResults = () => {
+  if (!props.contactResults) return;
+
   const data = {
-    contactPressure: contactPressureData.value,
-    slip: slipData.value,
-    penetration: penetrationData.value,
-    bolts: boltForces.value,
-    pairs: contactPairSummary.value,
+    pressure: props.contactResults.pressure,
+    slip: props.contactResults.slip,
+    gap: props.contactResults.gap,
+    boltForce: props.contactResults.boltForce,
+    summary: props.contactResults.summary,
   };
-  
+
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

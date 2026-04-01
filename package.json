@@ -1,6 +1,6 @@
 {
   "name": "caelab",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "科研与工程创作一体化工作台",
   "type": "module",
   "scripts": {
@@ -10,11 +10,13 @@
     "build:mac": "tauri build --target aarch64-apple-darwin",
     "build:win": "tauri build --target x86_64-pc-windows-msvc",
     "build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "build:all": "echo 'Cross-platform builds require platform-specific environments'",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tiptap/extension-code-block-lowlight": "^2.2.4",
     "@tiptap/extension-collaboration": "^2.2.4",
     "@tiptap/extension-image": "^2.2.4",
@@ -25,6 +27,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/three": "^0.162.0",
     "file-saver": "^2.0.5",
+    "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
     "katex": "^0.16.9",
     "lowlight": "^3.1.0",
@@ -35,6 +38,7 @@
     "sql.js": "^1.10.2",
     "three": "^0.162.0",
     "vue": "^3.4.21",
+    "vue-i18n": "^9.9.0",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
@@ -51,6 +55,7 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.3",
     "vite": "^5.2.0",
+    "vite-plugin-compression": "^0.5.1",
     "vite-plugin-monaco-editor": "^1.1.0",
     "vue-tsc": "^2.0.6"
   }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "CAELab",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "identifier": "com.caelab.app",
   "build": {
     "devUrl": "http://localhost:1420",
@@ -11,12 +11,53 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all"
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "copyright": "\u00a9 2024 CAELab Team",
+    "category": "Engineering",
+    "shortDescription": "CAE Simulation Workbench",
+    "longDescription": "CAELab - \u79d1\u7814\u4e0e\u5de5\u7a0b\u521b\u4f5c\u4e00\u4f53\u5316\u5de5\u4f5c\u53f0",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "providerShortName": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": null,
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"]
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "priority": "optional"
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
   },
   "app": {
     "windows": [
       {
-        "title": "CAELab - 科研与工程创作一体化工作台",
+        "title": "CAELab - \u79d1\u7814\u4e0e\u5de5\u7a0b\u521b\u4f5c\u4e00\u4f53\u5316\u5de5\u4f5c\u53f0",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

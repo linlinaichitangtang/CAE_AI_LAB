@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from './router'
+import i18n from './locales'
 import App from './App.vue'
 import './styles/main.css'
 
@@ -14,5 +15,8 @@ app.use(pinia)
 
 // Router
 app.use(router)
+
+// i18n
+app.use(i18n)
 
 app.mount('#app')
