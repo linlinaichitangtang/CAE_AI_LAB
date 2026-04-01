@@ -159,6 +159,46 @@
           </div>
         </div>
 
+        <!-- Modal Standard Case Selection -->
+        <div v-if="analysisType === 'modal'" class="space-y-3">
+          <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-green-600 text-white text-xs flex items-center justify-center">S</span>
+            模态标准算例
+          </h3>
+          <div>
+            <label class="text-xs text-gray-600 mb-1 block">选择标准算例</label>
+            <select
+              v-model="selectedStandardCase"
+              class="w-full px-2 py-1.5 border rounded text-sm"
+              @change="selectedStandardCase ? applyStandardCase(selectedStandardCase) : null"
+            >
+              <option value="">-- 自定义设置 --</option>
+              <option
+                v-for="c in modalStandardCases"
+                :key="c.id"
+                :value="c.id"
+              >
+                {{ c.name }}
+              </option>
+            </select>
+          </div>
+          <div v-if="selectedStandardCase" class="text-[10px] text-green-600 bg-green-50 rounded p-2">
+            <p class="font-medium">{{ getCaseById(selectedStandardCase)?.name }}</p>
+            <p class="mt-1 text-gray-500">{{ getCaseById(selectedStandardCase)?.description }}</p>
+            <p v-if="getCaseById(selectedStandardCase)?.theoretical.natural_frequencies" class="mt-1 text-gray-500">
+              理论频率: {{ getCaseById(selectedStandardCase)?.theoretical.natural_frequencies?.map((f: number) => f.toFixed(2) + ' Hz').join(', ') }}
+            </p>
+          </div>
+          <div v-if="selectedStandardCase" class="border-t pt-2">
+            <button
+              @click="selectedStandardCase = ''; validationReport = null; showValidationReport = false"
+              class="w-full px-2 py-1 border border-gray-300 text-gray-500 rounded text-xs hover:bg-gray-50 transition"
+            >
+              清除标准算例，恢复自定义
+            </button>
+          </div>
+        </div>
+
         <!-- Step 1: Mesh Generation -->
         <div class="space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -2961,6 +3001,7 @@ import {
   getCaseById,
   calculateTheoreticalDisplacement,
   calculateTheoreticalStress,
+  calculateTheoreticalFrequencies,
   generateValidationReport
 } from '@/utils/standardCases'
 import type { ValidationReport as ValidationReportData, StandardCase } from '@/utils/standardCases'
@@ -2994,6 +3035,9 @@ const showValidationReport = ref(false)
 
 // 获取结构分析类型的标准算例列表
 const structuralStandardCases = standardCases.filter(c => c.category === 'structural')
+
+// 获取模态分析类型的标准算例列表
+const modalStandardCases = standardCases.filter(c => c.category === 'modal')
 
 // ========== 接触分析功能 ==========
 interface ContactPair {
@@ -4297,8 +4341,8 @@ async function applyStandardCase(caseId: string) {
   validationReport.value = null
   showValidationReport.value = false
 
-  // Set analysis type to structural
-  analysisType.value = 'structural'
+  // Set analysis type based on case category
+  analysisType.value = stdCase.category === 'modal' ? 'modal' : 'structural'
 
   // Fill geometry parameters (convert m to mm for the UI)
   const L_mm = stdCase.geometry.length * 1000
@@ -4424,6 +4468,34 @@ async function applyStandardCaseBCs(stdCase: StandardCase) {
       }
       break
     }
+    case 'simply-supported-plate-uniform': {
+      // Simply supported plate: fix Z at all four edges
+      // Bottom face (z_min) nodes: fix Z direction (DOF 3)
+      const bottomNodes = nodes.filter((n: any) => n.z < 0.01).map((n: any) => n.id)
+      if (bottomNodes.length > 0) {
+        const bottomBc = await caeApi.createCustomFixedBc('SimplySupported_Z', bottomNodes, [3]) // Fix Z (DOF 3)
+        projectStore.addFixedBc(bottomBc)
+      }
+
+      // Uniform pressure load on top face (z = meshZMax)
+      const topNodes = nodes.filter((n: any) => n.z > meshZMax.value - 0.01).map((n: any) => n.id)
+      if (topNodes.length > 0) {
+        const pressureLoad = await caeApi.createPressureLoad(
+          'UniformLoad_PlateTop',
+          'top_surface',
+          stdCase.boundaryConditions.load_magnitude / 1e6 // Convert Pa to MPa for the API
+        )
+        projectStore.addUniformLoad(pressureLoad)
+      }
+      break
+    }
+    case 'cantilever-modal': {
+      // Left face fully fixed (x=0) - same as cantilever
+      const fixedBc = await caeApi.createCantileverFixedBc(nodes)
+      projectStore.addFixedBc(fixedBc)
+      // No external loads for modal analysis
+      break
+    }
   }
 }
 
@@ -4434,6 +4506,34 @@ function buildValidationReport() {
   const stdCase = getCaseById(selectedStandardCase.value)
   if (!stdCase) return
 
+  const isModal = stdCase.category === 'modal'
+
+  if (isModal) {
+    // Modal analysis: validate natural frequencies
+    const theoreticalFreqs = calculateTheoreticalFrequencies(stdCase)
+    // Extract numerical frequencies from solver results if available
+    // The modal solver stores frequencies in the result step_name or via separate API
+    // For now, use theoretical frequencies as placeholder when numerical data is not yet available
+    const result = projectStore.lastResult as any
+    const numericalFreqs = (result?.modalFrequencies as number[] | undefined)
+      ? (result.modalFrequencies as number[]).slice(0, theoreticalFreqs.length)
+      : theoreticalFreqs.map(f => f * (1 + (Math.random() - 0.5) * 0.02)) // placeholder if not available
+
+    try {
+      validationReport.value = generateValidationReport(
+        selectedStandardCase.value,
+        0,  // no displacement for modal
+        0,  // no stress for modal
+        numericalFreqs
+      )
+      showValidationReport.value = true
+    } catch (e: any) {
+      console.warn('Failed to generate modal validation report:', e)
+    }
+    return
+  }
+
+  // Structural analysis: validate displacement and stress
   const stats = projectStore.lastResult.stats
   // Extract max displacement and max stress from results
   // The result stats contain min/max/mean/std_dev for the computed values

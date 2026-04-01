@@ -60,8 +60,8 @@
             </tr>
           </thead>
           <tbody>
-            <!-- 最大位移 -->
-            <tr class="border-t">
+            <!-- 最大位移 (非模态时显示) -->
+            <tr v-if="!isModal" class="border-t">
               <td class="px-3 py-2 text-gray-700 font-medium">最大位移</td>
               <td class="px-3 py-2 text-right text-gray-600">
                 {{ formatDisplacement(report.theoretical.max_displacement) }}
@@ -81,8 +81,8 @@
                 {{ report.acceptance.displacement_error_limit }}%
               </td>
             </tr>
-            <!-- 最大应力 -->
-            <tr class="border-t">
+            <!-- 最大应力 (非模态时显示) -->
+            <tr v-if="!isModal" class="border-t">
               <td class="px-3 py-2 text-gray-700 font-medium">最大应力</td>
               <td class="px-3 py-2 text-right text-gray-600">
                 {{ formatStress(report.theoretical.max_stress) }}
@@ -100,6 +100,33 @@
               </td>
               <td class="px-3 py-2 text-right text-gray-500">
                 {{ report.acceptance.stress_error_limit }}%
+              </td>
+            </tr>
+            <!-- 固有频率 (模态分析时显示) -->
+            <tr v-if="isModal && report.theoretical.natural_frequencies && report.numerical.natural_frequencies" class="border-t">
+              <td class="px-3 py-2 text-gray-700 font-medium">固有频率</td>
+              <td class="px-3 py-2 text-right text-gray-600">
+                <div v-for="(f, i) in report.theoretical.natural_frequencies" :key="'th'+i" class="text-[10px]">
+                  f{{ i + 1 }}: {{ f.toFixed(2) }} Hz
+                </div>
+              </td>
+              <td class="px-3 py-2 text-right text-gray-600">
+                <div v-for="(f, i) in report.numerical.natural_frequencies" :key="'nm'+i" class="text-[10px]">
+                  f{{ i + 1 }}: {{ f.toFixed(2) }} Hz
+                </div>
+              </td>
+              <td class="px-3 py-2 text-right">
+                <div v-for="(e, i) in report.errors.frequency_errors" :key="'er'+i" class="mb-0.5">
+                  <span
+                    class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+                    :class="getErrorClass(e)"
+                  >
+                    f{{ i + 1 }}: {{ e.toFixed(2) }}%
+                  </span>
+                </div>
+              </td>
+              <td class="px-3 py-2 text-right text-gray-500">
+                {{ report.acceptance.frequency_error_limit ?? 5 }}%
               </td>
             </tr>
           </tbody>
@@ -154,6 +181,11 @@ defineEmits<{
 const caseData = computed(() => {
   if (!props.report) return null
   return getCaseById(props.report.caseId)
+})
+
+const isModal = computed(() => {
+  if (!caseData.value) return false
+  return caseData.value.category === 'modal'
 })
 
 function getErrorClass(errorPercent: number): string {

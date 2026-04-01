@@ -34,7 +34,7 @@ export interface StandardCase {
   // 边界条件
   boundaryConditions: {
     fixed_face: string      // 'x_min' | 'y_min' | 'z_min'
-    load_type: 'point' | 'uniform'
+    load_type: 'point' | 'uniform' | 'none'
     load_face: string
     load_magnitude: number  // N or Pa
     load_direction: string  // 'Y' | 'X' | 'Z'
@@ -45,11 +45,13 @@ export interface StandardCase {
     max_stress: number        // Pa (理论最大应力)
     formula: string           // 理论公式
     reference: string         // 参考文献
+    natural_frequencies?: number[]  // Hz (模态分析：前 N 阶固有频率)
   }
   // 验收标准
   acceptance: {
     displacement_error_limit: number  // % 位移误差上限
     stress_error_limit: number        // % 应力误差上限
+    frequency_error_limit?: number    // % 频率误差上限（模态分析）
   }
 }
 
@@ -60,18 +62,22 @@ export interface ValidationReport {
   theoretical: {
     max_displacement: number
     max_stress: number
+    natural_frequencies?: number[]
   }
   numerical: {
     max_displacement: number
     max_stress: number
+    natural_frequencies?: number[]
   }
   errors: {
     displacement_error: number  // %
     stress_error: number        // %
+    frequency_errors?: number[] // % (各阶频率误差)
   }
   acceptance: {
     displacement_error_limit: number
     stress_error_limit: number
+    frequency_error_limit?: number
   }
   result: 'PASS' | 'FAIL'
   details: string
@@ -262,12 +268,139 @@ const simplySupportedPointLoad: StandardCase = {
   }
 }
 
+/**
+ * 算例4：简支矩形板 - 均布载荷（Kirchhoff 薄板理论）
+ *
+ * 几何：a=1m, b=1m, h=0.01m
+ * 材料：钢 E=200GPa, ν=0.3, ρ=7850 kg/m³
+ * BC：四边简支，顶面均布载荷 q=10000 Pa (Z方向向下)
+ *
+ * 理论解（Navier 级数解，四边简支方板）：
+ *   D = Eh³/(12(1-ν²)) = 200e9 × 0.01³ / (12 × 0.91) = 18315.02 N·m
+ *   w_max = α × q × a⁴ / D, α = 0.00406 (方板 Navier 解)
+ *   w_max = 0.00406 × 10000 × 1.0 / 18315.02 = 0.002217 m ≈ 2.22 mm
+ *   σ_max = β × q × a² / h², β ≈ 0.2874 (方板底面中心)
+ *   σ_max = 0.2874 × 10000 × 1.0 / 0.01² = 28.74 MPa
+ */
+const simplySupportedPlateUniform: StandardCase = {
+  id: 'simply-supported-plate-uniform',
+  name: '简支矩形板 - 均布载荷',
+  nameEn: 'Simply Supported Plate - Uniform Load',
+  description: '四边简支矩形板受均布载荷，基于 Kirchhoff 薄板理论验证。板尺寸 1m×1m×0.01m，顶面均布载荷 q=10000 Pa。',
+  category: 'structural',
+  geometry: {
+    type: 'plate',
+    length: 1.0,    // m (X方向, a)
+    width: 1.0,     // m (Y方向, b)
+    height: 0.01,   // m (厚度, h)
+    dimension: '3d'
+  },
+  mesh: {
+    x_div: 20,
+    y_div: 20,
+    z_div: 2,
+    element_type: 'C3D8R'
+  },
+  material: {
+    name: '钢 (Steel)',
+    elastic_modulus: 200e9,   // Pa (200 GPa)
+    poisson_ratio: 0.3,
+    density: 7850             // kg/m³
+  },
+  boundaryConditions: {
+    fixed_face: 'z_min',      // 底面简支（Z方向固定）
+    load_type: 'uniform',
+    load_face: 'z_max',       // 顶面均布载荷
+    load_magnitude: 10000,    // Pa
+    load_direction: 'Z'       // Z方向（向下）
+  },
+  theoretical: {
+    max_displacement: 0.002217,  // m ≈ 2.22 mm (中心最大挠度，Navier 解)
+    max_stress: 28.74e6,         // Pa = 28.74 MPa (中心最大弯曲应力)
+    formula: 'w_max = 0.00406 × q × a⁴ / D, D = Eh³/(12(1-ν²)), σ_max = 0.2874 × q × a² / h²',
+    reference: 'Timoshenko, Theory of Plates and Shells, Eq. 29'
+  },
+  acceptance: {
+    displacement_error_limit: 10,  // % (薄板理论误差稍大，放宽到 10%)
+    stress_error_limit: 10         // %
+  }
+}
+
+/**
+ * 算例5：悬臂梁 - 模态分析（Euler-Bernoulli 梁理论）
+ *
+ * 几何：L=1m, b=0.05m, h=0.01m
+ * 材料：钢 E=200GPa, ν=0.3, ρ=7850 kg/m³
+ * BC：左端固定，无外载荷
+ *
+ * 理论解（Euler-Bernoulli 悬臂梁固有频率）：
+ *   I = bh³/12 = 0.05 × 0.01³/12 = 4.167e-9 m⁴
+ *   A = bh = 0.05 × 0.01 = 5e-4 m²
+ *   EI = 200e9 × 4.167e-9 = 833.33 N·m²
+ *   ρA = 7850 × 5e-4 = 3.925 kg/m
+ *   √(EI/ρA) = √(833.33/3.925) = √212.32 = 14.57 m²/s
+ *   f_n = (β_n² / (2πL²)) × √(EI/ρA)
+ *   β₁=1.875, β₂=4.694, β₃=7.855, β₄=10.996, β₅=14.137
+ *   f₁ = (1.875² / 6.283) × 14.57 = 8.15 Hz
+ *   f₂ = (4.694² / 6.283) × 14.57 = 51.10 Hz
+ *   f₃ = (7.855² / 6.283) × 14.57 = 143.1 Hz
+ *   f₄ = (10.996² / 6.283) × 14.57 = 280.4 Hz
+ *   f₅ = (14.137² / 6.283) × 14.57 = 463.4 Hz
+ */
+const cantileverModal: StandardCase = {
+  id: 'cantilever-modal',
+  name: '悬臂梁 - 模态分析',
+  nameEn: 'Cantilever Beam - Modal Analysis',
+  description: '悬臂梁前 5 阶固有频率，基于 Euler-Bernoulli 梁理论验证。L=1m, b=0.05m, h=0.01m，左端固定。',
+  category: 'modal',
+  geometry: {
+    type: 'beam',
+    length: 1.0,    // m
+    width: 0.05,    // m (b)
+    height: 0.01,   // m (h)
+    dimension: '3d'
+  },
+  mesh: {
+    x_div: 30,
+    y_div: 2,
+    z_div: 2,
+    element_type: 'C3D8'
+  },
+  material: {
+    name: '钢 (Steel)',
+    elastic_modulus: 200e9,   // Pa (200 GPa)
+    poisson_ratio: 0.3,
+    density: 7850             // kg/m³
+  },
+  boundaryConditions: {
+    fixed_face: 'x_min',
+    load_type: 'none',
+    load_face: '',
+    load_magnitude: 0,
+    load_direction: 'Y'
+  },
+  theoretical: {
+    max_displacement: 0,       // 模态分析无位移
+    max_stress: 0,             // 模态分析无应力
+    natural_frequencies: [8.15, 51.10, 143.1, 280.4, 463.4], // Hz, 前5阶
+    formula: 'f_n = (β_n² / 2πL²) × √(EI / ρA), β₁=1.875, β₂=4.694, β₃=7.855, β₄=10.996, β₅=14.137',
+    reference: 'Rao, Mechanical Vibrations, 6th Ed., Table 8.4'
+  },
+  acceptance: {
+    displacement_error_limit: 5,  // %
+    stress_error_limit: 5,        // %
+    frequency_error_limit: 5      // % 频率误差限
+  }
+}
+
 // ========== 标准算例列表 ==========
 
 export const standardCases: StandardCase[] = [
   cantileverPointLoad,
   cantileverUniformLoad,
-  simplySupportedPointLoad
+  simplySupportedPointLoad,
+  simplySupportedPlateUniform,
+  cantileverModal
 ]
 
 // ========== 导出函数 ==========
@@ -307,6 +440,17 @@ export function calculateTheoreticalDisplacement(stdCase: StandardCase): number 
       const F = boundaryConditions.load_magnitude
       return (F * Math.pow(L, 3)) / (48 * E * I)
     }
+    case 'simply-supported-plate-uniform': {
+      // Kirchhoff 薄板理论：w_max = α × q × a⁴ / D
+      // D = Eh³/(12(1-ν²)), α = 0.00406 (四边简支方板)
+      const nu = material.poisson_ratio
+      const h = geometry.height
+      const a = geometry.length
+      const q = boundaryConditions.load_magnitude
+      const D = (E * Math.pow(h, 3)) / (12 * (1 - nu * nu))
+      const alpha = 0.00406
+      return alpha * q * Math.pow(a, 4) / D
+    }
     default: {
       // 通用公式：使用预设的理论值
       return stdCase.theoretical.max_displacement
@@ -343,6 +487,15 @@ export function calculateTheoreticalStress(stdCase: StandardCase): number {
       const F = boundaryConditions.load_magnitude
       return (F * L * c) / (4 * I)
     }
+    case 'simply-supported-plate-uniform': {
+      // Kirchhoff 薄板理论：σ_max = β × q × a² / h²
+      // β = 0.2874 (四边简支方板底面中心弯曲应力系数)
+      const beta = 0.2874
+      const a = geometry.length
+      const h = geometry.height
+      const q = boundaryConditions.load_magnitude
+      return beta * q * (a * a) / (h * h)
+    }
     default: {
       return stdCase.theoretical.max_stress
     }
@@ -363,16 +516,51 @@ export function calculateError(numerical: number, theoretical: number): number {
 }
 
 /**
+ * 计算理论固有频率（Euler-Bernoulli 梁理论）
+ * @param stdCase 标准算例
+ * @returns 各阶固有频率数组 (Hz)，若无则返回空数组
+ */
+export function calculateTheoreticalFrequencies(stdCase: StandardCase): number[] {
+  if (!stdCase.theoretical.natural_frequencies || stdCase.theoretical.natural_frequencies.length === 0) {
+    return []
+  }
+
+  const { geometry, material } = stdCase
+  const E = material.elastic_modulus
+  const rho = material.density
+  const L = geometry.length
+  const b = geometry.width
+  const h = geometry.height
+  const I = calculateMomentOfInertia(b, h)
+  const A = b * h
+
+  // Euler-Bernoulli 悬臂梁频率系数
+  const betaCoefficients = [1.875, 4.694, 7.855, 10.996, 14.137]
+
+  const sqrtEIrhoA = Math.sqrt((E * I) / (rho * A))
+
+  return stdCase.theoretical.natural_frequencies.map((_, index) => {
+    if (index < betaCoefficients.length) {
+      const beta = betaCoefficients[index]
+      return (beta * beta) / (2 * Math.PI * L * L) * sqrtEIrhoA
+    }
+    return 0
+  })
+}
+
+/**
  * 生成验证报告
  * @param caseId 算例 ID
  * @param numericalDisp 数值解最大位移 (m)
  * @param numericalStress 数值解最大应力 (Pa)
+ * @param numericalFrequencies 数值解固有频率 (Hz)，模态分析时传入
  * @returns 验证报告
  */
 export function generateValidationReport(
   caseId: string,
   numericalDisp: number,
-  numericalStress: number
+  numericalStress: number,
+  numericalFrequencies?: number[]
 ): ValidationReport {
   const stdCase = getCaseById(caseId)
   if (!stdCase) {
@@ -384,22 +572,58 @@ export function generateValidationReport(
   const dispError = calculateError(numericalDisp, theoreticalDisp)
   const stressError = calculateError(numericalStress, theoreticalStress)
 
+  // 模态分析：计算频率误差
+  const isModal = stdCase.category === 'modal'
+  const theoreticalFreqs = isModal ? calculateTheoreticalFrequencies(stdCase) : []
+  const frequencyErrors: number[] = []
+  let freqPass = true
+
+  if (isModal && numericalFrequencies && numericalFrequencies.length > 0 && theoreticalFreqs.length > 0) {
+    for (let i = 0; i < Math.min(numericalFrequencies.length, theoreticalFreqs.length); i++) {
+      const err = calculateError(numericalFrequencies[i], theoreticalFreqs[i])
+      frequencyErrors.push(err)
+      if (err > (stdCase.acceptance.frequency_error_limit ?? 5)) {
+        freqPass = false
+      }
+    }
+  }
+
   const dispPass = dispError <= stdCase.acceptance.displacement_error_limit
   const stressPass = stressError <= stdCase.acceptance.stress_error_limit
-  const overallPass = dispPass && stressPass
+  const overallPass = isModal ? freqPass : (dispPass && stressPass)
 
   let details = ''
-  if (overallPass) {
-    details = `验证通过。位移误差 ${dispError.toFixed(2)}%（限值 ${stdCase.acceptance.displacement_error_limit}%），应力误差 ${stressError.toFixed(2)}%（限值 ${stdCase.acceptance.stress_error_limit}%）。`
+  if (isModal) {
+    // 模态分析报告
+    const freqLimit = stdCase.acceptance.frequency_error_limit ?? 5
+    if (overallPass) {
+      const freqDetails = frequencyErrors.map((e, i) =>
+        `第${i + 1}阶 ${e.toFixed(2)}%`
+      ).join('，')
+      details = `模态验证通过。各阶频率误差：${freqDetails}（限值 ${freqLimit}%）。`
+    } else {
+      const failures: string[] = []
+      frequencyErrors.forEach((e, i) => {
+        if (e > freqLimit) {
+          failures.push(`第${i + 1}阶频率误差 ${e.toFixed(2)}% 超过限值 ${freqLimit}%`)
+        }
+      })
+      details = `模态验证未通过。${failures.join('；')}。`
+    }
   } else {
-    const failures: string[] = []
-    if (!dispPass) {
-      failures.push(`位移误差 ${dispError.toFixed(2)}% 超过限值 ${stdCase.acceptance.displacement_error_limit}%`)
+    // 结构分析报告
+    if (overallPass) {
+      details = `验证通过。位移误差 ${dispError.toFixed(2)}%（限值 ${stdCase.acceptance.displacement_error_limit}%），应力误差 ${stressError.toFixed(2)}%（限值 ${stdCase.acceptance.stress_error_limit}%）。`
+    } else {
+      const failures: string[] = []
+      if (!dispPass) {
+        failures.push(`位移误差 ${dispError.toFixed(2)}% 超过限值 ${stdCase.acceptance.displacement_error_limit}%`)
+      }
+      if (!stressPass) {
+        failures.push(`应力误差 ${stressError.toFixed(2)}% 超过限值 ${stdCase.acceptance.stress_error_limit}%`)
+      }
+      details = `验证未通过。${failures.join('；')}。`
     }
-    if (!stressPass) {
-      failures.push(`应力误差 ${stressError.toFixed(2)}% 超过限值 ${stdCase.acceptance.stress_error_limit}%`)
-    }
-    details = `验证未通过。${failures.join('；')}。`
   }
 
   return {
@@ -408,19 +632,23 @@ export function generateValidationReport(
     timestamp: new Date().toISOString(),
     theoretical: {
       max_displacement: theoreticalDisp,
-      max_stress: theoreticalStress
+      max_stress: theoreticalStress,
+      natural_frequencies: theoreticalFreqs.length > 0 ? theoreticalFreqs : undefined
     },
     numerical: {
       max_displacement: numericalDisp,
-      max_stress: numericalStress
+      max_stress: numericalStress,
+      natural_frequencies: numericalFrequencies && numericalFrequencies.length > 0 ? numericalFrequencies : undefined
     },
     errors: {
       displacement_error: dispError,
-      stress_error: stressError
+      stress_error: stressError,
+      frequency_errors: frequencyErrors.length > 0 ? frequencyErrors : undefined
     },
     acceptance: {
       displacement_error_limit: stdCase.acceptance.displacement_error_limit,
-      stress_error_limit: stdCase.acceptance.stress_error_limit
+      stress_error_limit: stdCase.acceptance.stress_error_limit,
+      frequency_error_limit: stdCase.acceptance.frequency_error_limit
     },
     result: overallPass ? 'PASS' : 'FAIL',
     details
