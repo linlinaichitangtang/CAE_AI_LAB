@@ -139,6 +139,61 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/AcousticCouplingView.vue')
   },
   {
+    path: '/composite',
+    name: 'Composite',
+    component: () => import('./views/CompositeView.vue')
+  },
+  {
+    path: '/cellular',
+    name: 'CellularStructure',
+    component: () => import('./views/CellularStructureView.vue')
+  },
+  {
+    path: '/creep',
+    name: 'Creep',
+    component: () => import('./views/CreepView.vue')
+  },
+  {
+    path: '/advanced-material',
+    name: 'AdvancedMaterial',
+    component: () => import('./views/AdvancedMaterialView.vue')
+  },
+  {
+    path: '/cloud-hpc',
+    name: 'CloudHpc',
+    component: () => import('./views/CloudHpcView.vue')
+  },
+  {
+    path: '/hpc-cluster',
+    name: 'HpcCluster',
+    component: () => import('./views/HpcClusterView.vue')
+  },
+  {
+    path: '/rve',
+    name: 'Rve',
+    component: () => import('./views/RveView.vue')
+  },
+  {
+    path: '/homogenization',
+    name: 'Homogenization',
+    component: () => import('./views/HomogenizationView.vue')
+  },
+  {
+    path: '/multiscale',
+    name: 'Multiscale',
+    component: () => import('./views/MultiscaleView.vue')
+  },
+  {
+    path: '/data-asset',
+    name: 'DataAsset',
+    component: () => import('./views/DataAssetView.vue')
+  },
+  {
+    path: '/certification',
+    name: 'Certification',
+    component: () => import('./views/CertificationView.vue')
+  },
+  {
     path: '/ai',
     name: 'AIChat',
     component: () => import('./views/AIChatView.vue')
@@ -213,7 +268,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/data-asset', '/certification']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

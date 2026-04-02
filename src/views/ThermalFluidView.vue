@@ -912,12 +912,32 @@ function renderVelocityField(result: ThermalFluidResult) {
   })
   toRemove.forEach(obj => {
     scene!.remove(obj)
-    if (obj instanceof THREE.Points || obj instanceof THREE.ArrowHelper || obj instanceof THREE.Mesh) {
+    if (obj instanceof THREE.Mesh) {
       obj.geometry.dispose()
       if (Array.isArray(obj.material)) {
         obj.material.forEach(m => m.dispose())
       } else {
         obj.material.dispose()
+      }
+    } else if (obj instanceof THREE.Points) {
+      obj.geometry.dispose()
+      if (Array.isArray(obj.material)) {
+        obj.material.forEach(m => m.dispose())
+      } else {
+        obj.material.dispose()
+      }
+    } else if (obj instanceof THREE.ArrowHelper) {
+      obj.cone.geometry.dispose()
+      if (Array.isArray(obj.cone.material)) {
+        (obj.cone.material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose())
+      } else {
+        (obj.cone.material as THREE.Material).dispose()
+      }
+      obj.line.geometry.dispose()
+      if (Array.isArray(obj.line.material)) {
+        (obj.line.material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose())
+      } else {
+        (obj.line.material as THREE.Material).dispose()
       }
     }
   })

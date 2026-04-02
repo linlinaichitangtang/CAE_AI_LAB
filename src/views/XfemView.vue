@@ -389,7 +389,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import type { XfemConfig, XfemResult, XfemTemplate } from '@/api/xfem'
 
 // ============ 分析类型选项 ============
-const analysisTypes = [
+const analysisTypes: { value: 'static' | 'fatigue_crack_growth' | 'dynamic'; label: string }[] = [
   { value: 'static', label: '静态断裂' },
   { value: 'fatigue_crack_growth', label: '疲劳裂纹扩展' },
   { value: 'dynamic', label: '动态断裂' },

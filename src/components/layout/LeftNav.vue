@@ -181,6 +181,54 @@ const AcousticIcon = {
   ])
 }
 
+const CompositeIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }),
+    h('line', { x1: '3', y1: '9', x2: '21', y2: '9' }),
+    h('line', { x1: '3', y1: '15', x2: '21', y2: '15' }),
+    h('line', { x1: '9', y1: '3', x2: '9', y2: '21' }),
+    h('line', { x1: '15', y1: '3', x2: '15', y2: '21' })
+  ])
+}
+
+const CreepIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M22 12h-4l-3 9L9 3l-3 9H2' }),
+    h('path', { d: 'M17 3v4' }),
+    h('path', { d: 'M21 3h-4' })
+  ])
+}
+
+const CloudIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z' })
+  ])
+}
+
+const MultiscaleIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '10' }),
+    h('circle', { cx: '12', cy: '12', r: '6' }),
+    h('circle', { cx: '12', cy: '12', r: '2' })
+  ])
+}
+
+const DataIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('ellipse', { cx: '12', cy: '5', rx: '9', ry: '3' }),
+    h('path', { d: 'M21 12c0 1.66-4 3-9 3s-9-1.34-9-3' }),
+    h('path', { d: 'M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5' })
+  ])
+}
+
+const CertIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 15l-2 5l2-1l2 1l-2-5z' }),
+    h('circle', { cx: '12', cy: '9', r: '6' }),
+    h('path', { d: 'M9 9l2 2l4-4' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -211,6 +259,12 @@ const mainNavItems: Array<{
   { path: '/advanced-mesh', icon: AdvancedMeshIcon, label: '高级网格' },
   { path: '/mesh-refinement', icon: MeshRefinementIcon, label: '网格加密' },
   { path: '/acoustic', icon: AcousticIcon, label: '声学' },
+  { path: '/composite', icon: CompositeIcon, label: '复合' },
+  { path: '/creep', icon: CreepIcon, label: '蠕变' },
+  { path: '/cloud-hpc', icon: CloudIcon, label: '云HPC' },
+  { path: '/multiscale', icon: MultiscaleIcon, label: '多尺度' },
+  { path: '/data-asset', icon: DataIcon, label: '数据' },
+  { path: '/certification', icon: CertIcon, label: '认证' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

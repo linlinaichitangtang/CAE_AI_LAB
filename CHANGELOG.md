@@ -7,6 +7,31 @@
 
 ---
 
+## [V1.4-dev] - 2026-04-02
+
+### 新增
+
+- **V1.4-001 复合材料层合板分析**：新增 `composite.ts` API + `CompositeView.vue` 视图，支持经典层合板理论、Tsai-Hill/Tsai-Wu 失效准则、ABD矩阵计算、铺层顺序优化
+- **V1.4-002 蜂窝/点阵结构生成器**：新增 `cellularStructure.ts` API + `CellularStructureView.vue` 视图，支持8种胞元类型、Gibson-Ashby等效性能、参数化生成
+- **V1.4-003 蠕变分析**：新增 `creep.ts` API + `CreepView.vue` 视图，支持Norton/Bailey-Norton/时间硬化/应变硬化模型、Larson-Miller参数、剩余寿命评估
+- **V1.4-004 高级材料模型**：新增 `advancedMaterial.ts` API + `AdvancedMaterialView.vue` 视图，支持Perzyna/Chaboche/Anand粘塑性、NiTi形状记忆合金超弹性滞回
+- **V1.4-005 云端HPC提交**：新增 `cloudHpc.ts` API + `CloudHpcView.vue` 视图，支持任务提交/排队/进度推送/结果下载
+- **V1.4-006 HPC集群管理**：新增 `hpcCluster.ts` API + `HpcClusterView.vue` 视图，支持节点监控/队列管理/告警/资源趋势
+- **V1.4-007 RVE建模器**：新增 `rve.ts` API + `RveView.vue` 视图，支持随机颗粒/纤维/晶粒RVE生成、周期性边界条件
+- **V1.4-008 均匀化方法FE²**：新增 `homogenization.ts` API + `HomogenizationView.vue` 视图，支持Voigt/Reuss/Mori-Tanaka/自洽/FE²方法
+- **V1.4-009 多尺度桥接**：新增 `multiscale.ts` API + `MultiscaleView.vue` 视图，支持MD/相场→FE粗粒化、等效边界条件生成
+- **V1.4-010 仿真数据资产管理**：新增 `dataAsset.ts` API + `DataAssetView.vue` 视图，支持版本化存储/标签检索/数据血缘追踪/溯源报告
+- **V1.4-011 ISO/ASME认证报告**：新增 `certification.ts` API + `CertificationView.vue` 视图，支持ASME BPVC/ISO 2553等6种标准、应力校核/安全系数/合规检查
+
+### 变更
+
+- **路由**：新增 11 条路由（`/composite`、`/cellular`、`/creep`、`/advanced-material`、`/cloud-hpc`、`/hpc-cluster`、`/rve`、`/homogenization`、`/multiscale`、`/data-asset`、`/certification`）
+- **导航**：左侧导航栏新增 7 个模块入口（复合、蠕变、云HPC、多尺度、数据、认证）
+- **国际化**：中英文语言包新增 V1.4 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.3-dev] - 2026-04-02
 
 ### 新增

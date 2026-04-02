@@ -341,7 +341,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import type { AcousticConfig, AcousticResult } from '@/api/acoustic'
 
 // ============ 分析类型选项 ============
-const analysisTypes = [
+const analysisTypes: { value: 'modal_coupling' | 'harmonic_response' | 'transient_acoustic'; label: string }[] = [
   { value: 'modal_coupling', label: '模态耦合' },
   { value: 'harmonic_response', label: '谐响应' },
   { value: 'transient_acoustic', label: '瞬态声学' },
