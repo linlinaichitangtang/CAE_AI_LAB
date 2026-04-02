@@ -192,10 +192,12 @@ export interface ThermalSimulationConfig {
   tolerance?: number  // 收敛容差
 }
 
-// ============ CFD分析类型 ============
+// ============ CFD分析类型（旧版，仅供 SimulationView 兼容，新代码请使用下方 OpenFOAM API）============
 
+/** @deprecated 使用 CfdAnalysisTypeEnum 代替 */
 export type CfdAnalysisType = 'incompressible' | 'compressible'
 
+/** @deprecated 使用 CfdSetup 中的 material 字段代替 */
 export interface FluidProperties {
   density: number        // kg/m³
   viscosity: number      // Pa·s
@@ -598,9 +600,123 @@ export async function generateNonlinearBucklingInp(
   })
 }
 
-// ============ CFD分析 API ============
+// ============ CFD分析 API（基于 OpenFOAM）============
 
-/** 生成CFD INP输入文件 (简化版，生成CalculiX流体段) */
+/** CFD 分析类型 */
+export type CfdAnalysisTypeEnum = 'steady' | 'transient'
+
+/** CFD 瞬态分析参数 */
+export interface CfdTransientConfig {
+  end_time: number
+  delta_t: number
+  max_co: number
+}
+
+/** CFD 边界条件类型 */
+export type CfdBoundaryType = 'velocity_inlet' | 'pressure_outlet' | 'wall' | 'symmetry' | 'outlet'
+
+/** CFD 边界条件 */
+export interface CfdBoundaryCondition {
+  id: string
+  type: CfdBoundaryType
+  velocity?: [number, number, number]
+  turbulence_intensity?: number
+  hydraulic_diameter?: number
+  gauge_pressure?: number
+  wall_slip?: boolean
+  face_ids?: number[]
+}
+
+/** CFD 流体材料 */
+export interface CfdFluidMaterial {
+  type: 'air' | 'water' | 'oil' | 'custom'
+  density?: number
+  viscosity?: number
+}
+
+/** CFD 湍流模型 */
+export type CfdTurbulenceModel = 'laminar' | 'kepsilon' | 'komega_sst'
+
+/** CFD 仿真配置 */
+export interface CfdSetup {
+  project_id: string
+  domain_regions: Array<{ region_type: 'fluid' | 'solid'; face_ids: number[] }>
+  material: CfdFluidMaterial
+  boundary_conditions: CfdBoundaryCondition[]
+  turbulence_model: CfdTurbulenceModel
+  analysis_type: CfdAnalysisTypeEnum
+  convergence_tolerance: number
+  max_iterations: number
+  transient?: CfdTransientConfig
+}
+
+/** CFD 结果统计 */
+export interface CfdResultStats {
+  iterations: number
+  converged: boolean
+  cl: number | null
+  cd: number | null
+  cm: number | null
+}
+
+/** CFD 速度场数据点 */
+export interface VelocityPoint {
+  x: number
+  y: number
+  z: number
+  u: number
+  v: number
+  w: number
+  magnitude: number
+}
+
+/** CFD 压力场数据点 */
+export interface PressurePoint {
+  x: number
+  y: number
+  z: number
+  pressure: number
+}
+
+/** CFD 模拟样本结果（用于可视化测试） */
+export interface CfdSampleResults {
+  velocity_points: VelocityPoint[]
+  pressure_points: PressurePoint[]
+}
+
+/** 生成 OpenFOAM 案例 */
+export async function generateOpenfoamCase(setup: CfdSetup): Promise<string> {
+  return invoke<string>('generate_openfoam_case', { setup })
+}
+
+/** 解析 OpenFOAM 日志文件 */
+export async function parseOpenfoamLog(logPath: string): Promise<CfdResultStats> {
+  return invoke<CfdResultStats>('parse_openfoam_log', { logPath })
+}
+
+/** 下载 OpenFOAM 案例（打包为 zip） */
+export async function downloadOpenfoamCase(projectId: string): Promise<string> {
+  return invoke<string>('download_openfoam_case', { projectId })
+}
+
+/** 导入 CFD 几何文件（STL） */
+export async function importCfdGeometry(projectId: string, filePath: string): Promise<void> {
+  return invoke<void>('import_cfd_geometry', { projectId, filePath })
+}
+
+/** 生成 CFD 报告 */
+export async function generateCfdReport(projectId: string): Promise<string> {
+  return invoke<string>('generate_cfd_report', { projectId })
+}
+
+/** 生成 CFD 模拟样本结果（用于可视化测试） */
+export async function generateCfdSampleResults(setup: CfdSetup): Promise<CfdSampleResults> {
+  return invoke<CfdSampleResults>('generate_cfd_sample_results', { setup })
+}
+
+// ============ 旧版 CFD API（仅供 SimulationView 兼容，新代码请使用上方 OpenFOAM API）============
+
+/** @deprecated 使用 generateOpenfoamCase 代替 */
 export async function generateCfdInp(
   nodes: Node[],
   elements: Element[],
@@ -623,12 +739,12 @@ export async function generateCfdInp(
   })
 }
 
-/** 运行CFD求解器 */
+/** @deprecated OpenFOAM 案例通过 generateOpenfoamCase 生成后直接运行 */
 export async function runCfdSolver(inputPath: string, workingDir: string): Promise<any> {
   return await invoke<any>('run_cfd_solver', { input_path: inputPath, working_dir: workingDir })
 }
 
-/** 解析CFD结果文件 */
+/** @deprecated 使用 parseOpenfoamLog 代替 */
 export async function parseCfdResult(path: string): Promise<any> {
   return await invoke<any>('parse_cfd_result', { path })
 }

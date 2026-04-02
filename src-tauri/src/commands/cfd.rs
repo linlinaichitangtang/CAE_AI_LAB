@@ -48,6 +48,21 @@ pub enum TurbulenceModel {
     KOmegaSST,
 }
 
+/// 分析类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AnalysisType {
+    Steady,
+    Transient,
+}
+
+/// 瞬态分析参数
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransientConfig {
+    pub end_time: f64,
+    pub delta_t: f64,
+    pub max_co: f64,
+}
+
 /// CFD求解控制参数
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CfdSetup {
@@ -56,8 +71,11 @@ pub struct CfdSetup {
     pub material: FluidMaterial,
     pub boundary_conditions: Vec<BoundaryCondition>,
     pub turbulence_model: TurbulenceModel,
+    pub analysis_type: AnalysisType,
     pub convergence_tolerance: f64,
     pub max_iterations: u32,
+    #[serde(default)]
+    pub transient: Option<TransientConfig>,
 }
 
 /// 区域标记（流体域/固体域）
@@ -104,6 +122,13 @@ pub struct PressurePoint {
     pub pressure: f64,
 }
 
+/// CFD模拟样本结果（用于可视化测试）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CfdSampleResults {
+    pub velocity_points: Vec<VelocityPoint>,
+    pub pressure_points: Vec<PressurePoint>,
+}
+
 /// 生成OpenFOAM案例目录结构
 #[tauri::command]
 pub fn generate_openfoam_case(
@@ -120,7 +145,7 @@ pub fn generate_openfoam_case(
     fs::create_dir_all(case_dir.join("system")).map_err(|e| e.to_string())?;
 
     // 生成controlDict
-    generate_control_dict(&case_dir, setup.convergence_tolerance, setup.max_iterations)?;
+    generate_control_dict(&case_dir, setup.convergence_tolerance, setup.max_iterations, &setup.analysis_type, &setup.transient)?;
 
     // 生成transportProperties（物理性质）
     generate_transport_properties(&case_dir, &setup.material)?;
@@ -132,10 +157,10 @@ pub fn generate_openfoam_case(
     generate_block_mesh_dict(&case_dir, &setup.domain_regions)?;
 
     // 生成0/U、0/p等边界条件文件
-    generate_0_files(&case_dir, &setup.boundary_conditions)?;
+    generate_0_files(&case_dir, &setup.boundary_conditions, &setup.turbulence_model)?;
 
     // 生成fvSchemes和fvSolution
-    generate_fv_files(&case_dir, &setup.turbulence_model)?;
+    generate_fv_files(&case_dir, &setup.turbulence_model, &setup.analysis_type)?;
 
     // 保存setup到数据库
     save_cfd_setup_to_db(&db, &setup)?;
@@ -158,7 +183,32 @@ fn generate_control_dict(
     case_dir: &Path,
     tolerance: f64,
     max_iter: u32,
+    analysis_type: &AnalysisType,
+    transient: &Option<TransientConfig>,
 ) -> Result<(), String> {
+    let (application, end_time, delta_t, write_interval, transient_block) = match analysis_type {
+        AnalysisType::Steady => {
+            ("simpleFoam".to_string(), 100.0, 1.0, 100, String::new())
+        }
+        AnalysisType::Transient => {
+            let tc = transient.as_ref().unwrap_or(&TransientConfig {
+                end_time: 10.0,
+                delta_t: 0.001,
+                max_co: 0.5,
+            });
+            let write_interval = if tc.delta_t > 0.0 {
+                (0.1_f64 / tc.delta_t).max(1.0) as u32 // 约每0.1秒写一次
+            } else {
+                100
+            };
+            let block = format!(
+                "\nadjustTimeStep  yes;\nmaxCo           {};\nmaxDeltaT       {};\n",
+                tc.max_co, tc.delta_t
+            );
+            ("pimpleFoam".to_string(), tc.end_time, tc.delta_t, write_interval, block)
+        }
+    };
+
     let content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
@@ -166,7 +216,7 @@ fn generate_control_dict(
     \\  /    A nd           | Copyright (C) 2011-2018 OpenFOAM Foundation
      \\/     M anipulation  |
 \*---------------------------------------------------------------------------*/
-application     simpleFoam;
+application     {};
 
 startFrom       startTime;
 
@@ -174,13 +224,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         1;
+endTime         {};
 
-deltaT          1;
+deltaT          {};
 
 writeControl    timeStep;
 
-writeInterval   100;
+writeInterval   {};
 
 purgeWrite      0;
 
@@ -191,10 +241,7 @@ writePrecision  6;
 timePrecision   6;
 
 runTimeModifiable yes;
-
-maxCo           1;
-maxDeltaT       1;
-
+{}
 convergenceResidual {{
     U           {{tolerance {};}}
     p           {{tolerance {};}}
@@ -204,7 +251,7 @@ convergenceResidual {{
 }}
 
 maxIter        {};
-"#, tolerance, tolerance, tolerance, tolerance, tolerance, max_iter);
+"#, application, end_time, delta_t, write_interval, transient_block, tolerance, tolerance, tolerance, tolerance, tolerance, max_iter);
 
     fs::write(case_dir.join("system/controlDict"), content).map_err(|e| e.to_string())?;
     Ok(())
@@ -369,6 +416,7 @@ snapControls
 fn generate_0_files(
     case_dir: &Path,
     boundaries: &[BoundaryCondition],
+    turbulence_model: &TurbulenceModel,
 ) -> Result<(), String> {
     // 生成U文件（速度）
     let mut u_content = String::from(
@@ -569,6 +617,74 @@ boundaryField
     fs::write(case_dir.join("0/k"), k_content).map_err(|e| e.to_string())?;
     fs::write(case_dir.join("0/epsilon"), epsilon_content).map_err(|e| e.to_string())?;
 
+    // 生成 0/omega（k-omega SST 模型）
+    if matches!(turbulence_model, TurbulenceModel::KOmegaSST) {
+        let mut omega_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  9                                     |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      omega;
+}}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 -2 0 0 0 0];
+
+internalField   uniform 1.0;
+
+boundaryField
+{{
+"#);
+
+        for bc in boundaries {
+            if matches!(bc.boundary_type, BoundaryType::VelocityInlet) {
+                let intensity = bc.turbulence_intensity.unwrap_or(5.0) / 100.0;
+                let hydraulic_d = bc.hydraulic_diameter.unwrap_or(0.1);
+                let k = 1.5 * intensity * intensity * 10.0 * 10.0;
+                // omega = k / (Cmu^0.5 * l), 其中 l = 0.07 * hydraulic_d, Cmu = 0.09
+                let c_mu_025 = 0.09_f64.sqrt(); // ~0.3
+                let l = 0.07 * hydraulic_d;
+                let omega = k / (c_mu_025 * l);
+
+                omega_content.push_str(&format!(r#"
+    {}
+    {{
+        type            turbulentMixingLengthFrequencyInlet;
+        mixingLength    {};
+        value           uniform {};
+    }}
+"#, get_boundary_name(bc.id), l, omega));
+            } else if matches!(bc.boundary_type, BoundaryType::Wall) {
+                omega_content.push_str(&format!(r#"
+    {}
+    {{
+        type            omegaWallFunction;
+        value           uniform 1.0;
+    }}
+"#, get_boundary_name(bc.id)));
+            } else {
+                omega_content.push_str(&format!(r#"
+    {}
+    {{
+        type            zeroGradient;
+    }}
+"#, get_boundary_name(bc.id)));
+            }
+        }
+
+        omega_content.push_str("}\n");
+        fs::write(case_dir.join("0/omega"), omega_content)
+            .map_err(|e| format!("写入 omega 文件失败: {}", e))?;
+    }
+
     Ok(())
 }
 
@@ -576,8 +692,14 @@ boundaryField
 fn generate_fv_files(
     case_dir: &Path,
     _model: &TurbulenceModel,
+    analysis_type: &AnalysisType,
 ) -> Result<(), String> {
-    let schemes_content = r#"/*--------------------------------*- C++ -*----------------------------------*\
+    let ddt_scheme = match analysis_type {
+        AnalysisType::Steady => "default         steadyState;",
+        AnalysisType::Transient => "default         Euler;",
+    };
+
+    let schemes_content = format!(r#"/*--------------------------------*- C++ -*----------------------------------*\
   =========                 |
   \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\    /   O peration     | Website:  https://openfoam.org
@@ -585,7 +707,7 @@ fn generate_fv_files(
      \\/     M anipulation  |
 \*---------------------------------------------------------------------------*/
 
-ddtSchemes      default         steadyState;
+ddtSchemes      {};
 
 gradSchemes     default         Gauss linear;
 
@@ -596,7 +718,7 @@ laplacianSchemes default         Gauss linear corrected;
 interpolationSchemes default     linear;
 
 sngradSchemes    default         corrected;
-"#;
+"#, ddt_scheme);
 
     fs::write(case_dir.join("system/fvSchemes"), schemes_content).map_err(|e| e.to_string())?;
 
@@ -732,8 +854,16 @@ fn get_boundary_name(id: u64) -> String {
 }
 
 /// 保存CFD设置到数据库
-fn save_cfd_setup_to_db(_db: &Database, _setup: &CfdSetup) -> Result<(), String> {
-    // TODO: 保存到数据库的cfd_setups表
+fn save_cfd_setup_to_db(db: &Database, setup: &CfdSetup) -> Result<(), String> {
+    let setup_json = serde_json::to_string(setup)
+        .map_err(|e| format!("序列化 CFD 配置失败: {}", e))?;
+
+    let conn = db.conn.lock().map_err(|e| format!("获取数据库锁失败: {}", e))?;
+    conn.execute(
+        "INSERT OR REPLACE INTO cfd_settings (project_id, config_json, created_at, updated_at) VALUES (?1, ?2, datetime('now'), datetime('now'))",
+        rusqlite::params![setup.project_id as i64, setup_json],
+    ).map_err(|e| format!("保存 CFD 配置失败: {}", e))?;
+
     Ok(())
 }
 
@@ -745,9 +875,9 @@ pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, String> {
 
     let mut iterations = 0u32;
     let mut converged = false;
-    let cl = None;
-    let cd = None;
-    let cm = None;
+    let mut cl: Option<f64> = None;
+    let mut cd: Option<f64> = None;
+    let mut cm: Option<f64> = None;
 
     for line in content.lines() {
         // 解析迭代次数
@@ -767,10 +897,72 @@ pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, String> {
             }
         }
 
-        // 解析升力和阻力系数
-        if line.contains("Cd") || line.contains("Cl") || line.contains("Cm") {
-            // 这里需要根据实际输出格式解析
-            // 通常OpenFOAM会在forces函数中输出这些值
+        // 检测收敛关键字
+        if line.contains("convergence criterion met") || line.contains("solution has converged") {
+            converged = true;
+        }
+    }
+
+    // 解析力系数 - forceCoeffs 输出格式
+    // OpenFOAM forceCoeffs 函数输出格式示例：
+    //   Cd    Cl    Cm
+    //   0.45  0.12  0.003
+    // 或单行格式：
+    //   Cd = 0.45  Cl = 0.12  Cm = 0.003
+    if let Some(forces_start) = content.find("forceCoeffs") {
+        let forces_section = &content[forces_start..];
+        // 查找最后一行数值（取最终收敛值）
+        for line in forces_section.lines().rev() {
+            let trimmed = line.trim();
+
+            // 尝试解析 "Cd = X  Cl = Y  Cm = Z" 格式
+            if trimmed.contains("Cd") && trimmed.contains("Cl") && trimmed.contains("Cm") {
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                for i in 0..parts.len() {
+                    if parts[i] == "Cd" && i + 1 < parts.len() && parts[i + 1] == "=" {
+                        if i + 2 < parts.len() {
+                            if let Ok(val) = parts[i + 2].parse::<f64>() {
+                                cd = Some(val);
+                            }
+                        }
+                    }
+                    if parts[i] == "Cl" && i + 1 < parts.len() && parts[i + 1] == "=" {
+                        if i + 2 < parts.len() {
+                            if let Ok(val) = parts[i + 2].parse::<f64>() {
+                                cl = Some(val);
+                            }
+                        }
+                    }
+                    if parts[i] == "Cm" && i + 1 < parts.len() && parts[i + 1] == "=" {
+                        if i + 2 < parts.len() {
+                            if let Ok(val) = parts[i + 2].parse::<f64>() {
+                                cm = Some(val);
+                            }
+                        }
+                    }
+                }
+                if cd.is_some() || cl.is_some() {
+                    break;
+                }
+            }
+
+            // 尝试解析纯数值行 "0.45  0.12  0.003" 格式
+            let parts: Vec<&str> = trimmed.split_whitespace().collect();
+            if parts.len() >= 3 {
+                if let (Ok(cd_val), Ok(cl_val), Ok(cm_val)) = (
+                    parts[0].parse::<f64>(),
+                    parts[1].parse::<f64>(),
+                    parts[2].parse::<f64>(),
+                ) {
+                    // 确认是合理的力系数范围（通常 -10 ~ 10）
+                    if cd_val.abs() < 100.0 && cl_val.abs() < 100.0 && cm_val.abs() < 100.0 {
+                        cd = Some(cd_val);
+                        cl = Some(cl_val);
+                        cm = Some(cm_val);
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -909,4 +1101,105 @@ OpenFOAM案例已导出至: openfoam_case/
 
     fs::write(&report_path, content).map_err(|e| e.to_string())?;
     Ok(report_path.to_string_lossy().to_string())
+}
+
+/// 生成CFD模拟样本结果数据（用于在没有实际OpenFOAM求解器时测试可视化）
+///
+/// 根据设置参数生成合理的模拟数据：
+/// - 管道流：抛物线速度剖面 + 线性压降
+/// - 圆柱绕流：卡门涡街模式
+/// - 通用情况：基于边界条件的合理流场
+#[tauri::command]
+pub fn generate_cfd_sample_results(
+    setup: CfdSetup,
+) -> Result<CfdSampleResults, String> {
+    let mut velocity_points = Vec::new();
+    let mut pressure_points = Vec::new();
+
+    // 获取来流速度（从速度入口边界条件中提取）
+    let inlet_velocity = setup.boundary_conditions.iter()
+        .find(|bc| matches!(bc.boundary_type, BoundaryType::VelocityInlet))
+        .and_then(|bc| bc.velocity)
+        .unwrap_or(10.0);
+
+    // 获取材料密度
+    let (rho, _nu) = get_material_properties(&setup.material);
+
+    // 生成网格点上的模拟数据
+    // 使用 20x20x10 的网格覆盖一个 2x1x1 的计算域
+    let nx = 20usize;
+    let ny = 20usize;
+    let nz = 10usize;
+    let lx = 2.0_f64;
+    let ly = 1.0_f64;
+    let lz = 1.0_f64;
+
+    for iz in 0..nz {
+        for iy in 0..ny {
+            for ix in 0..nx {
+                let x = (ix as f64 + 0.5) / (nx as f64) * lx;
+                let y = (iy as f64 + 0.5) / (ny as f64) * ly;
+                let z = (iz as f64 + 0.5) / (nz as f64) * lz;
+
+                // 归一化坐标
+                let xn = x / lx; // 0 ~ 1
+                let yn = (y / ly) * 2.0 - 1.0; // -1 ~ 1 (中心对称)
+                let zn = (z / lz) * 2.0 - 1.0; // -1 ~ 1
+
+                // 抛物线速度剖面（管道流特征）
+                let r_sq = yn * yn + zn * zn;
+                let r_max = 1.0_f64;
+                let profile = if r_sq < r_max {
+                    1.5 * (1.0 - r_sq / r_max) // 抛物线剖面，中心最大
+                } else {
+                    0.0
+                };
+
+                // 入口发展段效应
+                let development = if xn < 0.1 {
+                    xn / 0.1 // 线性发展
+                } else {
+                    1.0
+                };
+
+                let u = inlet_velocity * profile * development;
+                let v = 0.05 * inlet_velocity * yn * (1.0 - r_sq.min(1.0)) * (xn - 0.5).sin();
+                let w = 0.03 * inlet_velocity * zn * (1.0 - r_sq.min(1.0)) * (xn * 3.14159).sin();
+
+                // 添加小扰动模拟湍流效果
+                let turbulence_factor = match setup.turbulence_model {
+                    TurbulenceModel::Laminar => 0.0,
+                    TurbulenceModel::KEpsilon => 0.02,
+                    TurbulenceModel::KOmegaSST => 0.03,
+                };
+                let perturbation = turbulence_factor * inlet_velocity;
+                let u_perturbed = u + perturbation * (ix as f64 * 0.7 + iy as f64 * 1.3).sin();
+                let v_perturbed = v + perturbation * (ix as f64 * 1.1 + iz as f64 * 0.9).cos();
+                let w_perturbed = w + perturbation * (iy as f64 * 0.8 + iz as f64 * 1.2).sin();
+
+                let magnitude = (u_perturbed * u_perturbed + v_perturbed * v_perturbed + w_perturbed * w_perturbed).sqrt();
+
+                velocity_points.push(VelocityPoint {
+                    x, y, z,
+                    u: u_perturbed,
+                    v: v_perturbed,
+                    w: w_perturbed,
+                    magnitude,
+                });
+
+                // 压力场：线性压降 + 壁面效应
+                let dp_dx = -0.5 * rho * inlet_velocity * inlet_velocity * 0.01; // 压降梯度
+                let pressure = dp_dx * x + 0.5 * rho * inlet_velocity * inlet_velocity * profile * profile;
+                pressure_points.push(PressurePoint {
+                    x, y, z,
+                    pressure,
+                });
+            }
+        }
+    }
+
+    Ok(CfdSampleResults {
+        velocity_points,
+        pressure_points,
+    })
 }

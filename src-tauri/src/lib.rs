@@ -152,6 +152,7 @@ pub fn run() {
             commands::cfd::download_openfoam_case,
             commands::cfd::import_cfd_geometry,
             commands::cfd::generate_cfd_report,
+            commands::cfd::generate_cfd_sample_results,
             // Topology optimization commands
             commands::optimization_commands::run_topology_optimization_full,
             commands::optimization_commands::run_topology_optimization,
