@@ -12,6 +12,22 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/HomeView.vue')
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('./views/AuthView.vue'),
+    meta: { public: true }
+  },
+  {
+    path: '/membership',
+    name: 'Membership',
+    component: () => import('./views/MembershipView.vue')
+  },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('./views/ProfileView.vue')
+  },
+  {
     path: '/share',
     name: 'Share',
     component: () => import('./views/ShareView.vue')
@@ -107,6 +123,26 @@ const router = createRouter({
       return savedPosition
     }
     return { top: 0 }
+  }
+})
+
+// Auth 路由守卫：未登录用户重定向到 /login
+router.beforeEach((to, _from, next) => {
+  // 检查是否为公开路由（不需要登录）
+  const isPublicRoute = to.meta.public === true
+
+  // 检查登录状态
+  const accessToken = localStorage.getItem('caelab-access-token')
+  const isAuthenticated = !!accessToken
+
+  if (!isPublicRoute && !isAuthenticated) {
+    // 未登录用户访问受保护路由，重定向到登录页
+    next('/login')
+  } else if (isPublicRoute && isAuthenticated && to.path === '/login') {
+    // 已登录用户访问登录页，重定向到首页
+    next('/')
+  } else {
+    next()
   }
 })
 

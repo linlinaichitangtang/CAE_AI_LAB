@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth};
 pub mod solver;
 mod db;
 mod models;
@@ -224,6 +224,20 @@ pub fn run() {
             // STEP/IGES file import commands
             commands::step_import::import_step_file,
             commands::step_import::check_step_import_available,
+            // Auth commands
+            commands::auth::register,
+            commands::auth::login,
+            commands::auth::refresh_token,
+            commands::auth::get_profile,
+            commands::auth::update_profile,
+            commands::auth::change_password,
+            commands::auth::list_devices,
+            commands::auth::logout_device,
+            commands::auth::get_membership_status,
+            commands::auth::update_membership,
+            commands::auth::send_verification_code,
+            commands::auth::verify_code,
+            commands::auth::verify_access_token_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

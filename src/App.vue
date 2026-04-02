@@ -1,66 +1,77 @@
 <template>
   <div id="app" class="h-screen flex flex-col bg-[var(--bg-base)]">
-    <!-- 桌面端顶栏 -->
-    <TopBar
-      v-if="isDesktop"
-      :current-layout="currentLayout"
-      @change-layout="changeLayout"
-      @toggle-sidebar="toggleSidebar"
-      @toggle-right-panel="toggleRightPanel"
-    />
+    <!-- Splash Screen -->
+    <SplashScreen :duration="1500" />
 
-    <!-- 移动端/平板端简化顶栏 -->
-    <div v-else class="mobile-topbar safe-area-top">
-      <span class="font-semibold text-sm">{{ currentRouteName }}</span>
-    </div>
+    <!-- Auth Page: full-screen without layout -->
+    <template v-if="isAuthPage">
+      <router-view />
+    </template>
 
-    <!-- 主内容区 -->
-    <div class="flex-1 flex overflow-hidden">
-      <!-- 桌面端左侧导航 -->
-      <LeftNav
-        v-if="isDesktop && showSidebar"
-        :class="['transition-all duration-300', showSidebar ? 'w-[72px]' : 'w-0']"
+    <!-- Main App Layout -->
+    <template v-else>
+      <!-- 桌面端顶栏 -->
+      <TopBar
+        v-if="isDesktop"
+        :current-layout="currentLayout"
+        @change-layout="changeLayout"
+        @toggle-sidebar="toggleSidebar"
+        @toggle-right-panel="toggleRightPanel"
       />
 
-      <!-- 主视图 -->
-      <main class="flex-1 flex flex-col overflow-hidden" :class="{ 'pb-14': isTouchDevice }">
-        <!-- Main Workspace with Optional Pane Split -->
-        <div class="flex-1 flex overflow-hidden" v-if="isDesktop && (currentLayout === 'quad' || currentLayout === 'split')">
-          <!-- Primary Pane -->
-          <div class="flex-1 overflow-hidden border-r border-[var(--border-subtle)]">
-            <PageTransition />
-          </div>
-          <!-- Secondary Pane -->
-          <div class="flex-1 overflow-hidden">
-            <component :is="secondaryComponent" />
-          </div>
-        </div>
+      <!-- 移动端/平板端简化顶栏 -->
+      <div v-else class="mobile-topbar safe-area-top">
+        <span class="font-semibold text-sm">{{ currentRouteName }}</span>
+      </div>
 
-        <!-- Single View (Focus, Side-by-Side, Tri-Panel, or mobile/tablet) -->
-        <div v-else class="flex-1 flex overflow-hidden">
-          <div class="flex-1 overflow-hidden">
-            <PageTransition />
-          </div>
-        </div>
-
-        <!-- Optional Right Panel (for Tri-Panel and Side-by-Side, desktop only) -->
-        <RightPanel
-          v-if="isDesktop && showRightPanel && (currentLayout === 'tri' || currentLayout === 'split')"
-          :class="['transition-all duration-300', showRightPanel ? 'w-[280px]' : 'w-0']"
+      <!-- 主内容区 -->
+      <div class="flex-1 flex overflow-hidden">
+        <!-- 桌面端左侧导航 -->
+        <LeftNav
+          v-if="isDesktop && showSidebar"
+          :class="['transition-all duration-300', showSidebar ? 'w-[72px]' : 'w-0']"
         />
-      </main>
-    </div>
 
-    <!-- 桌面端状态栏 -->
-    <StatusBar v-if="isDesktop" />
+        <!-- 主视图 -->
+        <main class="flex-1 flex flex-col overflow-hidden" :class="{ 'pb-14': isTouchDevice }">
+          <!-- Main Workspace with Optional Pane Split -->
+          <div class="flex-1 flex overflow-hidden" v-if="isDesktop && (currentLayout === 'quad' || currentLayout === 'split')">
+            <!-- Primary Pane -->
+            <div class="flex-1 overflow-hidden border-r border-[var(--border-subtle)]">
+              <PageTransition />
+            </div>
+            <!-- Secondary Pane -->
+            <div class="flex-1 overflow-hidden">
+              <component :is="secondaryComponent" />
+            </div>
+          </div>
 
-    <!-- 移动端底部导航 -->
-    <MobileBottomNav v-if="isTouchDevice" />
+          <!-- Single View (Focus, Side-by-Side, Tri-Panel, or mobile/tablet) -->
+          <div v-else class="flex-1 flex overflow-hidden">
+            <div class="flex-1 overflow-hidden">
+              <PageTransition />
+            </div>
+          </div>
+
+          <!-- Optional Right Panel (for Tri-Panel and Side-by-Side, desktop only) -->
+          <RightPanel
+            v-if="isDesktop && showRightPanel && (currentLayout === 'tri' || currentLayout === 'split')"
+            :class="['transition-all duration-300', showRightPanel ? 'w-[280px]' : 'w-0']"
+          />
+        </main>
+      </div>
+
+      <!-- 桌面端状态栏 -->
+      <StatusBar v-if="isDesktop" />
+
+      <!-- 移动端底部导航 -->
+      <MobileBottomNav v-if="isTouchDevice" />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import TopBar from './components/layout/TopBar.vue'
 import LeftNav from './components/layout/LeftNav.vue'
@@ -68,18 +79,23 @@ import RightPanel from './components/layout/RightPanel.vue'
 import StatusBar from './components/layout/StatusBar.vue'
 import MobileBottomNav from './components/layout/MobileBottomNav.vue'
 import PageTransition from './components/common/PageTransition.vue'
+import SplashScreen from './components/common/SplashScreen.vue'
 import CodeView from './views/CodeView.vue'
 import NotesView from './views/NotesView.vue'
 import ModelingView from './views/ModelingView.vue'
 import SimulationView from './views/SimulationView.vue'
 import { usePlatform } from './composables/usePlatform'
 import { useOrientation } from './composables/useOrientation'
+import { useAuthStore } from './stores/authStore'
 
 // Platform detection for responsive layout
 const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
 
 // Orientation detection for adaptive layout
 const { isPortrait, isLandscape } = useOrientation()
+
+// Auth store
+const authStore = useAuthStore()
 
 // Layout mode: 'focus' | 'side' | 'tri' | 'quad'
 const currentLayout = ref<string>(
@@ -92,6 +108,11 @@ const showRightPanel = ref(true)
 
 // Current route for determining secondary view in quad/split mode
 const route = useRoute()
+
+// Check if current page is auth page (no layout)
+const isAuthPage = computed(() => {
+  return route.path === '/login'
+})
 
 // Current route name for mobile topbar
 const currentRouteName = computed(() => {
@@ -109,6 +130,8 @@ const currentRouteName = computed(() => {
     '/topology': '拓扑',
     '/settings': '设置',
     '/more': '更多',
+    '/membership': '会员',
+    '/profile': '个人资料',
   }
   return nameMap[route.path] || 'CAELab'
 })
@@ -161,6 +184,11 @@ function toggleRightPanel() {
 // Watch for route changes to sync layout
 watch(route, () => {
   // Could sync layout based on route if needed
+})
+
+// Initialize auth store from localStorage
+onMounted(() => {
+  authStore.init()
 })
 </script>
 

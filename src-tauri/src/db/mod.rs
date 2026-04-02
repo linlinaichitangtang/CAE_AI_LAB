@@ -154,6 +154,80 @@ impl Database {
             [],
         )?;
 
+        // ========== Auth tables ==========
+
+        // Users table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                nickname TEXT,
+                avatar_url TEXT,
+                company TEXT,
+                position TEXT,
+                membership_tier TEXT NOT NULL DEFAULT 'free',
+                membership_expires_at TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                last_login_at TEXT
+            )",
+            [],
+        )?;
+
+        // Verification codes table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS verification_codes (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL,
+                code TEXT NOT NULL,
+                purpose TEXT NOT NULL DEFAULT 'register',
+                expires_at TEXT NOT NULL,
+                used_at TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )",
+            [],
+        )?;
+
+        // Devices table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS devices (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                device_name TEXT,
+                device_type TEXT,
+                ip_address TEXT,
+                last_active_at TEXT NOT NULL DEFAULT (datetime('now')),
+                is_current BOOLEAN DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )",
+            [],
+        )?;
+
+        // Refresh tokens table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS refresh_tokens (
+                token_hash TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id),
+                device_id TEXT,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )",
+            [],
+        )?;
+
+        // Index for devices by user_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_devices_user_id ON devices(user_id)",
+            [],
+        )?;
+
+        // Index for refresh_tokens by user_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id)",
+            [],
+        )?;
+
         Ok(())
     }
 

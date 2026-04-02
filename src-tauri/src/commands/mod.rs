@@ -30,3 +30,4 @@ pub mod electronics;
 pub mod biomechanics;
 pub mod code_exec;
 pub mod step_import;
+pub mod auth;

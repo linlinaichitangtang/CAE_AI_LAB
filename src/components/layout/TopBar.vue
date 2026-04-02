@@ -161,6 +161,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUndo } from '@/composables/useUndo'
+import { useAuthStore } from '@/stores/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const props = defineProps<{
@@ -171,6 +172,7 @@ defineEmits(['change-layout', 'toggle-sidebar', 'toggle-right-panel'])
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const showUserMenu = ref(false)
 const userMenuRef = ref<HTMLElement | null>(null)
 
@@ -260,7 +262,14 @@ function toggleUserMenu() {
 
 function handleMenuAction(action: string) {
   showUserMenu.value = false
-  console.log('User menu action:', action)
+  if (action === 'profile') {
+    router.push('/profile')
+  } else if (action === 'license') {
+    router.push('/membership')
+  } else if (action === 'logout') {
+    authStore.logout()
+    router.push('/login')
+  }
 }
 
 function handleClickOutside(event: MouseEvent) {
