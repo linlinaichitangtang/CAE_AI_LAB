@@ -190,3 +190,87 @@ export async function calculateMassScalingSuggestion(
 ): Promise<number> {
   return invoke('calculate_mass_scaling_suggestion', { originalDt, targetDt })
 }
+
+// ============ V1.3-004: 显式动力学求解器类型 ============
+
+export interface ExplicitSolverMaterial {
+  density: number
+  youngs_modulus: number
+  poisson_ratio: number
+  yield_stress: number
+  hardening_modulus: number
+  failure_strain: number
+}
+
+export interface ExplicitSolverBC {
+  fixed_nodes: number[]
+  prescribed_velocities: [number, [number, number, number]][]
+  initial_velocities: [number, [number, number, number]][]
+}
+
+export interface ExplicitSolverContactPair {
+  master_nodes: number[]
+  slave_nodes: number[]
+  penalty_stiffness: number
+  friction_coefficient: number
+}
+
+export interface ExplicitSolverConfig {
+  nodes: [number, number, number][]
+  elements: [number, number, number, number, number, number, number, number][]
+  node_masses: number[]
+  material: ExplicitSolverMaterial
+  boundary_conditions: ExplicitSolverBC
+  contact_pairs: ExplicitSolverContactPair[]
+  time_step: number
+  end_time: number
+  output_interval: number
+  damping: number
+}
+
+export interface ExplicitFrame {
+  time: number
+  kinetic_energy: number
+  internal_energy: number
+  total_energy: number
+  max_displacement: number
+  max_velocity: number
+  node_displacements: [number, number, number][]
+  node_velocities: [number, number, number][]
+  element_stresses: number[]
+  failed_elements: number[]
+}
+
+export interface ExplicitSolverResult {
+  frames: ExplicitFrame[]
+  num_time_steps: number
+  energy_error_percent: number
+  num_failed_elements: number
+  status: string
+}
+
+/**
+ * 运行显式动力学求解器
+ */
+export async function runExplicitSolver(config: ExplicitSolverConfig): Promise<ExplicitSolverResult> {
+  return invoke('run_explicit_solver', { config })
+}
+
+/**
+ * 生成示例网格用于求解器演示
+ */
+export async function generateExplicitDemoMesh(
+  nx: number,
+  ny: number,
+  nz: number,
+  size: number
+): Promise<{
+  nodes: [number, number, number][]
+  elements: [number, number, number, number, number, number, number, number][]
+  fixed_nodes: number[]
+  initial_velocities: [number, [number, number, number]][]
+  num_nodes: number
+  num_elements: number
+}> {
+  return invoke('generate_explicit_demo_mesh', { nx, ny, nz, size })
+}

@@ -27,6 +27,13 @@ export default {
     fatigue: '疲劳',
     automation: '自动化',
     help: '帮助',
+    thermalFluid: '热-流耦合',
+    cohesive: '内聚力模型',
+    xfem: '断裂力学',
+    geometryRepair: '几何修复',
+    advancedMesh: '高级网格',
+    meshRefinement: '网格加密',
+    acoustic: '声-结构耦合',
   },
   simulation: {
     title: '仿真分析',

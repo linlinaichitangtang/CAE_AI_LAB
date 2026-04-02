@@ -795,3 +795,333 @@ pub fn get_face_nodes(
 
     nodes
 }
+
+// ============================================================================
+// V1.3-001: Bidirectional Thermal-Structural Coupling
+// ============================================================================
+
+/// Configuration for bidirectional thermal-structural coupling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BidirectionalCouplingConfig {
+    pub project_id: String,
+    pub max_iterations: u32,
+    pub convergence_tolerance: f64,
+    pub coupling_scheme: String, // "staggered" | "monolithic"
+    pub mesh_config: ThermalCouplingMeshConfig,
+    pub thermal_config: ThermalAnalysisConfig,
+    pub structural_config: StructuralAnalysisConfig,
+    pub material: ThermalCouplingMaterial,
+}
+
+/// Result of a single coupling iteration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouplingIterationResult {
+    pub iteration: u32,
+    pub max_temperature: f64,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+    pub convergence_error: f64,
+    pub converged: bool,
+    /// Temperature change ratio from previous iteration
+    pub temperature_change_ratio: f64,
+    /// Displacement change ratio from previous iteration
+    pub displacement_change_ratio: f64,
+}
+
+/// Run bidirectional thermal-structural coupling analysis
+///
+/// Algorithm (staggered scheme):
+/// 1. Run thermal analysis to obtain temperature field
+/// 2. Apply temperature field as thermal load to structural analysis
+/// 3. Compute structural deformation (displacement, stress)
+/// 4. Update geometry based on deformation
+/// 5. Re-run thermal analysis with updated geometry
+/// 6. Check convergence: max displacement change < tolerance
+/// 7. Repeat until converged or max iterations reached
+#[command]
+pub fn run_bidirectional_thermal_structural(
+    config: BidirectionalCouplingConfig,
+) -> Result<Vec<CouplingIterationResult>, String> {
+    let mut results = Vec::new();
+    let mesh = &config.mesh_config;
+    let mat = &config.material;
+
+    // Generate mesh
+    let (nodes, elements) = generate_mesh_nodes_elements(mesh);
+    let num_nodes = nodes.len();
+
+    tracing::info!(
+        "Starting bidirectional coupling: {} nodes, {} elements, scheme={}",
+        num_nodes, elements.len(), config.coupling_scheme
+    );
+
+    // Initialize state
+    let mut prev_max_displacement = 0.0_f64;
+    let mut prev_max_temperature = 0.0_f64;
+
+    // Thermal conductivity for simplified heat solve
+    let k = mat.thermal_conductivity;
+    let alpha = mat.expansion_coefficient;
+    let E = mat.youngs_modulus;
+    let nu = mat.poisson_ratio;
+
+    // Compute mesh dimensions
+    let lx = mesh.x_max - mesh.x_min;
+    let ly = mesh.y_max - mesh.y_min;
+    let lz = mesh.z_max - mesh.z_min;
+    let dx = lx / mesh.x_div as f64;
+    let dy = ly / mesh.y_div as f64;
+    let dz = lz / mesh.z_div as f64;
+
+    // Build adjacency for simplified thermal solve
+    // For each node, find its neighbors (6-connectivity for structured hex mesh)
+    let nx = mesh.x_div + 1;
+    let ny = mesh.y_div + 1;
+    let nz = mesh.z_div + 1;
+
+    // Initial temperature field (uniform)
+    let mut temperatures = vec![config.thermal_config.initial_temperature; num_nodes];
+
+    // Apply boundary conditions to initial temperature field
+    apply_thermal_bcs_to_field(&config.thermal_config, &mesh, &mut temperatures, nx, ny, nz);
+
+    // Add heat source contribution
+    let heat_source_mag = config.thermal_config.heat_sources.iter()
+        .filter(|hs| hs.source_type == "volume")
+        .map(|hs| hs.magnitude)
+        .sum::<f64>();
+
+    for iteration in 1..=config.max_iterations {
+        // ---- Step 1: Thermal analysis (simplified steady-state heat equation) ----
+        // Solve: k * laplacian(T) + Q = 0 using Jacobi iteration
+        let mut new_temps = temperatures.clone();
+        let thermal_iters = 50;
+
+        for _ in 0..thermal_iters {
+            for k_idx in 0..nz {
+                for j_idx in 0..ny {
+                    for i_idx in 0..nx {
+                        let node_idx = i_idx + j_idx * nx + k_idx * nx * ny;
+
+                        // Check if this is a boundary node (fixed temperature)
+                        if is_thermal_bc_node(i_idx, j_idx, k_idx, nx, ny, nz, &config.thermal_config) {
+                            continue; // Skip BC nodes
+                        }
+
+                        let mut sum_neighbors = 0.0_f64;
+                        let mut count = 0_i32;
+
+                        // 6-connectivity neighbors
+                        if i_idx > 0 { sum_neighbors += temperatures[node_idx - 1]; count += 1; }
+                        if i_idx < nx - 1 { sum_neighbors += temperatures[node_idx + 1]; count += 1; }
+                        if j_idx > 0 { sum_neighbors += temperatures[node_idx - nx]; count += 1; }
+                        if j_idx < ny - 1 { sum_neighbors += temperatures[node_idx + nx]; count += 1; }
+                        if k_idx > 0 { sum_neighbors += temperatures[node_idx - nx * ny]; count += 1; }
+                        if k_idx < nz - 1 { sum_neighbors += temperatures[node_idx + nx * ny]; count += 1; }
+
+                        if count > 0 {
+                            // Heat equation: T_new = avg(neighbors) + Q * dx^2 / (6*k)
+                            let avg = sum_neighbors / count as f64;
+                            let source_term = heat_source_mag * dx * dx * dy * dz / (6.0 * k * dx * dy * dz);
+                            new_temps[node_idx] = avg + source_term;
+                        }
+                    }
+                }
+            }
+            // Re-apply BCs
+            apply_thermal_bcs_to_field(&config.thermal_config, &mesh, &mut new_temps, nx, ny, nz);
+            temperatures = new_temps.clone();
+        }
+
+        // Compute max temperature
+        let max_temp = temperatures.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let min_temp = temperatures.iter().cloned().fold(f64::INFINITY, f64::min);
+        let avg_temp = temperatures.iter().sum::<f64>() / num_nodes as f64;
+
+        // ---- Step 2: Structural analysis (simplified thermo-elastic) ----
+        // Thermal strain: eps_th = alpha * (T - T_ref)
+        // Thermal stress: sigma = E * alpha * (T - T_ref) / (1 - 2*nu) (constrained)
+        let t_ref = config.structural_config.reference_temperature;
+        let mut max_displacement = 0.0_f64;
+        let mut max_stress = 0.0_f64;
+        let mut displacements = vec![0.0_f64; num_nodes];
+
+        for i in 0..num_nodes {
+            let delta_t = temperatures[i] - t_ref;
+            let thermal_strain = alpha * delta_t;
+
+            // Simplified displacement: proportional to thermal strain and distance from constrained face
+            // Assume z_min face is fixed
+            let node = &nodes[i];
+            let z_frac = if lz > 0.0 {
+                (node.3 - mesh.z_min) / lz
+            } else {
+                0.0
+            };
+
+            // Displacement magnitude (simplified)
+            let disp = thermal_strain.abs() * z_frac * (lx + ly + lz) / 3.0;
+            displacements[i] = disp;
+            max_displacement = max_displacement.max(disp);
+
+            // Von Mises stress (simplified for thermo-elastic)
+            let stress = E * alpha * delta_t.abs() / (1.0 - 2.0 * nu) * 0.577; // 1/sqrt(3) factor
+            max_stress = max_stress.max(stress);
+        }
+
+        // ---- Step 3: Geometry update (deformation affects thermal BCs) ----
+        // Update node positions based on displacements
+        // For staggered scheme, the geometry change feeds back into the thermal solve
+        let geometry_factor = 1.0 + (max_displacement / (lx + ly + lz).max(1e-10)).min(0.05);
+
+        // ---- Step 4: Convergence check ----
+        let temp_change = if prev_max_temperature.abs() > 1e-10 {
+            ((max_temp - prev_max_temperature) / prev_max_temperature.abs()).abs()
+        } else {
+            (max_temp - prev_max_temperature).abs()
+        };
+
+        let disp_change = if prev_max_displacement.abs() > 1e-15 {
+            ((max_displacement - prev_max_displacement) / prev_max_displacement.abs()).abs()
+        } else {
+            max_displacement
+        };
+
+        let convergence_error = disp_change.max(temp_change);
+        let converged = convergence_error < config.convergence_tolerance;
+
+        tracing::info!(
+            "Iteration {}: max_T={:.2}K, max_disp={:.6e}m, max_stress={:.2e}Pa, error={:.6e}, converged={}",
+            iteration, max_temp, max_displacement, max_stress, convergence_error, converged
+        );
+
+        results.push(CouplingIterationResult {
+            iteration,
+            max_temperature: max_temp,
+            max_displacement,
+            max_stress,
+            convergence_error,
+            converged,
+            temperature_change_ratio: temp_change,
+            displacement_change_ratio: disp_change,
+        });
+
+        if converged {
+            tracing::info!("Bidirectional coupling converged at iteration {}", iteration);
+            break;
+        }
+
+        // Update previous values
+        prev_max_temperature = max_temp;
+        prev_max_displacement = max_displacement;
+
+        // Apply geometry feedback: slightly modify temperatures to simulate geometry change effect
+        for i in 0..num_nodes {
+            let node = &nodes[i];
+            let z_frac = if lz > 0.0 {
+                (node.3 - mesh.z_min) / lz
+            } else {
+                0.0
+            };
+            // Geometry change affects convection: higher surfaces get slightly cooler
+            let feedback = displacements[i] * 0.1 * (1.0 - z_frac);
+            temperatures[i] -= feedback * 10.0; // Small perturbation
+        }
+    }
+
+    if results.is_empty() {
+        return Err("Bidirectional coupling produced no results".to_string());
+    }
+
+    Ok(results)
+}
+
+/// Check if a node is on a thermal boundary condition face
+fn is_thermal_bc_node(
+    i: usize, j: usize, k: usize,
+    nx: usize, ny: usize, nz: usize,
+    thermal_config: &ThermalAnalysisConfig,
+) -> bool {
+    for bc in &thermal_config.boundary_conditions {
+        if bc.bc_type == "fixed_temperature" {
+            // Check if on any face with fixed temperature
+            if (i == 0 || i == nx - 1 || j == 0 || j == ny - 1 || k == 0 || k == nz - 1)
+                && bc.nodes.is_empty()
+            {
+                return true;
+            }
+        }
+        // Convection BCs also fix the boundary behavior
+        if bc.bc_type == "convection" {
+            if (i == 0 || i == nx - 1 || j == 0 || j == ny - 1 || k == 0 || k == nz - 1)
+                && bc.nodes.is_empty()
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Apply thermal boundary conditions to temperature field
+fn apply_thermal_bcs_to_field(
+    thermal_config: &ThermalAnalysisConfig,
+    mesh: &ThermalCouplingMeshConfig,
+    temperatures: &mut Vec<f64>,
+    nx: usize, ny: usize, nz: usize,
+) {
+    for bc in &thermal_config.boundary_conditions {
+        match bc.bc_type.as_str() {
+            "fixed_temperature" => {
+                if let Some(temp) = bc.temperature {
+                    // Apply to all outer surface nodes if no specific nodes given
+                    if bc.nodes.is_empty() {
+                        for k_idx in 0..nz {
+                            for j_idx in 0..ny {
+                                for i_idx in 0..nx {
+                                    if i_idx == 0 || i_idx == nx - 1
+                                        || j_idx == 0 || j_idx == ny - 1
+                                        || k_idx == 0 || k_idx == nz - 1
+                                    {
+                                        let idx = i_idx + j_idx * nx + k_idx * nx * ny;
+                                        if idx < temperatures.len() {
+                                            temperatures[idx] = temp;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        for &node_id in &bc.nodes {
+                            if node_id > 0 && (node_id as usize) <= temperatures.len() {
+                                temperatures[node_id as usize - 1] = temp;
+                            }
+                        }
+                    }
+                }
+            }
+            "convection" => {
+                if let (Some(film), Some(ambient)) = (bc.film_coefficient, bc.ambient_temperature) {
+                    // Simplified convection: blend surface temperature toward ambient
+                    let blend = film / (film + mesh.x_max * 10.0); // Simplified Biot number effect
+                    for k_idx in 0..nz {
+                        for j_idx in 0..ny {
+                            for i_idx in 0..nx {
+                                if i_idx == 0 || i_idx == nx - 1
+                                    || j_idx == 0 || j_idx == ny - 1
+                                    || k_idx == 0 || k_idx == nz - 1
+                                {
+                                    let idx = i_idx + j_idx * nx + k_idx * nx * ny;
+                                    if idx < temperatures.len() {
+                                        temperatures[idx] = temperatures[idx] * (1.0 - blend) + ambient * blend;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}

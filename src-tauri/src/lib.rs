@@ -4,7 +4,7 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi};
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -255,6 +255,8 @@ pub fn run() {
             commands::thermal_coupling::generate_sequential_coupling_inp_files,
             commands::thermal_coupling::parse_thermal_result_file,
             commands::thermal_coupling::get_face_nodes,
+            // V1.3-001: Bidirectional thermal-structural coupling
+            commands::thermal_coupling::run_bidirectional_thermal_structural,
             // Contact analysis commands
             commands::contact::create_contact_config,
             commands::contact::generate_contact_inp,
@@ -270,6 +272,9 @@ pub fn run() {
             commands::cfd::import_cfd_geometry,
             commands::cfd::generate_cfd_report,
             commands::cfd::generate_cfd_sample_results,
+            // V1.3-003: Conjugate Heat Transfer commands
+            commands::cfd::run_conjugate_heat_transfer,
+            commands::cfd::optimize_heat_sink,
             // Topology optimization commands
             commands::optimization_commands::run_topology_optimization_full,
             commands::optimization_commands::run_topology_optimization,
@@ -379,6 +384,10 @@ pub fn run() {
             plugin::api::load_plugin,
             plugin::api::unload_plugin,
             plugin::api::get_plugin_info,
+            // V1.3-002: FSI commands
+            commands::fsi::run_fsi_analysis,
+            commands::fsi::map_cfd_to_structural,
+            commands::fsi::get_fsi_templates,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

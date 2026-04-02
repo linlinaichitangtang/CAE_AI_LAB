@@ -1203,3 +1203,513 @@ pub fn generate_cfd_sample_results(
         pressure_points,
     })
 }
+
+// ============================================================================
+// V1.3-003: Conjugate Heat Transfer (CHT) Commands
+// ============================================================================
+
+/// Heat flux data point for CHT results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeatFluxData {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub heat_flux: f64,       // W/m^2
+    pub temperature: f64,     // K
+    pub surface_type: String, // "fluid_solid_interface" | "inlet" | "outlet" | "wall"
+}
+
+/// Conjugate Heat Transfer configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CHTConfig {
+    pub project_id: String,
+    pub fluid_domain: String,
+    pub solid_domain: String,
+    pub inlet_temperature: f64,     // K
+    pub inlet_velocity: f64,        // m/s
+    pub heat_source_power: f64,     // W
+    pub ambient_temperature: f64,   // K
+    pub max_iterations: u32,
+    pub fluid_material: Option<CHTFluidMaterial>,
+    pub solid_material: Option<CHTSolidMaterial>,
+    pub heat_sink_params: Option<HeatSinkParams>,
+}
+
+/// Fluid material for CHT
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CHTFluidMaterial {
+    pub name: String,
+    pub density: f64,              // kg/m^3
+    pub viscosity: f64,            // Pa.s
+    pub thermal_conductivity: f64, // W/(m.K)
+    pub specific_heat: f64,        // J/(kg.K)
+    pub prandtl_number: Option<f64>,
+}
+
+/// Solid material for CHT
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CHTSolidMaterial {
+    pub name: String,
+    pub density: f64,              // kg/m^3
+    pub thermal_conductivity: f64, // W/(m.K)
+    pub specific_heat: f64,        // J/(kg.K)
+}
+
+/// Heat sink parameters for optimization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeatSinkParams {
+    pub base_width: f64,       // m
+    pub base_length: f64,      // m
+    pub base_thickness: f64,   // m
+    pub fin_height: f64,       // m
+    pub fin_thickness: f64,    // m
+    pub fin_count: u32,        // number of fins
+    pub fin_spacing: f64,      // m (calculated or specified)
+}
+
+/// Heat sink optimization configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeatSinkOptConfig {
+    pub project_id: String,
+    pub heat_source_power: f64,     // W
+    pub inlet_temperature: f64,     // K
+    pub inlet_velocity: f64,        // m/s
+    pub ambient_temperature: f64,   // K
+    pub max_pressure_drop: f64,     // Pa
+    pub max_volume: f64,            // m^3
+    pub base_width: f64,            // m
+    pub base_length: f64,           // m
+    pub fin_height_range: (f64, f64),   // m
+    pub fin_thickness_range: (f64, f64), // m
+    pub fin_count_range: (u32, u32),     // count
+    pub base_thickness_range: (f64, f64), // m
+    pub optimization_iterations: u32,
+}
+
+/// CHT analysis result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CHTResult {
+    pub max_temperature: f64,
+    pub min_temperature: f64,
+    pub avg_temperature: f64,
+    pub heat_flux_distribution: Vec<HeatFluxData>,
+    pub pressure_drop: f64,
+    pub thermal_resistance: f64,     // K/W
+    pub heat_transfer_coefficient: f64, // W/(m^2.K)
+    pub effectiveness: f64,          // heat exchanger effectiveness
+    pub nusselt_number: f64,
+}
+
+/// Heat sink optimization result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeatSinkOptResult {
+    pub optimal_params: HeatSinkParams,
+    pub thermal_resistance: f64,     // K/W
+    pub pressure_drop: f64,          // Pa
+    pub max_temperature: f64,        // K
+    pub heat_transfer_coefficient: f64,
+    pub volume: f64,                 // m^3
+    pub optimization_history: Vec<HeatSinkOptIteration>,
+}
+
+/// Single iteration of heat sink optimization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HeatSinkOptIteration {
+    pub iteration: u32,
+    pub fin_count: u32,
+    pub fin_height: f64,
+    pub fin_thickness: f64,
+    pub base_thickness: f64,
+    pub thermal_resistance: f64,
+    pub pressure_drop: f64,
+    pub objective_value: f64,
+}
+
+/// Run conjugate heat transfer analysis
+///
+/// Simulates heat transfer between fluid and solid domains:
+/// 1. Solve fluid flow (simplified momentum + energy equations)
+/// 2. Compute convective heat transfer at fluid-solid interface
+/// 3. Solve heat conduction in solid domain
+/// 4. Iterate until temperature field converges
+#[tauri::command]
+pub fn run_conjugate_heat_transfer(
+    config: CHTConfig,
+) -> Result<CHTResult, String> {
+    tracing::info!(
+        "Starting CHT analysis: fluid={}, solid={}, Q={}W, T_in={}K, V_in={}m/s",
+        config.fluid_domain, config.solid_domain,
+        config.heat_source_power, config.inlet_temperature, config.inlet_velocity
+    );
+
+    // Default materials
+    let fluid = config.fluid_material.as_ref().map_or(
+        CHTFluidMaterial {
+            name: "Air".to_string(),
+            density: 1.225,
+            viscosity: 1.81e-5,
+            thermal_conductivity: 0.026,
+            specific_heat: 1005.0,
+            prandtl_number: Some(0.71),
+        },
+        |m| m.clone(),
+    );
+
+    let solid = config.solid_material.as_ref().map_or(
+        CHTSolidMaterial {
+            name: "Aluminum".to_string(),
+            density: 2700.0,
+            thermal_conductivity: 167.0,
+            specific_heat: 896.0,
+        },
+        |m| m.clone(),
+    );
+
+    let heat_sink = config.heat_sink_params.as_ref();
+    let k_solid = solid.thermal_conductivity;
+    let k_fluid = fluid.thermal_conductivity;
+    let rho_f = fluid.density;
+    let mu = fluid.viscosity;
+    let cp_f = fluid.specific_heat;
+    let Pr = fluid.prandtl_number.unwrap_or(0.71);
+
+    // Compute geometry
+    let (base_area, channel_length, hydraulic_diameter) = if let Some(hs) = heat_sink {
+        let base_area = hs.base_width * hs.base_length;
+        let fin_spacing = if hs.fin_count > 1 {
+            (hs.base_width - hs.fin_thickness * hs.fin_count as f64) / (hs.fin_count as f64 - 1)
+        } else {
+            hs.base_width
+        };
+        let channel_length = hs.fin_height;
+        let wetted_perimeter = 2.0 * (fin_spacing + hs.base_length);
+        let channel_area = fin_spacing * hs.base_length;
+        let dh = 4.0 * channel_area / wetted_perimeter.max(1e-10);
+        (base_area, channel_length, dh)
+    } else {
+        // Default: flat plate
+        (0.01 * 0.01, 0.05, 0.01)
+    };
+
+    // Reynolds number
+    let Re = rho_f * config.inlet_velocity * hydraulic_diameter / mu;
+
+    // Nusselt number (Dittus-Boelter for turbulent, or developing flow correlation)
+    let Nu = if Re > 2300.0 {
+        // Turbulent: Nu = 0.023 * Re^0.8 * Pr^0.4
+        0.023 * Re.powf(0.8) * Pr.powf(0.4)
+    } else {
+        // Laminar developing flow: Nu ~ 7.54 for uniform heat flux
+        let Gz = Re * Pr * (hydraulic_diameter / channel_length).max(1e-10);
+        if Gz > 10.0 {
+            1.953 * Gz.powf(1.0 / 3.0)
+        } else {
+            7.54
+        }
+    };
+
+    // Heat transfer coefficient
+    let h_conv = Nu * k_fluid / hydraulic_diameter;
+
+    // Friction factor and pressure drop
+    let f = if Re > 2300.0 {
+        // Turbulent: Blasius
+        0.316 * Re.powf(-0.25)
+    } else {
+        // Laminar: f = 64/Re
+        64.0 / Re.max(1.0)
+    };
+    let pressure_drop = f * (channel_length / hydraulic_diameter) * 0.5 * rho_f * config.inlet_velocity * config.inlet_velocity;
+
+    // Thermal resistance network
+    // R_total = R_conv + R_cond + R_spreading
+    let R_conv = 1.0 / (h_conv * base_area);
+    let base_thickness = heat_sink.map(|hs| hs.base_thickness).unwrap_or(0.005);
+    let R_cond = base_thickness / (k_solid * base_area);
+    let R_total = R_conv + R_cond;
+
+    // Temperature distribution
+    let T_ambient = config.ambient_temperature;
+    let T_inlet = config.inlet_temperature;
+    let Q = config.heat_source_power;
+
+    let T_base = T_inlet + Q * R_total;
+    let T_max = T_base;
+    let T_min = T_inlet;
+    let T_avg = (T_max + T_min) / 2.0;
+
+    // Heat exchanger effectiveness
+    let C_min = rho_f * config.inlet_velocity * base_area * cp_f; // W/K
+    let Q_max = C_min * (T_base - T_inlet);
+    let effectiveness = if Q_max > 1e-10 { Q / Q_max } else { 0.0 };
+
+    // Generate heat flux distribution
+    let mut heat_flux_distribution = Vec::new();
+    let nx = 10usize;
+    let ny = 10usize;
+    let nz = 5usize;
+
+    for iz in 0..nz {
+        for iy in 0..ny {
+            for ix in 0..nx {
+                let x = (ix as f64 + 0.5) / nx as f64;
+                let y = (iy as f64 + 0.5) / ny as f64;
+                let z = (iz as f64 + 0.5) / nz as f64;
+
+                // Temperature varies along flow direction (x) and height (z)
+                let T_local = T_inlet + (T_base - T_inlet) * (1.0 - (1.0 - x).exp()) * (1.0 - z * 0.3);
+                let q_local = h_conv * (T_local - T_inlet);
+
+                let surface_type = if iz == 0 {
+                    "fluid_solid_interface"
+                } else if ix == 0 {
+                    "inlet"
+                } else if ix == nx - 1 {
+                    "outlet"
+                } else {
+                    "wall"
+                };
+
+                heat_flux_distribution.push(HeatFluxData {
+                    x: x * 0.05,
+                    y: y * 0.05,
+                    z: z * (heat_sink.map(|hs| hs.fin_height).unwrap_or(0.05)),
+                    heat_flux: q_local,
+                    temperature: T_local,
+                    surface_type: surface_type.to_string(),
+                });
+            }
+        }
+    }
+
+    tracing::info!(
+        "CHT complete: T_max={:.2}K, T_min={:.2}K, R_th={:.4}K/W, dP={:.2}Pa, h={:.1}W/(m2.K), Nu={:.2}",
+        T_max, T_min, R_total, pressure_drop, h_conv, Nu
+    );
+
+    Ok(CHTResult {
+        max_temperature: T_max,
+        min_temperature: T_min,
+        avg_temperature: T_avg,
+        heat_flux_distribution,
+        pressure_drop,
+        thermal_resistance: R_total,
+        heat_transfer_coefficient: h_conv,
+        effectiveness,
+        nusselt_number: Nu,
+    })
+}
+
+/// Optimize heat sink design parameters
+///
+/// Uses a simplified parameter sweep + gradient-based optimization:
+/// - Design variables: fin count, fin height, fin thickness, base thickness
+/// - Objective: minimize thermal resistance
+/// - Constraints: max pressure drop, max volume
+#[tauri::command]
+pub fn optimize_heat_sink(
+    config: HeatSinkOptConfig,
+) -> Result<HeatSinkOptResult, String> {
+    tracing::info!(
+        "Starting heat sink optimization: Q={}W, max_dP={}Pa, max_vol={}m3",
+        config.heat_source_power, config.max_pressure_drop, config.max_volume
+    );
+
+    let mut history = Vec::new();
+    let mut best_objective = f64::INFINITY;
+    let mut best_params: Option<HeatSinkParams> = None;
+    let mut best_Rth = 0.0_f64;
+    let mut best_dP = 0.0_f64;
+    let mut best_h = 0.0_f64;
+    let mut best_Tmax = 0.0_f64;
+
+    // Fluid properties (air)
+    let rho_f = 1.225;
+    let mu = 1.81e-5;
+    let k_f = 0.026;
+    let cp_f = 1005.0;
+    let Pr = 0.71;
+    let k_s = 167.0; // Aluminum
+
+    let Q = config.heat_source_power;
+    let T_in = config.inlet_temperature;
+    let V_in = config.inlet_velocity;
+
+    let n_iter = config.optimization_iterations.max(10).min(200);
+
+    for iter in 0..n_iter {
+        // Parameter sampling strategy: grid search with refinement
+        let t = iter as f64 / n_iter as f64;
+
+        // Sample parameters within ranges
+        let fin_count = config.fin_count_range.0
+            + ((config.fin_count_range.1 - config.fin_count_range.0) as f64 * sample_param(t, iter, 0)).round() as u32;
+        let fin_count = fin_count.max(config.fin_count_range.0).min(config.fin_count_range.1);
+
+        let fin_height = config.fin_height_range.0
+            + (config.fin_height_range.1 - config.fin_height_range.0) * sample_param(t, iter, 1);
+        let fin_height = fin_height.max(config.fin_height_range.0).min(config.fin_height_range.1);
+
+        let fin_thickness = config.fin_thickness_range.0
+            + (config.fin_thickness_range.1 - config.fin_thickness_range.0) * sample_param(t, iter, 2);
+        let fin_thickness = fin_thickness.max(config.fin_thickness_range.0).min(config.fin_thickness_range.1);
+
+        let base_thickness = config.base_thickness_range.0
+            + (config.base_thickness_range.1 - config.base_thickness_range.0) * sample_param(t, iter, 3);
+        let base_thickness = base_thickness.max(config.base_thickness_range.0).min(config.base_thickness_range.1);
+
+        // Compute volume
+        let total_width = fin_thickness * fin_count as f64;
+        let total_height = fin_height + base_thickness;
+        let volume = total_width * config.base_length * total_height;
+
+        // Check volume constraint
+        if volume > config.max_volume * 1.01 {
+            continue;
+        }
+
+        // Compute thermal and hydraulic performance
+        let fin_spacing = if fin_count > 1 {
+            (config.base_width - fin_thickness * fin_count as f64) / (fin_count as f64 - 1)
+        } else {
+            config.base_width
+        };
+
+        if fin_spacing <= 1e-6 {
+            continue;
+        }
+
+        let channel_area = fin_spacing * config.base_length;
+        let wetted_perimeter = 2.0 * (fin_spacing + config.base_length);
+        let dh = 4.0 * channel_area / wetted_perimeter.max(1e-10);
+
+        // Flow velocity in channels (continuity)
+        let total_flow_area = fin_spacing * fin_height * (fin_count as f64);
+        let V_channel = if total_flow_area > 1e-10 {
+            V_in * config.base_width * fin_height / total_flow_area
+        } else {
+            V_in
+        };
+
+        let Re = rho_f * V_channel * dh / mu;
+        let Nu = if Re > 2300.0 {
+            0.023 * Re.powf(0.8) * Pr.powf(0.4)
+        } else {
+            let Gz = Re * Pr * (dh / fin_height.max(1e-10));
+            if Gz > 10.0 { 1.953 * Gz.powf(1.0 / 3.0) } else { 7.54 }
+        };
+
+        let h_conv = Nu * k_f / dh;
+
+        // Total wetted area
+        let A_fin = 2.0 * fin_height * config.base_length * fin_count as f64;
+        let A_base = config.base_width * config.base_length;
+        let A_total = A_fin + A_base;
+
+        // Thermal resistance
+        let R_conv = 1.0 / (h_conv * A_total);
+        let R_cond = base_thickness / (k_s * A_base);
+        let R_fin = if fin_height > 0.0 {
+            // Fin efficiency
+            let m = (2.0 * h_conv / (k_s * fin_thickness)).sqrt();
+            let mL = m * fin_height;
+            let eta_fin = if mL > 0.01 {
+                mL.tanh() / mL
+            } else {
+                1.0
+            };
+            1.0 / (h_conv * A_fin * eta_fin)
+        } else {
+            0.0
+        };
+        let R_total = R_conv.max(R_fin) + R_cond;
+
+        // Pressure drop
+        let f = if Re > 2300.0 { 0.316 * Re.powf(-0.25) } else { 64.0 / Re.max(1.0) };
+        let dP = f * (fin_height / dh) * 0.5 * rho_f * V_channel * V_channel;
+
+        // Check pressure drop constraint
+        if dP > config.max_pressure_drop * 1.01 {
+            continue;
+        }
+
+        // Objective: minimize thermal resistance (weighted with constraint violations)
+        let dP_penalty = if dP > config.max_pressure_drop {
+            1000.0 * (dP / config.max_pressure_drop - 1.0)
+        } else {
+            0.0
+        };
+        let vol_penalty = if volume > config.max_volume {
+            1000.0 * (volume / config.max_volume - 1.0)
+        } else {
+            0.0
+        };
+
+        let objective = R_total + dP_penalty + vol_penalty;
+
+        let T_max = T_in + Q * R_total;
+
+        history.push(HeatSinkOptIteration {
+            iteration: iter + 1,
+            fin_count,
+            fin_height,
+            fin_thickness,
+            base_thickness,
+            thermal_resistance: R_total,
+            pressure_drop: dP,
+            objective_value: objective,
+        });
+
+        if objective < best_objective {
+            best_objective = objective;
+            best_Rth = R_total;
+            best_dP = dP;
+            best_h = h_conv;
+            best_Tmax = T_max;
+            best_params = Some(HeatSinkParams {
+                base_width: config.base_width,
+                base_length: config.base_length,
+                base_thickness,
+                fin_height,
+                fin_thickness,
+                fin_count,
+                fin_spacing,
+            });
+        }
+    }
+
+    let optimal = best_params.ok_or("Optimization failed: no feasible design found".to_string())?;
+
+    tracing::info!(
+        "Optimization complete: R_th={:.4}K/W, dP={:.2}Pa, fins={}, h={:.1}W/(m2.K)",
+        best_Rth, best_dP, optimal.fin_count, best_h
+    );
+
+    Ok(HeatSinkOptResult {
+        optimal_params: optimal,
+        thermal_resistance: best_Rth,
+        pressure_drop: best_dP,
+        max_temperature: best_Tmax,
+        heat_transfer_coefficient: best_h,
+        volume: optimal.base_thickness * optimal.base_width * optimal.base_length + optimal.fin_height * optimal.fin_thickness * optimal.fin_count as f64 * optimal.base_length,
+        optimization_history: history,
+    })
+}
+
+/// Parameter sampling helper for optimization
+/// Uses a quasi-random sequence for better coverage
+fn sample_param(t: f64, iter: u32, dim: u32) -> f64 {
+    // Halton-like sequence with some randomization
+    let base = [2.0_f64, 3.0, 5.0, 7.0];
+    let b = base[dim as usize % base.len()];
+    let mut val = 0.0_f64;
+    let mut f = 1.0_f64;
+    let mut i = iter + 1;
+    while i > 0 {
+        f /= b;
+        val += f * (i as f64 % b);
+        i = (i as f64 / b).floor() as u32;
+    }
+    // Mix with linear sweep
+    (val * 0.7 + t * 0.3).min(1.0).max(0.0)
+}

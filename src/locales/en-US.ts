@@ -27,6 +27,13 @@ export default {
     fatigue: 'Fatigue',
     automation: 'Automation',
     help: 'Help',
+    thermalFluid: 'Thermal-Fluid',
+    cohesive: 'Cohesive Zone',
+    xfem: 'Fracture (XFEM)',
+    geometryRepair: 'Geometry Repair',
+    advancedMesh: 'Advanced Mesh',
+    meshRefinement: 'Mesh Refinement',
+    acoustic: 'Acoustic Coupling',
   },
   simulation: {
     title: 'Simulation',

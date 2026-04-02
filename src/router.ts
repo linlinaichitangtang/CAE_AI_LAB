@@ -104,6 +104,41 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/ComparisonView.vue')
   },
   {
+    path: '/thermal-fluid',
+    name: 'ThermalFluid',
+    component: () => import('./views/ThermalFluidView.vue')
+  },
+  {
+    path: '/cohesive',
+    name: 'CohesiveZone',
+    component: () => import('./views/CohesiveZoneView.vue')
+  },
+  {
+    path: '/xfem',
+    name: 'Xfem',
+    component: () => import('./views/XfemView.vue')
+  },
+  {
+    path: '/geometry-repair',
+    name: 'GeometryRepair',
+    component: () => import('./views/GeometryRepairView.vue')
+  },
+  {
+    path: '/advanced-mesh',
+    name: 'AdvancedMesh',
+    component: () => import('./views/AdvancedMeshView.vue')
+  },
+  {
+    path: '/mesh-refinement',
+    name: 'MeshRefinement',
+    component: () => import('./views/MeshRefinementView.vue')
+  },
+  {
+    path: '/acoustic',
+    name: 'AcousticCoupling',
+    component: () => import('./views/AcousticCouplingView.vue')
+  },
+  {
     path: '/ai',
     name: 'AIChat',
     component: () => import('./views/AIChatView.vue')
@@ -178,7 +213,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

@@ -121,6 +121,66 @@ const TopologyIcon = {
   ])
 }
 
+const ThermalFluidIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z' }),
+    h('path', { d: 'M8 14s1.5 2 4 2 4-2 4-2' })
+  ])
+}
+
+const CohesiveIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M16 3h5v5' }),
+    h('path', { d: 'M4 20L21 3' }),
+    h('path', { d: 'M21 16v5h-5' }),
+    h('path', { d: 'M15 15l6 6' }),
+    h('path', { d: 'M4 4l5 5' })
+  ])
+}
+
+const XfemIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0-4h18' }),
+    h('path', { d: 'M14 9l-4 6' })
+  ])
+}
+
+const GeometryRepairIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z' })
+  ])
+}
+
+const AdvancedMeshIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('polygon', { points: '12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2' }),
+    h('line', { x1: '12', y1: '22', x2: '12', y2: '15.5' }),
+    h('polyline', { points: '22 8.5 12 15.5 2 8.5' }),
+    h('polyline', { points: '2 15.5 12 8.5 22 15.5' }),
+    h('line', { x1: '12', y1: '2', x2: '12', y2: '8.5' })
+  ])
+}
+
+const MeshRefinementIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '10' }),
+    h('circle', { cx: '12', cy: '12', r: '6' }),
+    h('circle', { cx: '12', cy: '12', r: '2' }),
+    h('line', { x1: '12', y1: '2', x2: '12', y2: '6' }),
+    h('line', { x1: '12', y1: '18', x2: '12', y2: '22' }),
+    h('line', { x1: '2', y1: '12', x2: '6', y2: '12' }),
+    h('line', { x1: '18', y1: '12', x2: '22', y2: '12' })
+  ])
+}
+
+const AcousticIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M9 18V5l12-2v13' }),
+    h('circle', { cx: '6', cy: '18', r: '3' }),
+    h('circle', { cx: '18', cy: '16', r: '3' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -144,6 +204,13 @@ const mainNavItems: Array<{
   { path: '/explicit', icon: ExplicitIcon, label: '显式' },
   { path: '/cfd', icon: CFDIcon, label: 'CFD' },
   { path: '/thermal', icon: ThermalIcon, label: '热耦合' },
+  { path: '/thermal-fluid', icon: ThermalFluidIcon, label: '热流' },
+  { path: '/cohesive', icon: CohesiveIcon, label: '内聚力' },
+  { path: '/xfem', icon: XfemIcon, label: 'XFEM' },
+  { path: '/geometry-repair', icon: GeometryRepairIcon, label: '几何修复' },
+  { path: '/advanced-mesh', icon: AdvancedMeshIcon, label: '高级网格' },
+  { path: '/mesh-refinement', icon: MeshRefinementIcon, label: '网格加密' },
+  { path: '/acoustic', icon: AcousticIcon, label: '声学' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

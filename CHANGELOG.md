@@ -7,6 +7,27 @@
 
 ---
 
+## [V1.3-dev] - 2026-04-02
+
+### 新增
+
+- **V1.3-003 热-流耦合分析 (CHT)**：新增 `ThermalFluidView.vue` 视图，支持共轭传热分析、散热片参数优化、温度场/速度场可视化
+- **V1.3-005 内聚力模型分析 (CZM)**：新增 `cohesive.ts` API + `CohesiveZoneView.vue` 视图，支持分层/脱粘/裂纹扩展分析、双线性内聚力模型、载荷-位移曲线
+- **V1.3-006 断裂力学分析 (XFEM)**：新增 `xfem.ts` API + `XfemView.vue` 视图，支持裂纹扩展追踪、J积分/K因子计算、Williams 奇异场展开
+- **V1.3-007 几何清理与修复**：新增 `geometryRepair.ts` API + `GeometryRepairView.vue` 视图，支持 STL/STEP/IGES 导入、问题检测与自动修复
+- **V1.3-008 高级网格工具**：新增 `advancedMesh.ts` API + `AdvancedMeshView.vue` 视图，支持梁/壳/实体混合网格、7种梁截面、截面属性计算、网格质量评分
+- **V1.3-009 局部加密与映射网格**：新增 `meshRefinement.ts` API + `MeshRefinementView.vue` 视图，支持多区域加密、边界层网格(y+控制)、网格密度映射
+- **V1.3-010 声-结构耦合分析**：新增 `acoustic.ts` API + `AcousticCouplingView.vue` 视图，支持模态耦合/谐响应/瞬态声学、频率响应曲线、辐射噪声计算
+
+### 变更
+
+- **路由**：新增 7 条路由（`/thermal-fluid`、`/cohesive`、`/xfem`、`/geometry-repair`、`/advanced-mesh`、`/mesh-refinement`、`/acoustic`）
+- **导航**：左侧导航栏新增 7 个模块入口（热流、内聚力、XFEM、几何修复、高级网格、网格加密、声学）
+- **国际化**：中英文语言包新增 V1.3 模块翻译
+- **移动端**：新增强分析模块加入移动端路由限制列表
+
+---
+
 ## [0.5.0] - 2026-04-02
 
 ### 新增

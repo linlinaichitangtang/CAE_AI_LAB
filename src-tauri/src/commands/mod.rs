@@ -32,3 +32,4 @@ pub mod code_exec;
 pub mod step_import;
 pub mod auth;
 pub mod collaboration;
+pub mod fsi;

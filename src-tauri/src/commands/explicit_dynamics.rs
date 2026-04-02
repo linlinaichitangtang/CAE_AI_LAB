@@ -763,3 +763,610 @@ pub fn calculate_mass_scaling_suggestion(
     // because dt ∝ sqrt(1/m)
     (original_dt / target_dt).powi(2)
 }
+
+// ============ V1.3-004: 显式动力学求解器 ============
+
+/// 显式求解器配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitSolverConfig {
+    pub nodes: Vec<[f64; 3]>,
+    pub elements: Vec<[usize; 8]>,  // HEX8
+    pub node_masses: Vec<f64>,
+    pub material: ExplicitMaterial,
+    pub boundary_conditions: ExplicitBC,
+    pub contact_pairs: Vec<ExplicitContactPair>,
+    pub time_step: f64,
+    pub end_time: f64,
+    pub output_interval: u32,
+    pub damping: f64,
+}
+
+/// 显式求解器材料参数
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitMaterial {
+    pub density: f64,
+    pub youngs_modulus: f64,
+    pub poisson_ratio: f64,
+    pub yield_stress: f64,
+    pub hardening_modulus: f64,
+    pub failure_strain: f64,
+}
+
+/// 边界条件
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitBC {
+    pub fixed_nodes: Vec<usize>,
+    pub prescribed_velocities: Vec<(usize, [f64; 3])>,
+    pub initial_velocities: Vec<(usize, [f64; 3])>,
+}
+
+/// 接触对
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitContactPair {
+    pub master_nodes: Vec<usize>,
+    pub slave_nodes: Vec<usize>,
+    pub penalty_stiffness: f64,
+    pub friction_coefficient: f64,
+}
+
+/// 单帧结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitFrame {
+    pub time: f64,
+    pub kinetic_energy: f64,
+    pub internal_energy: f64,
+    pub total_energy: f64,
+    pub max_displacement: f64,
+    pub max_velocity: f64,
+    pub node_displacements: Vec<[f64; 3]>,
+    pub node_velocities: Vec<[f64; 3]>,
+    pub element_stresses: Vec<f64>,
+    pub failed_elements: Vec<usize>,
+}
+
+/// 求解器完整结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplicitSolverResult {
+    pub frames: Vec<ExplicitFrame>,
+    pub num_time_steps: u64,
+    pub energy_error_percent: f64,
+    pub num_failed_elements: usize,
+    pub status: String,
+}
+
+/// HEX8 单元高斯积分点 (2x2x2 = 8 points)
+const HEX_GP: [[f64; 3]; 8] = [
+    [-0.5773502691896257, -0.5773502691896257, -0.5773502691896257],
+    [ 0.5773502691896257, -0.5773502691896257, -0.5773502691896257],
+    [-0.5773502691896257,  0.5773502691896257, -0.5773502691896257],
+    [ 0.5773502691896257,  0.5773502691896257, -0.5773502691896257],
+    [-0.5773502691896257, -0.5773502691896257,  0.5773502691896257],
+    [ 0.5773502691896257, -0.5773502691896257,  0.5773502691896257],
+    [-0.5773502691896257,  0.5773502691896257,  0.5773502691896257],
+    [ 0.5773502691896257,  0.5773502691896257,  0.5773502691896257],
+];
+const HEX_GP_WEIGHT: f64 = 1.0;
+
+/// HEX8 形函数在参考坐标 (xi, eta, zeta) 下的值
+fn hex8_shape_functions(xi: f64, eta: f64, zeta: f64) -> [f64; 8] {
+    let n = [
+        (1.0 - xi) * (1.0 - eta) * (1.0 - zeta) / 8.0,
+        (1.0 + xi) * (1.0 - eta) * (1.0 - zeta) / 8.0,
+        (1.0 + xi) * (1.0 + eta) * (1.0 - zeta) / 8.0,
+        (1.0 - xi) * (1.0 + eta) * (1.0 - zeta) / 8.0,
+        (1.0 - xi) * (1.0 - eta) * (1.0 + zeta) / 8.0,
+        (1.0 + xi) * (1.0 - eta) * (1.0 + zeta) / 8.0,
+        (1.0 + xi) * (1.0 + eta) * (1.0 + zeta) / 8.0,
+        (1.0 - xi) * (1.0 + eta) * (1.0 + zeta) / 8.0,
+    ];
+    n
+}
+
+/// HEX8 形函数对参考坐标的导数 (8x3)
+fn hex8_shape_derivatives(xi: f64, eta: f64, zeta: f64) -> [[f64; 3]; 8] {
+    [
+        [-(1.0-eta)*(1.0-zeta)/8.0, -(1.0-xi)*(1.0-zeta)/8.0, -(1.0-xi)*(1.0-eta)/8.0],
+        [ (1.0-eta)*(1.0-zeta)/8.0, -(1.0+xi)*(1.0-zeta)/8.0, -(1.0+xi)*(1.0-eta)/8.0],
+        [ (1.0+eta)*(1.0-zeta)/8.0,  (1.0+xi)*(1.0-zeta)/8.0, -(1.0+xi)*(1.0+eta)/8.0],
+        [-(1.0+eta)*(1.0-zeta)/8.0,  (1.0-xi)*(1.0-zeta)/8.0, -(1.0-xi)*(1.0+eta)/8.0],
+        [-(1.0-eta)*(1.0+zeta)/8.0, -(1.0-xi)*(1.0+zeta)/8.0,  (1.0-xi)*(1.0-eta)/8.0],
+        [ (1.0-eta)*(1.0+zeta)/8.0, -(1.0+xi)*(1.0+zeta)/8.0,  (1.0+xi)*(1.0-eta)/8.0],
+        [ (1.0+eta)*(1.0+zeta)/8.0,  (1.0+xi)*(1.0+zeta)/8.0,  (1.0+xi)*(1.0+eta)/8.0],
+        [-(1.0+eta)*(1.0+zeta)/8.0,  (1.0-xi)*(1.0+zeta)/8.0,  (1.0-xi)*(1.0+eta)/8.0],
+    ]
+}
+
+/// 3x3 矩阵行列式
+fn det3x3(m: &[[f64; 3]; 3]) -> f64 {
+    m[0][0] * (m[1][1]*m[2][2] - m[1][2]*m[2][1])
+  - m[0][1] * (m[1][0]*m[2][2] - m[1][2]*m[2][0])
+  + m[0][2] * (m[1][0]*m[2][1] - m[1][1]*m[2][0])
+}
+
+/// 3x3 矩阵求逆
+fn inv3x3(m: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
+    let d = det3x3(m);
+    if d.abs() < 1e-30 {
+        return [[0.0; 3]; 3];
+    }
+    let id = 1.0 / d;
+    [
+        [
+            (m[1][1]*m[2][2] - m[1][2]*m[2][1]) * id,
+            (m[0][2]*m[2][1] - m[0][1]*m[2][2]) * id,
+            (m[0][1]*m[1][2] - m[0][2]*m[1][1]) * id,
+        ],
+        [
+            (m[1][2]*m[2][0] - m[1][0]*m[2][2]) * id,
+            (m[0][0]*m[2][2] - m[0][2]*m[2][0]) * id,
+            (m[0][2]*m[1][0] - m[0][0]*m[1][2]) * id,
+        ],
+        [
+            (m[1][0]*m[2][1] - m[1][1]*m[2][0]) * id,
+            (m[0][1]*m[2][0] - m[0][0]*m[2][1]) * id,
+            (m[0][0]*m[1][1] - m[0][1]*m[1][0]) * id,
+        ],
+    ]
+}
+
+/// Von Mises 等效应力
+fn von_mises_stress(s: &[f64; 6]) -> f64 {
+    // s = [s11, s22, s33, s12, s23, s13]
+    let s11 = s[0]; let s22 = s[1]; let s33 = s[2];
+    let s12 = s[3]; let s23 = s[4]; let s13 = s[5];
+    ((s11 - s22).powi(2) + (s22 - s33).powi(2) + (s33 - s11).powi(2)
+     + 6.0 * (s12*s12 + s23*s23 + s13*s13)).sqrt() / std::f64::consts::SQRT_2
+}
+
+/// 计算单元应变和应力，返回内力向量
+fn compute_element_internal_forces(
+    elem_nodes: &[[f64; 8]; 3], // [x[8], y[8], z[8]]
+    displacements: &[[f64; 3]],
+    elem: &[usize; 8],
+    mat: &ExplicitMaterial,
+    plastic_strain: &mut f64,
+) -> (Vec<[f64; 3]>, f64, f64, bool) {
+    // (nodal_forces, von_mises, strain_energy_density, is_failed)
+    let e = mat.youngs_modulus;
+    let nu = mat.poisson_ratio;
+    let lambda = e * nu / ((1.0 + nu) * (1.0 - 2.0 * nu));
+    let mu = e / (2.0 * (1.0 + nu));
+
+    let mut nodal_forces: Vec<[f64; 3]> = vec![[0.0; 3]; 8];
+    let mut total_vm = 0.0;
+    let mut total_se = 0.0;
+    let mut is_failed = false;
+
+    // 当前节点位移
+    let u: [[f64; 3]; 8] = std::array::from_fn(|i| displacements[elem[i]]);
+
+    for gp in &HEX_GP {
+        let xi = gp[0]; let eta = gp[1]; let zeta = gp[2];
+
+        // 形函数导数
+        let dnds = hex8_shape_derivatives(xi, eta, zeta);
+
+        // Jacobian: J = dN/dxi * x
+        let mut j: [[f64; 3]; 3] = [[0.0; 3]; 3];
+        for i in 0..8 {
+            for a in 0..3 {
+                j[0][a] += dnds[i][0] * elem_nodes[a][i];
+                j[1][a] += dnds[i][1] * elem_nodes[a][i];
+                j[2][a] += dnds[i][2] * elem_nodes[a][i];
+            }
+        }
+
+        let det_j = det3x3(&j);
+        if det_j.abs() < 1e-20 { continue; }
+        let jinv = inv3x3(&j);
+
+        // dN/dx = J^-1 * dN/dxi
+        let mut dndx: [[f64; 3]; 8] = [[0.0; 3]; 8];
+        for i in 0..8 {
+            for a in 0..3 {
+                dndx[i][a] = jinv[0][a] * dnds[i][0] + jinv[1][a] * dnds[i][1] + jinv[2][a] * dnds[i][2];
+            }
+        }
+
+        // B matrix (6x24): strain = B * u
+        // B for node i: [[dNi/dx, 0, 0], [0, dNi/dy, 0], [0, 0, dNi/dz],
+        //                 [dNi/dy, dNi/dx, 0], [0, dNi/dz, dNi/dy], [dNi/dz, 0, dNi/dx]]
+        let mut strain: [f64; 6] = [0.0; 6];
+        for i in 0..8 {
+            strain[0] += dndx[i][0] * u[i][0];
+            strain[1] += dndx[i][1] * u[i][1];
+            strain[2] += dndx[i][2] * u[i][2];
+            strain[3] += dndx[i][1] * u[i][0] + dndx[i][0] * u[i][1];
+            strain[4] += dndx[i][2] * u[i][1] + dndx[i][1] * u[i][2];
+            strain[5] += dndx[i][2] * u[i][0] + dndx[i][0] * u[i][2];
+        }
+
+        // 应力增量 (弹性部分)
+        let trace = strain[0] + strain[1] + strain[2];
+        let mut stress: [f64; 6] = [
+            lambda * trace + 2.0 * mu * strain[0],
+            lambda * trace + 2.0 * mu * strain[1],
+            lambda * trace + 2.0 * mu * strain[2],
+            2.0 * mu * strain[3],
+            2.0 * mu * strain[4],
+            2.0 * mu * strain[5],
+        ];
+
+        let vm = von_mises_stress(&stress);
+        total_vm += vm;
+
+        // 塑性修正 (J2 plasticity, return mapping)
+        if vm > mat.yield_stress && mat.hardening_modulus > 0.0 {
+            let delta_gamma = (vm - mat.yield_stress) / (3.0 * mu + mat.hardening_modulus);
+            *plastic_strain += delta_gamma;
+            let factor = 1.0 - delta_gamma * 3.0 * mu / vm;
+            for s in &mut stress {
+                *s *= factor;
+            }
+            // 检查失效
+            if *plastic_strain > mat.failure_strain {
+                is_failed = true;
+            }
+        }
+
+        // 应变能密度
+        let se: f64 = 0.5 * (stress[0]*strain[0] + stress[1]*strain[1] + stress[2]*strain[2]
+            + stress[3]*strain[3] + stress[4]*strain[4] + stress[5]*strain[5]);
+        total_se += se;
+
+        // 内力 = B^T * stress * detJ * weight
+        for i in 0..8 {
+            let b0 = dndx[i][0]; let b1 = dndx[i][1]; let b2 = dndx[i][2];
+            nodal_forces[i][0] -= (stress[0]*b0 + stress[3]*b1 + stress[5]*b2) * det_j * HEX_GP_WEIGHT;
+            nodal_forces[i][1] -= (stress[3]*b0 + stress[1]*b1 + stress[4]*b2) * det_j * HEX_GP_WEIGHT;
+            nodal_forces[i][2] -= (stress[5]*b0 + stress[4]*b1 + stress[2]*b2) * det_j * HEX_GP_WEIGHT;
+        }
+    }
+
+    (nodal_forces, total_vm / 8.0, total_se, is_failed)
+}
+
+/// 运行显式动力学求解器
+#[tauri::command]
+pub fn run_explicit_solver(config: ExplicitSolverConfig) -> Result<ExplicitSolverResult, String> {
+    let num_nodes = config.nodes.len();
+    let num_elements = config.elements.len();
+    if num_nodes == 0 || num_elements == 0 {
+        return Err("No nodes or elements provided".to_string());
+    }
+
+    // 初始化状态向量
+    let mut displacements: Vec<[f64; 3]> = vec![[0.0; 3]; num_nodes];
+    let mut velocities: Vec<[f64; 3]> = vec![[0.0; 3]; num_nodes];
+    let mut accelerations: Vec<[f64; 3]> = vec![[0.0; 3]; num_nodes];
+    let mut plastic_strains: Vec<f64> = vec![0.0; num_elements];
+    let mut failed_elements: std::collections::HashSet<usize> = std::collections::HashSet::new();
+
+    // 设置初始速度
+    for &(nid, vel) in &config.boundary_conditions.initial_velocities {
+        if nid < num_nodes {
+            velocities[nid] = vel;
+        }
+    }
+
+    // 集中质量矩阵
+    let mut lumped_mass: Vec<f64> = config.node_masses.clone();
+    if lumped_mass.len() != num_nodes {
+        // 如果没有提供节点质量，从单元质量分配
+        lumped_mass = vec![0.0; num_nodes];
+        let vol_per_elem = if num_elements > 0 {
+            // 估算单元体积
+            let e0 = &config.elements[0];
+            let n0 = config.nodes[e0[0]];
+            let n6 = config.nodes[e0[6]];
+            let dx = (n6[0] - n0[0]).abs();
+            let dy = (n6[1] - n0[1]).abs();
+            let dz = (n6[2] - n0[2]).abs();
+            dx * dy * dz
+        } else {
+            1.0
+        };
+        let elem_mass = config.material.density * vol_per_elem;
+        for elem in &config.elements {
+            for &nid in elem {
+                lumped_mass[nid] += elem_mass / 8.0;
+            }
+        }
+    }
+
+    let dt = config.time_step;
+    let end_time = config.end_time;
+    let output_interval = config.output_interval.max(1) as u64;
+    let damping = config.damping;
+    let num_steps = (end_time / dt).ceil() as u64;
+
+    // 构建固定节点集合
+    let fixed_set: std::collections::HashSet<usize> = config.boundary_conditions.fixed_nodes.iter().cloned().collect();
+
+    // 输出帧
+    let mut frames: Vec<ExplicitFrame> = Vec::new();
+
+    // 计算初始内力
+    let mut internal_forces: Vec<[f64; 3]> = vec![[0.0; 3]; num_nodes];
+    let mut element_stresses: Vec<f64> = vec![0.0; num_elements];
+
+    // 初始能量
+    let initial_ke = compute_kinetic_energy(&velocities, &lumped_mass);
+
+    // 中心差分时间积分
+    for step in 0..=num_steps {
+        let current_time = step as f64 * dt;
+
+        // 输出帧
+        if step % output_interval == 0 {
+            let ke = compute_kinetic_energy(&velocities, &lumped_mass);
+            let ie = compute_internal_energy(&element_stresses, &plastic_strains, &config);
+
+            let mut max_disp = 0.0;
+            let mut max_vel = 0.0;
+            for i in 0..num_nodes {
+                let d = (displacements[i][0].powi(2) + displacements[i][1].powi(2) + displacements[i][2].powi(2)).sqrt();
+                let v = (velocities[i][0].powi(2) + velocities[i][1].powi(2) + velocities[i][2].powi(2)).sqrt();
+                if d > max_disp { max_disp = d; }
+                if v > max_vel { max_vel = v; }
+            }
+
+            frames.push(ExplicitFrame {
+                time: current_time,
+                kinetic_energy: ke,
+                internal_energy: ie,
+                total_energy: ke + ie,
+                max_displacement: max_disp,
+                max_velocity: max_vel,
+                node_displacements: displacements.clone(),
+                node_velocities: velocities.clone(),
+                element_stresses: element_stresses.clone(),
+                failed_elements: failed_elements.iter().cloned().collect(),
+            });
+        }
+
+        if step == num_steps { break; }
+
+        // 重置内力
+        for f in internal_forces.iter_mut() { *f = [0.0; 3]; }
+
+        // 计算每个单元的内力
+        for (eidx, elem) in config.elements.iter().enumerate() {
+            if failed_elements.contains(&eidx) { continue; }
+
+            // 提取单元节点坐标
+            let mut elem_nodes: [[f64; 8]; 3] = [[0.0; 8]; 3];
+            for i in 0..8 {
+                elem_nodes[0][i] = config.nodes[elem[i]][0];
+                elem_nodes[1][i] = config.nodes[elem[i]][1];
+                elem_nodes[2][i] = config.nodes[elem[i]][2];
+            }
+
+            let (nodal_forces, vm, _se, is_failed) = compute_element_internal_forces(
+                &elem_nodes,
+                &displacements,
+                elem,
+                &config.material,
+                &mut plastic_strains[eidx],
+            );
+
+            element_stresses[eidx] = vm;
+
+            if is_failed {
+                failed_elements.insert(eidx);
+                continue;
+            }
+
+            // 组装内力
+            for i in 0..8 {
+                let nid = elem[i];
+                internal_forces[nid][0] += nodal_forces[i][0];
+                internal_forces[nid][1] += nodal_forces[i][1];
+                internal_forces[nid][2] += nodal_forces[i][2];
+            }
+        }
+
+        // 接触力计算（罚函数法）
+        for cp in &config.contact_pairs {
+            for &sid in &cp.slave_nodes {
+                let slave_pos = [
+                    config.nodes[sid][0] + displacements[sid][0],
+                    config.nodes[sid][1] + displacements[sid][1],
+                    config.nodes[sid][2] + displacements[sid][2],
+                ];
+                for &mid in &cp.master_nodes {
+                    let master_pos = [
+                        config.nodes[mid][0] + displacements[mid][0],
+                        config.nodes[mid][1] + displacements[mid][1],
+                        config.nodes[mid][2] + displacements[mid][2],
+                    ];
+                    let dx = slave_pos[0] - master_pos[0];
+                    let dy = slave_pos[1] - master_pos[1];
+                    let dz = slave_pos[2] - master_pos[2];
+                    let dist = (dx*dx + dy*dy + dz*dz).sqrt();
+
+                    // 简化的接触检测阈值
+                    let contact_dist = 0.5; // 可配置
+                    if dist < contact_dist && dist > 1e-10 {
+                        let penetration = contact_dist - dist;
+                        let fn_mag = cp.penalty_stiffness * penetration;
+                        let nx = dx / dist;
+                        let ny = dy / dist;
+                        let nz = dz / dist;
+
+                        // 法向力
+                        internal_forces[sid][0] += fn_mag * nx;
+                        internal_forces[sid][1] += fn_mag * ny;
+                        internal_forces[sid][2] += fn_mag * nz;
+
+                        // 摩擦力（简化）
+                        let rel_vx = velocities[sid][0] - velocities[mid][0];
+                        let rel_vy = velocities[sid][1] - velocities[mid][1];
+                        let rel_vz = velocities[sid][2] - velocities[mid][2];
+                        let rel_vt = (rel_vx*rel_vx + rel_vy*rel_vy + rel_vz*rel_vz
+                            - (rel_vx*nx + rel_vy*ny + rel_vz*nz).powi(2)).sqrt();
+                        if rel_vt > 1e-10 {
+                            let ft_mag = cp.friction_coefficient * fn_mag;
+                            let ftx = -ft_mag * rel_vx / rel_vt;
+                            let fty = -ft_mag * rel_vy / rel_vt;
+                            let ftz = -ft_mag * rel_vz / rel_vt;
+                            internal_forces[sid][0] += ftx;
+                            internal_forces[sid][1] += fty;
+                            internal_forces[sid][2] += ftz;
+                            internal_forces[mid][0] -= ftx;
+                            internal_forces[mid][1] -= fty;
+                            internal_forces[mid][2] -= ftz;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 中心差分更新
+        for i in 0..num_nodes {
+            if fixed_set.contains(&i) { continue; }
+            let m = lumped_mass[i];
+            if m < 1e-20 { continue; }
+
+            // a = F/m - damping * v
+            accelerations[i][0] = internal_forces[i][0] / m - damping * velocities[i][0];
+            accelerations[i][1] = internal_forces[i][1] / m - damping * velocities[i][1];
+            accelerations[i][2] = internal_forces[i][2] / m - damping * velocities[i][2];
+
+            // v(t+dt/2) = v(t-dt/2) + a * dt
+            velocities[i][0] += accelerations[i][0] * dt;
+            velocities[i][1] += accelerations[i][1] * dt;
+            velocities[i][2] += accelerations[i][2] * dt;
+
+            // u(t+dt) = u(t) + v(t+dt/2) * dt
+            displacements[i][0] += velocities[i][0] * dt;
+            displacements[i][1] += velocities[i][1] * dt;
+            displacements[i][2] += velocities[i][2] * dt;
+        }
+
+        // 施加固定边界条件
+        for &nid in &config.boundary_conditions.fixed_nodes {
+            displacements[nid] = [0.0; 3];
+            velocities[nid] = [0.0; 3];
+        }
+
+        // 施加速度边界条件
+        for &(nid, vel) in &config.boundary_conditions.prescribed_velocities {
+            if nid < num_nodes {
+                velocities[nid] = vel;
+            }
+        }
+    }
+
+    // 计算能量误差
+    let final_ke = compute_kinetic_energy(&velocities, &lumped_mass);
+    let final_ie = compute_internal_energy(&element_stresses, &plastic_strains, &config);
+    let total_final = final_ke + final_ie;
+    let total_initial = initial_ke;
+    let energy_error = if total_initial.abs() > 1e-10 {
+        ((total_final - total_initial).abs() / total_initial * 100.0)
+    } else if total_final.abs() > 1e-10 {
+        ((total_final - total_initial).abs() / total_final * 100.0)
+    } else {
+        0.0
+    };
+
+    Ok(ExplicitSolverResult {
+        frames,
+        num_time_steps: num_steps,
+        energy_error_percent: energy_error,
+        num_failed_elements: failed_elements.len(),
+        status: "completed".to_string(),
+    })
+}
+
+/// 计算动能
+fn compute_kinetic_energy(velocities: &[[f64; 3]], masses: &[f64]) -> f64 {
+    let mut ke = 0.0;
+    for i in 0..velocities.len() {
+        let v2 = velocities[i][0].powi(2) + velocities[i][1].powi(2) + velocities[i][2].powi(2);
+        ke += 0.5 * masses[i] * v2;
+    }
+    ke
+}
+
+/// 计算内能（近似）
+fn compute_internal_energy(stresses: &[f64], plastic_strains: &[f64], config: &ExplicitSolverConfig) -> f64 {
+    let mut ie = 0.0;
+    for i in 0..stresses.len() {
+        // 弹性应变能 ~ sigma^2 / (2E) * volume
+        ie += stresses[i].powi(2) / (2.0 * config.material.youngs_modulus);
+        // 塑性耗散
+        ie += config.material.yield_stress * plastic_strains[i];
+    }
+    ie
+}
+
+/// 生成示例网格用于求解器演示
+#[tauri::command]
+pub fn generate_explicit_demo_mesh(
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    size: f64,
+) -> Result<serde_json::Value, String> {
+    let dx = size / nx as f64;
+    let dy = size / ny as f64;
+    let dz = size / nz as f64;
+
+    let mut nodes: Vec<[f64; 3]> = Vec::new();
+    let mut elements: Vec<[usize; 8]> = Vec::new();
+    let mut fixed_nodes: Vec<usize> = Vec::new();
+    let mut initial_velocities: Vec<(usize, [f64; 3])> = Vec::new();
+
+    // 生成节点
+    let (nnx, nny, nnz) = (nx + 1, ny + 1, nz + 1);
+    for iz in 0..nnz {
+        for iy in 0..nny {
+            for ix in 0..nnx {
+                nodes.push([ix as f64 * dx, iy as f64 * dy, iz as f64 * dz]);
+            }
+        }
+    }
+
+    // 生成HEX8单元
+    for iz in 0..nz {
+        for iy in 0..ny {
+            for ix in 0..nx {
+                let n0 = iz * nny * nnx + iy * nnx + ix;
+                let n1 = n0 + 1;
+                let n2 = n0 + nnx + 1;
+                let n3 = n0 + nnx;
+                let n4 = n0 + nny * nnx;
+                let n5 = n4 + 1;
+                let n6 = n4 + nnx + 1;
+                let n7 = n4 + nnx;
+                elements.push([n0, n1, n2, n3, n4, n5, n6, n7]);
+            }
+        }
+    }
+
+    // 固定底面 (z=0)
+    for iy in 0..nny {
+        for ix in 0..nnx {
+            fixed_nodes.push(iy * nnx + ix);
+        }
+    }
+
+    // 顶面初始速度 (z=size)
+    for iy in 0..nny {
+        for ix in 0..nnx {
+            let nid = nz * nny * nnx + iy * nnx + ix;
+            initial_velocities.push((nid, [0.0, 0.0, -10.0]));
+        }
+    }
+
+    Ok(serde_json::json!({
+        "nodes": nodes,
+        "elements": elements,
+        "fixed_nodes": fixed_nodes,
+        "initial_velocities": initial_velocities,
+        "num_nodes": nodes.len(),
+        "num_elements": elements.len(),
+    }))
+}
