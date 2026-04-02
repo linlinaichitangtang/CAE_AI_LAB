@@ -845,3 +845,46 @@ body {
     user-select: none;
   }
 }
+
+/* ===== 横屏/竖屏自适应 ===== */
+
+/* 竖屏模式：底部导航正常 */
+@media (max-width: 767px) and (orientation: portrait) {
+  .mobile-bottom-nav {
+    height: 64px; /* 竖屏时底部导航稍高 */
+  }
+
+  /* 竖屏时仿真面板全宽 */
+  .simulation-panel {
+    width: 100% !important;
+  }
+}
+
+/* 横屏模式：底部导航变侧边栏风格 */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .mobile-bottom-nav {
+    height: 48px; /* 横屏时底部导航更紧凑 */
+    flex-direction: row;
+  }
+
+  .mobile-bottom-nav .tab-label {
+    display: none; /* 横屏时隐藏文字标签，只显示图标 */
+  }
+
+  .mobile-bottom-nav .tab-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* 横屏时仿真面板和3D视图并排 */
+  .simulation-content {
+    flex-direction: row !important;
+  }
+}
+
+/* 平板横屏：类似桌面布局 */
+@media (min-width: 768px) and (orientation: landscape) {
+  .mobile-topbar {
+    height: 48px;
+  }
+}

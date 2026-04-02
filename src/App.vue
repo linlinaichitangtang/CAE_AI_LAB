@@ -28,7 +28,7 @@
         <div class="flex-1 flex overflow-hidden" v-if="isDesktop && (currentLayout === 'quad' || currentLayout === 'split')">
           <!-- Primary Pane -->
           <div class="flex-1 overflow-hidden border-r border-[var(--border-subtle)]">
-            <router-view />
+            <PageTransition />
           </div>
           <!-- Secondary Pane -->
           <div class="flex-1 overflow-hidden">
@@ -39,7 +39,7 @@
         <!-- Single View (Focus, Side-by-Side, Tri-Panel, or mobile/tablet) -->
         <div v-else class="flex-1 flex overflow-hidden">
           <div class="flex-1 overflow-hidden">
-            <router-view />
+            <PageTransition />
           </div>
         </div>
 
@@ -67,14 +67,19 @@ import LeftNav from './components/layout/LeftNav.vue'
 import RightPanel from './components/layout/RightPanel.vue'
 import StatusBar from './components/layout/StatusBar.vue'
 import MobileBottomNav from './components/layout/MobileBottomNav.vue'
+import PageTransition from './components/common/PageTransition.vue'
 import CodeView from './views/CodeView.vue'
 import NotesView from './views/NotesView.vue'
 import ModelingView from './views/ModelingView.vue'
 import SimulationView from './views/SimulationView.vue'
 import { usePlatform } from './composables/usePlatform'
+import { useOrientation } from './composables/useOrientation'
 
 // Platform detection for responsive layout
 const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
+
+// Orientation detection for adaptive layout
+const { isPortrait, isLandscape } = useOrientation()
 
 // Layout mode: 'focus' | 'side' | 'tri' | 'quad'
 const currentLayout = ref<string>(

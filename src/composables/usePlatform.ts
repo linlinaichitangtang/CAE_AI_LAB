@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
 
+export type OSType = 'windows' | 'macos' | 'linux' | 'ios' | 'android' | 'harmony' | 'unknown'
+
 /**
  * 平台检测 composable
  * 检测当前设备类型和输入方式
@@ -31,10 +33,30 @@ export function usePlatform() {
 
   const isIOS = computed(() => /iPhone|iPad|iPod/i.test(userAgent))
   const isAndroid = computed(() => /Android/i.test(userAgent))
+  const isHarmony = computed(() => {
+    const ua = userAgent.toLowerCase()
+    return ua.includes('harmony') || ua.includes('hmos')
+  })
 
   const isApplePencilSupported = computed(() => {
     return isIOS.value && isTouchDevice.value
   })
+
+  /**
+   * 检测操作系统类型
+   */
+  function detectOS(): OSType {
+    const ua = userAgent.toLowerCase()
+    if (ua.includes('harmony') || ua.includes('hmos')) return 'harmony'
+    if (/iphone|ipad|ipod/.test(ua)) return 'ios'
+    if (/android/.test(ua)) return 'android'
+    if (/windows/.test(ua)) return 'windows'
+    if (/macintosh|mac os x/.test(ua)) return 'macos'
+    if (/linux/.test(ua)) return 'linux'
+    return 'unknown'
+  }
+
+  const os = detectOS()
 
   return {
     isTouchDevice,
@@ -43,6 +65,9 @@ export function usePlatform() {
     isDesktop,
     isIOS,
     isAndroid,
+    isHarmony,
     isApplePencilSupported,
+    os,
+    detectOS,
   }
 }

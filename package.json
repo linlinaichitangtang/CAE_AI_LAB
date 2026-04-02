@@ -1,6 +1,6 @@
 {
   "name": "caelab",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "科研与工程创作一体化工作台",
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
     "build:win": "tauri build --target x86_64-pc-windows-msvc",
     "build:linux": "tauri build --target x86_64-unknown-linux-gnu",
     "build:all": "echo 'Cross-platform builds require platform-specific environments'",
+    "build:harmony": "vite build --mode harmony",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck": "vue-tsc --noEmit"
   },

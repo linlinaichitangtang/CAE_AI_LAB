@@ -40,6 +40,17 @@
 
     <!-- Right Section Indicators -->
     <div class="flex items-center gap-4">
+      <!-- Network Status (Offline Mode Indicator) -->
+      <div class="flex items-center gap-1.5 cursor-pointer select-none" @click="toggleOfflineMode" :title="statusText + '（点击切换离线模式）'">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M1.42 9a16.06 16.06 0 0 1 21.16 0"/>
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <circle cx="12" cy="20" r="1" fill="currentColor"/>
+        </svg>
+        <span class="text-[var(--text-muted)]">{{ statusText }}</span>
+      </div>
+
       <!-- Memory Usage -->
       <div class="flex items-center gap-1.5 text-[var(--text-muted)]" :title="'内存: ' + memoryUsage">
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -89,9 +100,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAutoSave } from '@/composables/useAutoSave'
+import { useOfflineMode } from '@/composables/useOfflineMode'
 
 // Auto save state
 const { lastSaveTime, isAutoSaving } = useAutoSave()
+
+// Offline mode state
+const { statusText, toggleOfflineMode } = useOfflineMode()
 
 const autoSaveText = computed(() => {
   if (isAutoSaving.value) return '保存中...'

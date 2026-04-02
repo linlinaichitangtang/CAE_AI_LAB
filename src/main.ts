@@ -1,3 +1,6 @@
+import { applyHarmonyPolyfills } from './utils/harmonyPolyfill'
+applyHarmonyPolyfills()
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
@@ -20,3 +23,10 @@ app.use(router)
 app.use(i18n)
 
 app.mount('#app')
+
+// 注册 Service Worker（仅生产环境）
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    // Service Worker 注册失败不影响应用运行
+  })
+}

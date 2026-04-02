@@ -14,7 +14,7 @@
       </div>
 
       <!-- 工具栏 -->
-      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-6">
+      <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-6 flex-wrap">
         <!-- 笔刷大小 -->
         <div class="flex items-center gap-2">
           <span class="text-sm text-gray-600 dark:text-gray-400">粗细:</span>
@@ -47,6 +47,24 @@
                  :style="{ width: (currentPressure * 100) + '%' }"></div>
           </div>
           <span class="text-xs text-gray-500 w-8">{{ currentPressure.toFixed(2) }}</span>
+        </div>
+
+        <!-- 分隔线 -->
+        <div class="w-px h-6 bg-gray-300 dark:bg-gray-600"></div>
+
+        <!-- M-Pencil 专属选项 -->
+        <div class="flex items-center gap-4">
+          <!-- 笔触平滑开关 -->
+          <label class="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" v-model="strokeSmoothing" class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500" />
+            <span class="text-sm text-gray-600 dark:text-gray-400">笔触平滑</span>
+          </label>
+
+          <!-- 侧边按钮 = 橡皮擦 开关 -->
+          <label class="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" v-model="sideButtonEraser" class="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500" />
+            <span class="text-sm text-gray-600 dark:text-gray-400">侧边按钮=橡皮擦</span>
+          </label>
         </div>
       </div>
 
@@ -96,6 +114,22 @@ const colors = ['#000000', '#2563eb', '#dc2626', '#16a34a', '#9333ea']
 const currentPressure = ref(0)
 const activePointerType = ref<'pen' | 'touch' | 'mouse' | ''>('')
 
+// M-Pencil 专属选项
+const strokeSmoothing = ref(true)       // 笔触平滑开关
+const sideButtonEraser = ref(true)      // 侧边按钮 = 橡皮擦 开关
+
+// M-Pencil 侧边按钮状态
+const isSideButtonActive = ref(false)   // 侧边按钮当前是否按下
+const toolBeforeSideButton = ref(false) // 侧边按钮按下前的工具状态（是否为橡皮擦）
+
+// M-Pencil 双击检测
+const lastPointerDownTime = ref(0)      // 上次 pointerdown 时间戳
+const DOUBLE_TAP_INTERVAL = 300         // 双击检测间隔（毫秒）
+
+// 笔触延迟补偿：使用 requestAnimationFrame 批量处理
+let pendingPoints: StrokePoint[] = []
+let rafId: number | null = null
+
 interface StrokePoint {
   x: number
   y: number
@@ -141,6 +175,41 @@ function getPressureOpacity(pressure: number): number {
 }
 
 /**
+ * 贝塞尔曲线平滑：使用二次贝塞尔曲线连接三个点
+ * 中间点作为控制点，取相邻点的中点作为端点
+ */
+function getSmoothedPoints(points: StrokePoint[]): StrokePoint[] {
+  if (points.length < 3) return points
+
+  const smoothed: StrokePoint[] = [points[0]]
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(0, i - 1)]
+    const p1 = points[i]
+    const p2 = points[Math.min(points.length - 1, i + 1)]
+
+    // 使用 Catmull-Rom 样条转贝塞尔的方式计算平滑点
+    const midX1 = (p0.x + p1.x) / 2
+    const midY1 = (p0.y + p1.y) / 2
+    const midX2 = (p1.x + p2.x) / 2
+    const midY2 = (p1.y + p2.y) / 2
+
+    // 插值生成中间平滑点
+    const steps = 3
+    for (let t = 1; t <= steps; t++) {
+      const frac = t / (steps + 1)
+      const x = (1 - frac) * (1 - frac) * midX1 + 2 * (1 - frac) * frac * p1.x + frac * frac * midX2
+      const y = (1 - frac) * (1 - frac) * midY1 + 2 * (1 - frac) * frac * p1.y + frac * frac * midY2
+      const pressure = p1.pressure
+      smoothed.push({ x, y, pressure })
+    }
+  }
+
+  smoothed.push(points[points.length - 1])
+  return smoothed
+}
+
+/**
  * 绘制带压感的笔画段
  */
 function drawStrokeSegment(
@@ -176,6 +245,77 @@ function drawStrokeSegment(
 }
 
 /**
+ * 绘制带平滑的笔画段（使用二次贝塞尔曲线）
+ */
+function drawSmoothedStrokeSegment(
+  context: CanvasRenderingContext2D,
+  points: StrokePoint[],
+  stroke: Stroke
+) {
+  if (points.length < 2) return
+
+  if (points.length === 2) {
+    drawStrokeSegment(context, points[0], points[1], stroke)
+    return
+  }
+
+  // 使用二次贝塞尔曲线绘制平滑笔画
+  context.beginPath()
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+  context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
+
+  if (stroke.hasPressure && !stroke.isEraser) {
+    // 压感模式：逐段绘制以体现压感变化
+    for (let i = 1; i < points.length; i++) {
+      const from = points[i - 1]
+      const to = points[i]
+
+      context.beginPath()
+      const width = getPressureWidth(stroke.width, to.pressure)
+      const opacity = getPressureOpacity(to.pressure)
+      context.lineWidth = width
+      context.globalAlpha = opacity
+
+      if (i < points.length - 1) {
+        // 使用二次贝塞尔曲线
+        const next = points[i + 1]
+        const cpx = to.x
+        const cpy = to.y
+        const endX = (to.x + next.x) / 2
+        const endY = (to.y + next.y) / 2
+        context.moveTo(from.x, from.y)
+        context.quadraticCurveTo(cpx, cpy, endX, endY)
+      } else {
+        // 最后一段直接连线
+        context.moveTo(from.x, from.y)
+        context.lineTo(to.x, to.y)
+      }
+      context.stroke()
+      context.globalAlpha = 1.0
+    }
+  } else {
+    // 非压感模式：整条路径一次绘制
+    context.lineWidth = stroke.width
+    context.globalAlpha = 1.0
+    context.moveTo(points[0].x, points[0].y)
+
+    for (let i = 1; i < points.length - 1; i++) {
+      const cpx = points[i].x
+      const cpy = points[i].y
+      const endX = (points[i].x + points[i + 1].x) / 2
+      const endY = (points[i].y + points[i + 1].y) / 2
+      context.quadraticCurveTo(cpx, cpy, endX, endY)
+    }
+
+    // 连接到最后一个点
+    const last = points[points.length - 1]
+    context.lineTo(last.x, last.y)
+    context.stroke()
+  }
+}
+
+/**
  * 重绘整个画布（用于撤销和笔画历史回放）
  */
 const redrawCanvas = () => {
@@ -189,23 +329,33 @@ const redrawCanvas = () => {
     if (stroke.points.length < 2) continue
 
     if (!stroke.hasPressure || stroke.isEraser) {
-      // 非压感笔画：一次性绘制整条路径
-      context.beginPath()
-      context.lineWidth = stroke.width
-      context.lineCap = 'round'
-      context.lineJoin = 'round'
-      context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
-      context.globalAlpha = 1.0
+      // 非压感笔画
+      if (strokeSmoothing.value && stroke.points.length >= 3) {
+        // 使用平滑绘制
+        drawSmoothedStrokeSegment(context, stroke.points, stroke)
+      } else {
+        // 一次性绘制整条路径
+        context.beginPath()
+        context.lineWidth = stroke.width
+        context.lineCap = 'round'
+        context.lineJoin = 'round'
+        context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
+        context.globalAlpha = 1.0
 
-      context.moveTo(stroke.points[0].x, stroke.points[0].y)
-      for (let i = 1; i < stroke.points.length; i++) {
-        context.lineTo(stroke.points[i].x, stroke.points[i].y)
+        context.moveTo(stroke.points[0].x, stroke.points[0].y)
+        for (let i = 1; i < stroke.points.length; i++) {
+          context.lineTo(stroke.points[i].x, stroke.points[i].y)
+        }
+        context.stroke()
       }
-      context.stroke()
     } else {
       // 压感笔画：逐段绘制以体现压感变化
-      for (let i = 1; i < stroke.points.length; i++) {
-        drawStrokeSegment(context, stroke.points[i - 1], stroke.points[i], stroke)
+      if (strokeSmoothing.value && stroke.points.length >= 3) {
+        drawSmoothedStrokeSegment(context, stroke.points, stroke)
+      } else {
+        for (let i = 1; i < stroke.points.length; i++) {
+          drawStrokeSegment(context, stroke.points[i - 1], stroke.points[i], stroke)
+        }
       }
     }
   }
@@ -226,6 +376,72 @@ const getCanvasCoords = (e: PointerEvent): { x: number; y: number } => {
 }
 
 /**
+ * 检测 M-Pencil 侧边按钮状态
+ * M-Pencil 侧边按钮按下时 event.buttons 包含 2（辅助按钮）
+ */
+function checkSideButton(e: PointerEvent): boolean {
+  return (e.buttons & 2) !== 0
+}
+
+/**
+ * M-Pencil 双击检测
+ * 在鸿蒙 WebView 中通过快速连续的 pointerdown 事件检测
+ */
+function checkDoubleTap(): boolean {
+  const now = Date.now()
+  const interval = now - lastPointerDownTime.value
+  lastPointerDownTime.value = now
+  return interval < DOUBLE_TAP_INTERVAL && interval > 0
+}
+
+/**
+ * 使用 requestAnimationFrame 批量处理待绘制的点
+ * 补偿触控笔输入延迟
+ */
+function flushPendingPoints() {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+
+  if (!currentStroke.value || pendingPoints.length === 0) return
+
+  const context = getContext()
+  if (!context) return
+
+  // 将待处理的点添加到当前笔画
+  currentStroke.value.points.push(...pendingPoints)
+
+  const points = currentStroke.value.points
+  if (points.length >= 2) {
+    if (strokeSmoothing.value && points.length >= 3) {
+      // 平滑模式：取最近的几个点进行贝塞尔绘制
+      const recentPoints = points.slice(-4)
+      drawSmoothedStrokeSegment(context, recentPoints, currentStroke.value)
+    } else {
+      // 普通模式：绘制最新一段
+      drawStrokeSegment(context, points[points.length - 2], points[points.length - 1], currentStroke.value)
+    }
+  }
+
+  pendingPoints = []
+}
+
+/**
+ * 添加点到待处理队列，通过 rAF 批量绘制
+ */
+function queuePoint(point: StrokePoint) {
+  pendingPoints.push(point)
+
+  if (rafId === null) {
+    rafId = requestAnimationFrame(() => {
+      flushPendingPoints()
+      rafId = null
+    })
+  }
+}
+
+/**
  * PointerEvent 事件处理：开始绘制
  */
 const onPointerDown = (e: PointerEvent) => {
@@ -235,8 +451,25 @@ const onPointerDown = (e: PointerEvent) => {
     canvas.setPointerCapture(e.pointerId)
   }
 
-  isDrawing.value = true
   activePointerType.value = e.pointerType as 'pen' | 'touch' | 'mouse'
+
+  // M-Pencil 双击切换工具检测（仅笔类型）
+  if (e.pointerType === 'pen' && checkDoubleTap()) {
+    // 双击笔身：切换画笔/橡皮擦
+    isEraser.value = !isEraser.value
+    return
+  }
+
+  // M-Pencil 侧边按钮检测（按下时自动切换为橡皮擦）
+  if (e.pointerType === 'pen' && sideButtonEraser.value && checkSideButton(e)) {
+    if (!isSideButtonActive.value) {
+      isSideButtonActive.value = true
+      toolBeforeSideButton.value = isEraser.value
+      isEraser.value = true
+    }
+  }
+
+  isDrawing.value = true
 
   const coords = getCanvasCoords(e)
   const pressure = e.pressure
@@ -254,6 +487,9 @@ const onPointerDown = (e: PointerEvent) => {
     isEraser: isEraser.value,
     hasPressure
   }
+
+  // 清空待处理点队列
+  pendingPoints = []
 }
 
 /**
@@ -265,28 +501,62 @@ const onPointerMove = (e: PointerEvent) => {
     currentPressure.value = e.pressure
   }
 
+  // M-Pencil 侧边按钮实时检测
+  if (e.pointerType === 'pen' && sideButtonEraser.value) {
+    const sideActive = checkSideButton(e)
+    if (sideActive && !isSideButtonActive.value) {
+      // 侧边按钮刚按下
+      isSideButtonActive.value = true
+      toolBeforeSideButton.value = isEraser.value
+      isEraser.value = true
+
+      // 如果正在绘制，结束当前笔画并开始新的橡皮擦笔画
+      if (isDrawing.value && currentStroke.value && currentStroke.value.points.length > 0) {
+        flushPendingPoints()
+        strokes.value.push(currentStroke.value)
+        currentStroke.value = null
+        isDrawing.value = false
+      }
+    } else if (!sideActive && isSideButtonActive.value) {
+      // 侧边按钮松开，恢复之前的工具
+      isSideButtonActive.value = false
+      isEraser.value = toolBeforeSideButton.value
+
+      // 如果正在绘制橡皮擦笔画，结束它
+      if (isDrawing.value && currentStroke.value && currentStroke.value.points.length > 0) {
+        flushPendingPoints()
+        strokes.value.push(currentStroke.value)
+        currentStroke.value = null
+        isDrawing.value = false
+      }
+    }
+  }
+
   if (!isDrawing.value || !currentStroke.value) return
   if (e.buttons === 0) return
 
   const coords = getCanvasCoords(e)
   const pressure = e.pressure
 
-  currentStroke.value.points.push({ ...coords, pressure })
+  const point: StrokePoint = { ...coords, pressure }
 
-  // 实时绘制当前笔画段
-  const context = getContext()
-  if (!context || !currentStroke.value) return
-
-  const points = currentStroke.value.points
-  if (points.length >= 2) {
-    drawStrokeSegment(context, points[points.length - 2], points[points.length - 1], currentStroke.value)
-  }
+  // 使用 rAF 批量处理，补偿触控笔延迟
+  queuePoint(point)
 }
 
 /**
  * PointerEvent 事件处理：停止绘制
  */
 const onPointerUp = (e: PointerEvent) => {
+  // 刷新所有待处理点
+  flushPendingPoints()
+
+  // M-Pencil 侧边按钮松开检测
+  if (isSideButtonActive.value) {
+    isSideButtonActive.value = false
+    isEraser.value = toolBeforeSideButton.value
+  }
+
   if (currentStroke.value && currentStroke.value.points.length > 0) {
     strokes.value.push(currentStroke.value)
   }
@@ -294,6 +564,7 @@ const onPointerUp = (e: PointerEvent) => {
   isDrawing.value = false
   currentPressure.value = 0
   activePointerType.value = ''
+  pendingPoints = []
 }
 
 const clearCanvas = () => {
@@ -325,6 +596,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 释放 rAF 资源
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
   // 释放资源
   ctx.value = null
 })
