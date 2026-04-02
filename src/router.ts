@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
+// 预加载核心路由的辅助函数
+/* @vite-ignore */
+const preload = (importFn: () => Promise<any>) => importFn()
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -96,7 +100,14 @@ const routes: RouteRecordRaw[] = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  // 滚动行为优化
+  scrollBehavior(to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0 }
+  }
 })
 
 // 移动端路由守卫：限制访问桌面端专属功能
@@ -112,6 +123,40 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+/**
+ * 预加载核心路由组件
+ * 在空闲时预加载首页、仿真、笔记、代码等核心路由
+ * 移动端使用 requestIdleCallback，桌面端使用 setTimeout
+ */
+export function prefetchCoreRoutes() {
+  const coreRoutes = [
+    () => import('./views/SimulationView.vue'),
+    () => import('./views/NotesView.vue'),
+    () => import('./views/CodeView.vue'),
+    () => import('./views/ModelingView.vue'),
+  ]
+
+  const schedulePrefetch = typeof requestIdleCallback !== 'undefined'
+    ? requestIdleCallback
+    : (cb: () => void) => setTimeout(cb, 200)
+
+  schedulePrefetch(() => {
+    coreRoutes.forEach((importFn, idx) => {
+      setTimeout(() => {
+        preload(importFn).catch(() => {
+          // 预加载失败不影响正常使用
+        })
+      }, idx * 300) // 错开 300ms 避免同时请求
+    })
+  })
+}
+
+// 在路由就绪后预加载核心路由
+router.isReady().then(() => {
+  // 延迟 1 秒后开始预加载，确保首屏渲染完成
+  setTimeout(prefetchCoreRoutes, 1000)
 })
 
 export default router

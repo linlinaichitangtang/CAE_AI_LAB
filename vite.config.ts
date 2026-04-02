@@ -34,11 +34,25 @@ export default defineConfig(({ mode }) => ({
     sourcemap: !!process.env.TAURI_DEBUG,
     // 鸿蒙构建模式输出到 harmony/dist 目录
     outDir: mode === 'harmony' ? 'harmony/dist' : 'dist',
+    // 移动端不需要 module preload polyfill
+    modulePreload: {
+      polyfill: false,
+    },
+    // CSS 压缩优化
+    cssMinify: true,
     rollupOptions: {
       output: {
         manualChunks: {
           'three': ['three'],
           'monaco': ['monaco-editor'],
+          'codemirror': [
+            'codemirror',
+            '@codemirror/lang-python',
+            '@codemirror/lang-javascript',
+            '@codemirror/lang-json',
+            '@codemirror/lang-xml',
+            '@codemirror/theme-one-dark',
+          ],
           'tiptap': ['@tiptap/vue-3', '@tiptap/starter-kit', '@tiptap/extension-placeholder'],
           'katex': ['katex'],
           'vendor': ['vue', 'vue-router', 'pinia'],
@@ -47,6 +61,6 @@ export default defineConfig(({ mode }) => ({
     }
   },
   optimizeDeps: {
-    include: ['monaco-editor']
+    include: ['monaco-editor', 'codemirror']
   }
 }))

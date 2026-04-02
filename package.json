@@ -1,6 +1,6 @@
 {
   "name": "caelab",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "科研与工程创作一体化工作台",
   "type": "module",
   "scripts": {
@@ -40,7 +40,13 @@
     "three": "^0.162.0",
     "vue": "^3.4.21",
     "vue-i18n": "^9.9.0",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "codemirror": "^6.0.1",
+    "@codemirror/lang-python": "^6.1.0",
+    "@codemirror/lang-javascript": "^6.2.0",
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lang-xml": "^6.0.1",
+    "@codemirror/theme-one-dark": "^6.1.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

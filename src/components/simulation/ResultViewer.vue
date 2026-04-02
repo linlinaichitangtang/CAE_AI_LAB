@@ -61,6 +61,13 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
+// 移动端检测
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || window.innerWidth < 768
+}
+
 interface SimulationResult {
   nodes: Array<{ id: number; x: number; y: number; z: number }>
   elements: Array<{ id: number; type: string; nodeIds: number[] }>
@@ -502,6 +509,8 @@ function updateMeshForFrame(frameIndex: number) {
 function initScene() {
   if (!canvasRef.value || !containerRef.value) return
 
+  const mobile = isMobileDevice()
+
   // Scene
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0xf0f0f0)
@@ -515,14 +524,22 @@ function initScene() {
   )
   camera.position.set(5, 5, 5)
 
-  // Renderer with clipping enabled
+  // Renderer with mobile optimizations
+  const pixelRatio = mobile
+    ? Math.min(window.devicePixelRatio, 2) // 移动端限制 pixelRatio 最大为 2
+    : window.devicePixelRatio
+
   renderer = new THREE.WebGLRenderer({
     canvas: canvasRef.value,
-    antialias: true
+    antialias: !mobile, // 移动端关闭抗锯齿以提升性能
+    powerPreference: 'high-performance',
   })
   renderer.setSize(containerRef.value.clientWidth, containerRef.value.clientHeight)
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(pixelRatio)
   renderer.localClippingEnabled = true
+
+  // 手动管理渲染器信息重置，减少内存开销
+  renderer.info.autoReset = false
 
   // Controls
   controls = new OrbitControls(camera, renderer.domElement)
@@ -837,6 +854,8 @@ function animate() {
   requestAnimationFrame(animate)
   controls.update()
   renderer.render(scene, camera)
+  // 手动重置渲染器信息
+  renderer.info.reset()
 }
 
 function handleResize() {

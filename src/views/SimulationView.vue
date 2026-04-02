@@ -1843,6 +1843,14 @@
         </div>
       </div>
 
+      <!-- 移动端报告查看器 -->
+      <div v-if="showMobileReport" class="fixed inset-0 z-50 bg-white">
+        <MobileReportViewer
+          :report-html="mobileReportHtml"
+          @close="showMobileReport = false"
+        />
+      </div>
+
       <!-- 云端任务面板 -->
       <div class="w-80 bg-white border-l overflow-y-auto">
         <div class="p-4">
@@ -3006,6 +3014,8 @@ import {
 } from '@/utils/standardCases'
 import type { ValidationReport as ValidationReportData, StandardCase } from '@/utils/standardCases'
 import ValidationReport from '../components/simulation/ValidationReport.vue'
+import MobileReportViewer from '../components/simulation/MobileReportViewer.vue'
+import { usePlatform } from '@/composables/usePlatform'
 
 // Development mode: uncomment to load sample data
 // import { generateSampleResult } from '../components/simulation/simulationParser'
@@ -5503,8 +5513,16 @@ async function embedSimulationToNote() {
 
 // ========== 生成报告功能 ==========
 const showReportDialog = ref(false)
+const showMobileReport = ref(false)
 const reportTemplate = ref<'simple' | 'detailed'>('simple')
 const isExportingPdf = ref(false)
+const { isMobile } = usePlatform()
+
+// 移动端报告 HTML
+const mobileReportHtml = computed(() => {
+  if (!projectStore.hasResult) return ''
+  return buildReportContent()
+})
 
 // ========== 屈曲分析结果功能 ==========
 const showBucklingResultDialogFlag = ref(false)
@@ -5725,7 +5743,11 @@ const reportSafetyFactor = computed(() => {
 
 // 打开生成报告对话框
 function showGenerateReportDialog() {
-  showReportDialog.value = true
+  if (isMobile.value) {
+    showMobileReport.value = true
+  } else {
+    showReportDialog.value = true
+  }
 }
 
 // 生成并导出报告

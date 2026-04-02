@@ -815,6 +815,13 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+
+// 移动端检测
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || window.innerWidth < 768
+}
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useProjectStore } from '@/stores/project'
@@ -978,11 +985,22 @@ function initThreeJS() {
   camera.position.set(200, 150, 200)
   camera.lookAt(0, 0, 0)
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true })
+  // Renderer with mobile optimizations
+  const mobile = isMobileDevice()
+  const pixelRatio = mobile
+    ? Math.min(window.devicePixelRatio, 2) // 移动端限制 pixelRatio 最大为 2
+    : window.devicePixelRatio
+
+  renderer = new THREE.WebGLRenderer({
+    antialias: !mobile, // 移动端关闭抗锯齿以提升性能
+    powerPreference: 'high-performance',
+  })
   renderer.setSize(canvasContainer.value.clientWidth, canvasContainer.value.clientHeight)
-  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setPixelRatio(pixelRatio)
   canvasContainer.value.appendChild(renderer.domElement)
+
+  // 手动管理渲染器信息重置，减少内存开销
+  renderer.info.autoReset = false
 
   // Controls
   controls = new OrbitControls(camera, renderer.domElement)

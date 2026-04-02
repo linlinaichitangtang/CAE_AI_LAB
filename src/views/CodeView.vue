@@ -114,10 +114,10 @@
         </div>
       </div>
 
-      <!-- Editor Container -->
+      <!-- Editor Container (Desktop: Monaco) -->
       <div class="editor-container flex-1 relative bg-[#1e1e1e]">
         <div
-          v-if="tabs.length === 0"
+          v-if="tabs.length === 0 && isDesktop"
           class="absolute inset-0 flex flex-col items-center justify-center text-[#858585]"
         >
           <svg class="w-16 h-16 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,10 +127,28 @@
           <p class="text-xs mt-2 opacity-60">或使用 Ctrl+P 快速打开</p>
         </div>
         <div
-          v-show="tabs.length > 0"
+          v-show="tabs.length > 0 && isDesktop"
           ref="editorContainer"
           class="absolute inset-0"
         />
+        <!-- Mobile: LiteCodeEditor -->
+        <div v-if="isMobile" class="absolute inset-0">
+          <div
+            v-if="tabs.length === 0"
+            class="flex flex-col items-center justify-center h-full text-[#858585]"
+          >
+            <svg class="w-12 h-12 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            <p class="text-sm">选择文件开始编辑</p>
+          </div>
+          <LiteCodeEditor
+            v-else
+            :modelValue="activeTabContent"
+            :language="activeTabLanguage"
+            @update:modelValue="onLiteEditorInput"
+          />
+        </div>
       </div>
 
       <!-- Terminal Panel (toggleable) -->
@@ -326,16 +344,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCodeEditor, type FileTreeNode } from '@/composables/useCodeEditor'
 import { invoke } from '@tauri-apps/api/core'
 import { executeCode, type CodeOutput } from '@/api'
 import { useAiStore } from '@/stores/ai'
 import { useProjectStore } from '@/stores/project'
+import { usePlatform } from '@/composables/usePlatform'
+import LiteCodeEditor from '@/components/editor/LiteCodeEditor.vue'
 const aiStore = useAiStore()
 const projectStore = useProjectStore()
 const router = useRouter()
+const { isMobile, isDesktop } = usePlatform()
 
 function goBackToNote() {
   if (projectStore.currentNoteId) {
@@ -654,6 +675,26 @@ const {
   editorRef
 } = useCodeEditor()
 
+// 移动端 LiteCodeEditor 所需的 computed
+const activeTabContent = computed(() => {
+  const tab = tabs.value.find(t => t.id === activeTabId.value)
+  return tab?.content || ''
+})
+
+const activeTabLanguage = computed(() => {
+  const tab = tabs.value.find(t => t.id === activeTabId.value)
+  return tab?.language || 'python'
+})
+
+// 移动端编辑器输入回调
+function onLiteEditorInput(value: string) {
+  const tabIndex = tabs.value.findIndex(t => t.id === activeTabId.value)
+  if (tabIndex !== -1) {
+    tabs.value[tabIndex].content = value
+    tabs.value[tabIndex].dirty = true
+  }
+}
+
 const handleFileSelect = (data: { path: string; name: string }) => {
   openFile(data.path, data.name)
 }
@@ -693,10 +734,13 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(async () => {
-  await loadMonacoWorkers()
-  await nextTick()
-  if (editorContainer.value) {
-    initEditor(editorContainer.value)
+  // 仅桌面端加载 Monaco Editor
+  if (isDesktop.value) {
+    await loadMonacoWorkers()
+    await nextTick()
+    if (editorContainer.value) {
+      initEditor(editorContainer.value)
+    }
   }
   window.addEventListener('keydown', handleKeydown)
   

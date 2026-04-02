@@ -19,6 +19,20 @@
       <span>{{ autoSaveText }}</span>
     </div>
 
+    <!-- Divider -->
+    <div class="w-px h-3.5 bg-[var(--border-default)]"></div>
+
+    <!-- Sync Status -->
+    <div
+      class="flex items-center gap-1.5 cursor-pointer select-none"
+      :title="syncStatusTooltip"
+      @click="handleSyncClick"
+    >
+      <span class="sync-status-dot" :class="syncStatusDotClass"></span>
+      <span class="text-[var(--text-muted)]">{{ syncStatusText }}</span>
+      <span v-if="syncPendingOps > 0" class="sync-pending-badge">{{ syncPendingOps }}</span>
+    </div>
+
     <!-- Progress Bar (shown when solving) -->
     <div v-if="isSolving" class="flex items-center gap-2 flex-1 max-w-xs">
       <div class="progress-bar">
@@ -101,12 +115,17 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAutoSave } from '@/composables/useAutoSave'
 import { useOfflineMode } from '@/composables/useOfflineMode'
+import { useSyncService, type SyncStatus } from '@/api/syncService'
 
 // Auto save state
 const { lastSaveTime, isAutoSaving } = useAutoSave()
 
 // Offline mode state
 const { statusText, toggleOfflineMode } = useOfflineMode()
+
+// Sync state
+const syncService = useSyncService()
+const showSyncPanel = ref(false)
 
 const autoSaveText = computed(() => {
   if (isAutoSaving.value) return '保存中...'
@@ -221,6 +240,50 @@ function handleKeydown(e: KeyboardEvent) {
     startSolveDemo()
   }
 }
+
+// Sync computed properties
+const syncStatus = computed(() => syncService.status.value)
+
+const syncStatusDotClass = computed(() => ({
+  'sync-dot-green': syncStatus.value === 'connected',
+  'sync-dot-yellow': syncStatus.value === 'connecting' || syncStatus.value === 'syncing',
+  'sync-dot-red': syncStatus.value === 'error',
+  'sync-dot-gray': syncStatus.value === 'disconnected',
+}))
+
+const syncStatusText = computed(() => {
+  const map: Record<SyncStatus, string> = {
+    disconnected: '未同步',
+    connecting: '同步连接中',
+    connected: '已同步',
+    syncing: '同步中...',
+    error: '同步错误',
+  }
+  return map[syncStatus.value]
+})
+
+const syncPendingOps = computed(() => syncService.stats.value.pendingOps)
+
+const syncStatusTooltip = computed(() => {
+  const stats = syncService.stats.value
+  let tip = `同步状态: ${syncStatusText.value}\n`
+  tip += `已发送: ${stats.totalOpsSent} | 已接收: ${stats.totalOpsReceived}\n`
+  tip += `冲突: ${stats.totalConflicts} | 待处理: ${stats.pendingOps}`
+  if (stats.lastSyncTime) {
+    tip += `\n最后同步: ${new Date(stats.lastSyncTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`
+  }
+  tip += '\n点击查看同步详情'
+  return tip
+})
+
+function handleSyncClick() {
+  // 触发同步面板显示（通过事件通知父组件）
+  if (syncStatus.value === 'disconnected' || syncStatus.value === 'error') {
+    syncService.connect()
+  } else {
+    syncService.syncNow()
+  }
+}
 </script>
 
 <style scoped>
@@ -265,5 +328,46 @@ function handleKeydown(e: KeyboardEvent) {
   background: linear-gradient(90deg, var(--primary) 0%, var(--primary-hover) 100%);
   border-radius: 2px;
   transition: width 0.2s ease-out;
+}
+
+/* Sync status indicator */
+.sync-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sync-dot-green {
+  background: var(--accent-green);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.4);
+}
+
+.sync-dot-yellow {
+  background: var(--accent-amber);
+  animation: pulse 1.5s infinite;
+}
+
+.sync-dot-red {
+  background: var(--accent-red);
+}
+
+.sync-dot-gray {
+  background: var(--text-muted);
+}
+
+.sync-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-radius: 7px;
+  background: var(--accent-amber);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
 }
 </style>
