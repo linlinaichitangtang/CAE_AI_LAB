@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::command;
 
 // Re-use coupling types for thermal-structural analysis
-use crate::commands::coupling::{
-    CouplingAnalysisConfig, CouplingType, TemperatureField, TemperatureSource,
-};
+
 
 // ============ Biomechanics Analysis Types ============
 
@@ -657,7 +655,7 @@ fn run_bio_analysis(
     let loading = &job.loading_config;
     
     let youngs = mat.youngs_modulus;
-    let poisson = mat.poissions_ratio;
+    let _poisson = mat.poissions_ratio;
     
     let mut displacement = Vec::new();
     let mut stress = Vec::new();

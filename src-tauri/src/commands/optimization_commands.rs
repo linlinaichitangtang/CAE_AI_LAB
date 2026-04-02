@@ -9,7 +9,7 @@ use tauri::command;
 use super::input_gen::{Node as MeshNode, Element as MeshElement, Material};
 use super::solver::bc::BcContainer;
 use super::topology_optimization::{
-    self, ExportResult, OptimizationTemplates, TopologyConfig, TopologyIteration,
+    self, ExportResult, OptimizationTemplates, TopologyConfig,
     TopologyResult, TemplateInfo,
 };
 

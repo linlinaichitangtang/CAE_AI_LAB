@@ -22,8 +22,6 @@ pub async fn ai_chat(
     prompt: String,
     config: AIConfig,
 ) -> Result<AIResponse, String> {
-    use std::io::Write;
-
     if config.api_url.is_empty() || config.model_name.is_empty() {
         return Ok(AIResponse {
             content: String::new(),

@@ -18,7 +18,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
 use thiserror::Error;
 
 /// 瞬态分析错误类型
@@ -403,7 +402,7 @@ pub fn generate_transient_inp(
     
     // 荷载应用
     writeln!(content, "\n** Loads")?;
-    for (i, curve) in config.load_curves.iter().enumerate() {
+    for (i, _curve) in config.load_curves.iter().enumerate() {
         let amp_name = format!("LOAD_{}", i + 1);
         writeln!(content, "*CLOAD")?;
         // 应用到自由端节点
@@ -545,7 +544,7 @@ fn calculate_load_at_time(curves: &[LoadCurve], time: f64) -> f64 {
             }
             LoadType::Impulse => {
                 // 冲击载荷: 近似高斯脉冲
-                let impulse_total: f64 = curve.points.iter().map(|p| p.value).sum::<f64>() * 0.001;
+                let _impulse_total: f64 = curve.points.iter().map(|p| p.value).sum::<f64>() * 0.001;
                 if time < 0.01 {
                     total_load += curve.amplitude * (-((time - 0.005) / 0.005).powi(2) + 1.0);
                 }

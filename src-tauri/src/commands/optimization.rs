@@ -217,7 +217,7 @@ impl Optimizer {
     }
     
     /// Apply SIMP penalization
-    fn apply_penalization(&mut self, penalty: f64) {
+    fn apply_penalization(&mut self, _penalty: f64) {
         // Penalization is handled in sensitivity calculation
         // This is a simplified version
     }
@@ -355,4 +355,4 @@ pub fn generate_optimization_inp(
     Ok(())
 }
 
-use super::output_parser::AnalysisResults;
+

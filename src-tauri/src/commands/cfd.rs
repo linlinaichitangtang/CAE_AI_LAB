@@ -4,7 +4,6 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use tauri::State;
 use crate::db::Database;
@@ -746,9 +745,9 @@ pub fn parse_openfoam_log(log_path: String) -> Result<CfdResultStats, String> {
 
     let mut iterations = 0u32;
     let mut converged = false;
-    let mut cl = None;
-    let mut cd = None;
-    let mut cm = None;
+    let cl = None;
+    let cd = None;
+    let cm = None;
 
     for line in content.lines() {
         // 解析迭代次数

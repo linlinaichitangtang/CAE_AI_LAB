@@ -219,7 +219,7 @@ impl MeshGenerator {
 
         // Generate elements (Quad4)
         let mut elements = Vec::with_capacity(nx * ny);
-        let mut elem_id = 1;
+        let mut _elem_id = 1;
         for j in 0..ny {
             for i in 0..nx {
                 // Node indices for this element
@@ -227,9 +227,9 @@ impl MeshGenerator {
                 let n1 = n0 + 1;
                 let n2 = n0 + num_nodes_x + 1;
                 let n3 = n0 + num_nodes_x;
-                
+
                 elements.push(vec![n0, n1, n2, n3]);
-                elem_id += 1;
+                _elem_id += 1;
             }
         }
 
@@ -284,7 +284,7 @@ impl MeshGenerator {
 
         // Generate elements (Hex8)
         let mut elements = Vec::with_capacity(nx * ny * nz);
-        let mut elem_id = 1;
+        let mut _elem_id = 1;
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -297,9 +297,9 @@ impl MeshGenerator {
                     let n101 = n001 + 1;
                     let n011 = n001 + num_nodes_x;
                     let n111 = n011 + 1;
-                    
+
                     elements.push(vec![n000, n100, n110, n010, n001, n101, n111, n011]);
-                    elem_id += 1;
+                    _elem_id += 1;
                 }
             }
         }
@@ -1006,11 +1006,11 @@ fn compute_skewness_2d(coords: &[[f64; 3]]) -> f64 {
     } else {
         // 四边形：基于对角线夹角偏差
         // 理想矩形对角线互相垂直
-        let center = centroid(coords);
-        let mid01 = midpoint(&coords[0], &coords[1]);
-        let mid23 = midpoint(&coords[2], &coords[3]);
-        let mid12 = midpoint(&coords[1], &coords[2]);
-        let mid30 = midpoint(&coords[3], &coords[0]);
+        let _center = centroid(coords);
+        let _mid01 = midpoint(&coords[0], &coords[1]);
+        let _mid23 = midpoint(&coords[2], &coords[3]);
+        let _mid12 = midpoint(&coords[1], &coords[2]);
+        let _mid30 = midpoint(&coords[3], &coords[0]);
 
         // 对角线方向
         let d1 = [coords[2][0] - coords[0][0], coords[2][1] - coords[0][1]];
@@ -1168,7 +1168,7 @@ fn compute_warp_angle_2d(coords: &[[f64; 3]]) -> f64 {
     }
 
     // 四边形翘曲角：计算4个节点偏离最佳拟合平面的最大角度
-    let center = centroid(coords);
+    let _center = centroid(coords);
 
     // 使用前3个节点确定平面
     let v1 = [coords[1][0] - coords[0][0], coords[1][1] - coords[0][1], coords[1][2] - coords[0][2]];

@@ -719,7 +719,7 @@ impl InpGenerator {
                 continue;
             }
             
-            let elem_type = self.model.elements
+            let _elem_type = self.model.elements
                 .iter()
                 .find(|e| e.id == elem_ids[0])
                 .map(|e| e.element_type.as_str())

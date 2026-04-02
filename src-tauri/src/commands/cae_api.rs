@@ -5,17 +5,16 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::{Arc};
 use tauri::{command, AppHandle, Emitter, Manager};
 
 // Re-export types from other modules
 use crate::commands::input_gen::{BoundaryCondition, Direction, Element, ElementType, InpGenerator, Load, LoadType, Material, Model, Node, Step};
 use crate::commands::output_parser::FrdParser;
 use crate::commands::postprocess::{ColorMap, ResultSet, ResultStats};
-use crate::commands::solver::{CalculiXSolver, GridConfig, MeshElementType, MeshGenerator, MeshError, MeshQualityMetrics, RefinementConfig, RefinementRegionType, SolverConfig, SolverResult, SolverEvent, StructuredMesh};
+use crate::commands::solver::{CalculiXSolver, GridConfig, MeshElementType, MeshGenerator, MeshQualityMetrics, RefinementConfig, SolverConfig, SolverResult, StructuredMesh};
 use crate::commands::solver::mesh::check_mesh_quality as check_mesh_quality_impl;
-use crate::commands::solver::bc::{BcContainer, Dof, FixedBc, LoadDirection, PointLoad, UniformLoad, UniformLoadType};
+use crate::commands::solver::bc::{BcContainer, Dof, FixedBc, LoadDirection, PointLoad, UniformLoad};
 
 // ============================================================================
 // Global Cancel Flag Management
@@ -845,7 +844,7 @@ pub fn generate_complete_inp(
     material: Material,
     fixed_bc: FixedBc,
     point_load: Option<PointLoad>,
-    uniform_loads: Vec<UniformLoad>,
+    _uniform_loads: Vec<UniformLoad>,
     output_path: String,
 ) -> Result<String, String> {
     tracing::info!("Generating complete INP file: {}", output_path);
@@ -970,7 +969,7 @@ pub fn generate_buckling_inp(
     material: Material,
     fixed_bc: FixedBc,
     point_load: Option<PointLoad>,
-    uniform_loads: Vec<UniformLoad>,
+    _uniform_loads: Vec<UniformLoad>,
     config: BucklingConfig,
     output_path: String,
 ) -> Result<String, String> {
@@ -1099,7 +1098,7 @@ pub fn generate_nonlinear_buckling_inp(
     material: Material,
     fixed_bc: FixedBc,
     point_load: Option<PointLoad>,
-    uniform_loads: Vec<UniformLoad>,
+    _uniform_loads: Vec<UniformLoad>,
     config: BucklingConfig,
     output_path: String,
 ) -> Result<String, String> {
@@ -1465,13 +1464,13 @@ pub fn get_contact_settings() -> Result<serde_json::Value, String> {
 #[command]
 pub fn validate_contact_surfaces(
     surfaces: Vec<String>,
-    elements: Vec<Element>,
-    nodes: Vec<Node>,
+    _elements: Vec<Element>,
+    _nodes: Vec<Node>,
 ) -> Result<serde_json::Value, String> {
     tracing::info!("Validating {} contact surfaces", surfaces.len());
     
     let mut valid_surfaces: Vec<String> = vec![];
-    let mut warnings: Vec<String> = vec![];
+    let warnings: Vec<String> = vec![];
     
     // Simple validation - check if surfaces are referenced by elements
     // In a real implementation, we would parse surface definitions
@@ -1631,7 +1630,7 @@ fn generate_frequency_response_inp_content(
     }
     
     // Frequency range and number of steps
-    let freq_range = config.end_frequency - config.start_frequency;
+    let _freq_range = config.end_frequency - config.start_frequency;
     let initial_freq = config.start_frequency;
     let final_freq = config.end_frequency;
     
@@ -1677,7 +1676,6 @@ pub fn generate_frequency_response_inp(
         output_path, config.start_frequency, config.end_frequency);
     
     use crate::commands::input_gen::InpGenerator;
-    use crate::commands::solver::bc::BcType;
     
     // Convert FixedBc to BoundaryCondition
     let constrained_dofs = fixed_bc.bc_type.get_constrained_dofs();
@@ -1780,10 +1778,10 @@ pub fn parse_frequency_response_result(
     let mut errors = Vec::new();
     
     // Find displacement/amplitude data
-    let mut current_freq = 0.0;
-    let mut current_disp = 0.0;
-    let mut current_phase = 0.0;
-    let mut found_data = false;
+    let mut _current_freq = 0.0;
+    let _current_disp = 0.0;
+    let _current_phase = 0.0;
+    let mut _found_data = false;
     
     for line in content.lines() {
         // Look for frequency data in output
@@ -1793,8 +1791,8 @@ pub fn parse_frequency_response_result(
             if let Some(val) = line.split_whitespace().find(|s| s.parse::<f64>().is_ok()) {
                 if let Ok(f) = val.parse::<f64>() {
                     if f > 0.0 && f < 10000.0 {
-                        current_freq = f;
-                        found_data = true;
+                        _current_freq = f;
+                        _found_data = true;
                     }
                 }
             }
@@ -1850,7 +1848,6 @@ pub fn parse_frequency_response_result(
         }
     } else {
         // Calculate current values from parsed data
-        current_disp = current_disp;
     }
     
     // Find resonance frequency (max displacement)
@@ -1880,7 +1877,7 @@ pub fn parse_frequency_response_result(
 // ============================================================================
 
 use crate::commands::coupling::{
-    CouplingAnalysisConfig, CouplingType, TemperatureField, TemperatureSource,
+    CouplingAnalysisConfig, TemperatureField, TemperatureSource,
     generate_sequential_coupling_inp, generate_fully_coupled_inp,
 };
 
@@ -1931,7 +1928,7 @@ pub fn run_sequential_coupling(
     // Get temperature field from config
     let node_ids: Vec<usize> = model.nodes.iter().map(|n| n.id).collect();
     let temperature_field = match &config.temperature_source {
-        TemperatureSource::FromThermalResult { result_file } => {
+        TemperatureSource::FromThermalResult { result_file: _ } => {
             // Parse from .frd file - simplified: generate uniform as fallback
             tracing::warn!("Thermal result import not fully implemented, using uniform temperature");
             TemperatureField::uniform(&node_ids, reference_temperature)
@@ -2161,7 +2158,7 @@ pub fn refine_mesh(
         "S4".to_string()
     };
 
-    let nz = if is_3d { 1 } else { 1 }; // refine_existing_mesh 通过 dimensions.2 判断
+    let _nz = if is_3d { 1 } else { 1 }; // refine_existing_mesh 通过 dimensions.2 判断
 
     let mesh = StructuredMesh {
         dimensions: (0, 0, if is_3d { 2 } else { 1 }),

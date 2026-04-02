@@ -3,13 +3,10 @@
 //! Reuses thermal-structural coupling solver
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tauri::command;
 
 // Re-use coupling types for thermal-structural analysis
-use crate::commands::coupling::{
-    CouplingAnalysisConfig, CouplingType, TemperatureField, TemperatureSource,
-};
+
 
 // ============ Electronics Analysis Types ============
 
@@ -682,7 +679,7 @@ fn run_thermal_stress_analysis(
     
     let cte = 17.0e-6; // copper CTE
     let youngs = 117.0e9;
-    let alpha = youngs / (1.0 - 0.34 * 0.34);
+    let _alpha = youngs / (1.0 - 0.34 * 0.34);
     
     for (node_id, temp) in temperatures {
         let delta_t = temp - ambient;
@@ -725,7 +722,7 @@ fn run_thermal_stress_analysis(
 }
 
 fn analyze_solder_reliability(
-    job: &ElectronicsAnalysisJob,
+    _job: &ElectronicsAnalysisJob,
     results: &StructuralResult,
 ) -> Result<Vec<SolderJointResult>, String> {
     let mut solder_results = Vec::new();
@@ -770,7 +767,7 @@ fn find_hotspots(
     
     sorted.iter()
         .take(5)
-        .map(|(id, temp)| {
+        .map(|(_id, temp)| {
             let comp_name = components.first()
                 .map(|c| c.name.clone())
                 .unwrap_or_else(|| "PCB".to_string());

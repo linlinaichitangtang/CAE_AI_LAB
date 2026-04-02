@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use super::input_gen::{BoundaryCondition, Element, ElementType, Load, LoadType, Material, Model, Node, Step};
-use super::solver::{CalculiXSolver, SolverConfig, SolverResult};
+use super::solver::{CalculiXSolver, SolverConfig};
 
 // ============================================================================
 // Error Types
@@ -274,7 +274,7 @@ pub fn run_single_case(
 fn generate_case_inp(
     param_values: &HashMap<String, f64>,
     config: &ParametricConfig,
-    output_dir: &PathBuf,
+    _output_dir: &PathBuf,
 ) -> Result<String, ParametricError> {
     // 生成网格
     let mesh = generate_parametric_mesh(&config.mesh_config)?;
@@ -645,7 +645,7 @@ pub fn summarize_results(
 
 /// 计算各参数对结果的影响程度
 fn calculate_parameter_influence(
-    results: &[ScanCaseResult],
+    _results: &[ScanCaseResult],
     parameter_names: &HashMap<String, f64>,
 ) -> HashMap<String, f64> {
     let mut influence = HashMap::new();

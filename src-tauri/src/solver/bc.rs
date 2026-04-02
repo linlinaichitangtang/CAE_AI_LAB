@@ -2,9 +2,8 @@
 //! Implements Fixed, Point Load, and Uniform Load constraints
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use thiserror::Error;
-use crate::commands::input_gen::{Node, Direction};
+use crate::commands::input_gen::Node;
 
 #[derive(Error, Debug)]
 pub enum BcError {
@@ -379,7 +378,7 @@ impl UniformLoad {
     }
     
     /// Create a convection load
-    pub fn film(name: &str, surface_name: String, film_coeff: f64, ambient_temp: f64) -> Self {
+    pub fn film(name: &str, surface_name: String, film_coeff: f64, _ambient_temp: f64) -> Self {
         Self {
             name: name.to_string(),
             surface_name,

@@ -3,8 +3,6 @@
 //! 使用 *DATASET 格式的显式动力学步，支持质量缩放、时间步控制
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
 use thiserror::Error;
 
 // ============ 错误类型 ============
@@ -450,7 +448,7 @@ pub fn generate_explicit_dynamics_inp(
 
     // Element section
     inp.push_str("\n*ELEMENT, TYPE=C3D8R\n");
-    let mut elem_idx = 0usize;
+    let mut _elem_idx = 0usize;
     for &(id, ref elem_type, ref node_ids) in elements {
         if elem_type == "C3D8R" || elem_type == "C3D8" {
             inp.push_str(&format!("{}", id));
@@ -458,7 +456,7 @@ pub fn generate_explicit_dynamics_inp(
                 inp.push_str(&format!(", {}", nid));
             }
             inp.push_str("\n");
-            elem_idx += 1;
+            _elem_idx += 1;
         }
     }
 

@@ -7,9 +7,7 @@ use std::path::PathBuf;
 use tauri::command;
 
 // Re-export coupling types
-use crate::commands::coupling::{
-    CouplingAnalysisConfig, CouplingType, TemperatureField, TemperatureSource,
-};
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThermalCouplingJob {
@@ -162,7 +160,7 @@ pub fn generate_thermal_coupling_inp(
 
     // ===== MATERIALS =====
     let mat = &job.material;
-    let mut mat_inp = format!(
+    let mat_inp = format!(
         r#"** MATERIAL: {}
 *MATERIAL, NAME={}
 *ELASTIC
@@ -717,7 +715,7 @@ pub fn get_face_nodes(
     let ny = y_div + 1;
     let nz = z_div + 1;
 
-    let dx = (x_max - x_min) / x_div as f64;
+    let _dx = (x_max - x_min) / x_div as f64;
     let dy = (y_max - y_min) / y_div as f64;
     let dz = (z_max - z_min) / z_div as f64;
 

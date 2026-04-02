@@ -311,7 +311,7 @@ pub fn mean_stress_correction(
     ultimate_tensile: f64,  // Su (MPa)
     yield_strength: f64,   // Sy (MPa)
 ) -> f64 {
-    let r = stress_amplitude / (stress_amplitude + mean_stress.abs());
+    let _r = stress_amplitude / (stress_amplitude + mean_stress.abs());
     
     match correction_type {
         "goodman" => {
@@ -360,7 +360,7 @@ pub fn surface_factor(treatment: &str) -> f64 {
 /// 
 /// # 返回
 /// 总损伤累积值D
-pub fn minER_rule(cycles: &[f64], sn_curve: &SNCurve) -> f64 {
+pub fn min_er_rule(cycles: &[f64], sn_curve: &SNCurve) -> f64 {
     let mut damage = 0.0;
     
     for &n in cycles {
@@ -775,7 +775,7 @@ pub fn generate_fatigue_inp_file(
     }
     
     // 荷载工况 (循环加载)
-    let num_cycles = load_data.get("num_cycles")
+    let _num_cycles = load_data.get("num_cycles")
         .and_then(|v| v.as_i64())
         .unwrap_or(1000) as i32;
     

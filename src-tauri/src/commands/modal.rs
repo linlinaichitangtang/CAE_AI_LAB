@@ -3,12 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Lines};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use thiserror::Error;
 
-use super::input_gen::{Element, ElementType, Material, Model, Node};
-use super::output_parser::{ParseError as OutputParseError, NodeData};
+use super::input_gen::{Element, Material, Model, Node};
+
 
 #[derive(Error, Debug)]
 pub enum ModalError {
@@ -94,7 +94,7 @@ pub fn generate_modal_inp(
     config: &ModalAnalysisConfig,
     output_path: &str,
 ) -> Result<String, ModalError> {
-    let mut model = Model {
+    let _model = Model {
         nodes: nodes.to_vec(),
         elements: elements.to_vec(),
         materials: vec![material.clone()],
@@ -186,6 +186,7 @@ pub fn generate_modal_inp(
 /// - Block -1NOD: node coordinates (same as static)
 /// - Block -1DAT or -1TOST: modal displacement data
 ///   Mode shapes are stored as displacement U1, U2, U3 for each mode
+#[allow(unused_assignments)]
 pub fn parse_modal_frd(frd_path: &str) -> Result<ModalResults, ModalError> {
     let file = File::open(frd_path)
         .map_err(|e| ModalError::IoError(e))?;
@@ -255,7 +256,7 @@ pub fn parse_modal_frd(frd_path: &str) -> Result<ModalResults, ModalError> {
                     let parts: Vec<&str> = line.split_whitespace().collect();
                     if parts.len() >= 3 {
                         // Check if this is a new mode
-                        if let Ok(ds_type) = parts[1].parse::<usize>() {
+                        if let Ok(_ds_type) = parts[1].parse::<usize>() {
                             // Save previous mode
                             if let Some(mut mode) = current_mode.take() {
                                 mode.node_displacements = mode_displacements.clone();
@@ -474,7 +475,7 @@ pub fn run_modal_solver(
     working_dir: String,
     num_threads: Option<usize>,
 ) -> Result<super::solver::SolverResult, String> {
-    use super::solver::{CalculiXSolver, SolverConfig, SolverError};
+    use super::solver::{CalculiXSolver, SolverConfig};
     
     let config = SolverConfig {
         executable_path: "ccx".to_string(),

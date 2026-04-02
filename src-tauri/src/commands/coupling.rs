@@ -174,7 +174,7 @@ pub fn generate_sequential_coupling_inp(
     
     // ===== MATERIALS =====
     writeln!(output, "** ------------------- MATERIALS -------------------").unwrap();
-    for (i, material) in model.materials.iter().enumerate() {
+    for (_i, material) in model.materials.iter().enumerate() {
         writeln!(output, "** Material: {}", material.name).unwrap();
         writeln!(output, "*MATERIAL, NAME={}", material.name).unwrap();
         

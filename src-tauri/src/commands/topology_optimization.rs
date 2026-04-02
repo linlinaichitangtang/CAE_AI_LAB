@@ -331,7 +331,7 @@ impl OptimizerState {
     /// # 参数
     /// - `sensitivities`: 灵敏度数组
     /// - `volume_constraint`: 体积约束值
-    pub fn oc_update(&mut self, sensitivities: &[f64], volume_constraint: f64) {
+    pub fn oc_update(&mut self, sensitivities: &[f64], _volume_constraint: f64) {
         let beta = self.config.oc_beta;
         let move_limit = self.config.oc_move_limit;
         let min_rho = self.config.min_density;
@@ -408,7 +408,7 @@ impl OptimizerState {
             .sum::<f64>()
             / count;
 
-        let std_dev = variance.sqrt();
+        let _std_dev = variance.sqrt();
         let max_d = *self.density_field.iter().max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&1.0);
         let min_d = *self.density_field.iter().min_by(|a, b| a.partial_cmp(b).unwrap()).unwrap_or(&0.0);
 
@@ -940,7 +940,7 @@ fn calculate_compliance(state: &OptimizerState) -> f64 {
     // 实际实现需要FEA计算
     let mut compliance = 0.0;
 
-    for (i, rho) in state.density_field.iter().enumerate() {
+    for (_i, rho) in state.density_field.iter().enumerate() {
         let penalized = rho.powf(state.config.penalization_factor);
         compliance += penalized;
     }
@@ -999,7 +999,7 @@ pub fn calculate_simp_stiffness(base_young: f64, density: f64, penalization: f64
 /// 
 /// # 返回
 /// OC灵敏度值
-pub fn calculate_oc_sensitivity(element_index: usize, density: f64, _compliance: f64, beta: f64) -> f64 {
+pub fn calculate_oc_sensitivity(_element_index: usize, density: f64, _compliance: f64, beta: f64) -> f64 {
     // OC方法简化灵敏度
     let sens = -beta * density.powf(beta - 1.0);
     sens.max(-100.0).min(100.0)

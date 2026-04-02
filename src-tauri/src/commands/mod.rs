@@ -10,13 +10,18 @@ pub mod solver;
 pub mod ai;
 pub mod materials;
 pub mod parametric;
+#[allow(dead_code)]
 pub mod modal;
+#[allow(dead_code)]
 pub mod optimization;
 pub mod optimization_commands;
 pub mod topology_optimization; // SIMP + OC method with STL export
+#[allow(dead_code)]
 pub mod coupling;
+#[allow(dead_code)]
 pub mod thermal_coupling;
 pub mod contact;
+#[allow(dead_code)]
 pub mod fatigue;
 pub mod transient_dynamics;
 pub mod cfd;

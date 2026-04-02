@@ -1,24 +1,30 @@
 //! Solver facade — re-exports from src/solver/
 //! Used by command modules that reference crate::commands::solver::*
 
-pub use crate::solver::CalculiXSolver;
-pub use crate::solver::mesh::GridConfig;
-pub use crate::solver::mesh::MeshElementType;
-pub use crate::solver::mesh::MeshError;
-pub use crate::solver::mesh::MeshGenerator;
-pub use crate::solver::mesh::MeshQualityMetrics;
-pub use crate::solver::mesh::RefinementConfig;
-pub use crate::solver::mesh::RefinementRegionType;
-pub use crate::solver::mesh::StructuredMesh;
-pub use crate::solver::SolverConfig;
-pub use crate::solver::SolverError;
-pub use crate::solver::SolverEvent;
-pub use crate::solver::SolverResult;
+#[allow(unused_imports)]
+mod reexports {
+    pub use crate::solver::CalculiXSolver;
+    pub use crate::solver::mesh::GridConfig;
+    pub use crate::solver::mesh::MeshElementType;
+    pub use crate::solver::mesh::MeshError;
+    pub use crate::solver::mesh::MeshGenerator;
+    pub use crate::solver::mesh::MeshQualityMetrics;
+    pub use crate::solver::mesh::RefinementConfig;
+    pub use crate::solver::mesh::RefinementRegionType;
+    pub use crate::solver::mesh::StructuredMesh;
+    pub use crate::solver::SolverConfig;
+    pub use crate::solver::SolverError;
+    pub use crate::solver::SolverEvent;
+    pub use crate::solver::SolverResult;
+}
+
+pub use reexports::*;
 
 pub mod mesh {
     pub use crate::solver::mesh::check_mesh_quality;
 }
 
+#[allow(unused_imports)]
 pub mod bc {
     pub use crate::solver::bc::BcContainer;
     pub use crate::solver::bc::BcType;

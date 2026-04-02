@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Lines};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -210,7 +210,7 @@ impl FrdParser {
                             .split_whitespace()
                             .map(|s| s.to_string())
                             .collect();
-                        if let Some((ref dtype, ref mut comps)) = current_dataset {
+                        if let Some((ref _dtype, ref mut comps)) = current_dataset {
                             comps.extend(labels);
                         }
                     } else if line.starts_with("2") {

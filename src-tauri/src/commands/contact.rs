@@ -368,7 +368,7 @@ pub fn diagnose_contacts(
         let mut recommendations = Vec::new();
         
         // Check for element type compatibility
-        let master_elems: Vec<_> = model.elements.iter()
+        let _master_elems: Vec<_> = model.elements.iter()
             .filter(|e| e.nodes.len() >= 4)
             .collect();
         
