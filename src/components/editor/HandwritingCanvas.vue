@@ -12,7 +12,7 @@
           </button>
         </div>
       </div>
-      
+
       <!-- 工具栏 -->
       <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-6">
         <!-- 笔刷大小 -->
@@ -21,7 +21,7 @@
           <input type="range" v-model="strokeWidth" min="1" max="20" class="w-24" />
           <span class="text-sm text-gray-500 w-8">{{ strokeWidth }}px</span>
         </div>
-        
+
         <!-- 颜色 -->
         <div class="flex items-center gap-2">
           <span class="text-sm text-gray-600 dark:text-gray-400">颜色:</span>
@@ -36,8 +36,18 @@
         <!-- 橡皮擦 -->
         <button @click="toggleEraser" :class="isEraser ? 'bg-red-100 border-red-300' : ''"
           class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-          🧹 橡皮擦
+          橡皮擦
         </button>
+
+        <!-- 压感指示器 -->
+        <div v-if="activePointerType === 'pen'" class="flex items-center gap-2">
+          <span class="text-sm text-gray-600 dark:text-gray-400">压感:</span>
+          <div class="w-16 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-500 rounded-full transition-all duration-75"
+                 :style="{ width: (currentPressure * 100) + '%' }"></div>
+          </div>
+          <span class="text-xs text-gray-500 w-8">{{ currentPressure.toFixed(2) }}</span>
+        </div>
       </div>
 
       <!-- 画布 -->
@@ -47,13 +57,10 @@
           class="bg-white rounded shadow-lg cursor-crosshair"
           :width="canvasWidth"
           :height="canvasHeight"
-          @mousedown="startDrawing"
-          @mousemove="draw"
-          @mouseup="stopDrawing"
-          @mouseleave="stopDrawing"
-          @touchstart.prevent="startDrawing"
-          @touchmove.prevent="draw"
-          @touchend.prevent="stopDrawing"
+          @pointerdown="onPointerDown"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
+          @pointerleave="onPointerUp"
         ></canvas>
       </div>
 
@@ -70,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const emit = defineEmits<{
   (e: 'save', dataUrl: string): void
@@ -85,11 +92,22 @@ const strokeColor = ref('#000000')
 const isEraser = ref(false)
 const colors = ['#000000', '#2563eb', '#dc2626', '#16a34a', '#9333ea']
 
+// 压感相关状态
+const currentPressure = ref(0)
+const activePointerType = ref<'pen' | 'touch' | 'mouse' | ''>('')
+
+interface StrokePoint {
+  x: number
+  y: number
+  pressure: number
+}
+
 interface Stroke {
-  points: { x: number; y: number }[]
+  points: StrokePoint[]
   width: number
   color: string
   isEraser: boolean
+  hasPressure: boolean  // 标记是否包含压感数据
 }
 
 const strokes = ref<Stroke[]>([])
@@ -105,97 +123,177 @@ const getContext = () => {
   return ctx.value
 }
 
+/**
+ * 根据压感值计算笔画宽度
+ * 基础宽度由用户设置，压感值 (0~1) 在此基础上缩放
+ */
+function getPressureWidth(baseWidth: number, pressure: number): number {
+  // 基础宽度 * (0.5 + pressure * 0.5)，最小 1px
+  return Math.max(1, baseWidth * (0.5 + pressure * 0.5))
+}
+
+/**
+ * 根据压感值计算笔画透明度
+ * 基础透明度 0.6，最大 1.0
+ */
+function getPressureOpacity(pressure: number): number {
+  return 0.6 + pressure * 0.4
+}
+
+/**
+ * 绘制带压感的笔画段
+ */
+function drawStrokeSegment(
+  context: CanvasRenderingContext2D,
+  from: StrokePoint,
+  to: StrokePoint,
+  stroke: Stroke
+) {
+  context.beginPath()
+
+  if (stroke.hasPressure && !stroke.isEraser) {
+    // 压感模式：根据压感动态调整宽度和透明度
+    const width = getPressureWidth(stroke.width, to.pressure)
+    const opacity = getPressureOpacity(to.pressure)
+    context.lineWidth = width
+    context.globalAlpha = opacity
+  } else {
+    // 非压感模式：使用固定宽度
+    context.lineWidth = stroke.width
+    context.globalAlpha = 1.0
+  }
+
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+  context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
+
+  context.moveTo(from.x, from.y)
+  context.lineTo(to.x, to.y)
+  context.stroke()
+
+  // 重置透明度
+  context.globalAlpha = 1.0
+}
+
+/**
+ * 重绘整个画布（用于撤销和笔画历史回放）
+ */
 const redrawCanvas = () => {
   const context = getContext()
   if (!context || !canvasRef.value) return
-  
+
   context.fillStyle = '#ffffff'
   context.fillRect(0, 0, canvasWidth, canvasHeight)
-  
+
   for (const stroke of strokes.value) {
     if (stroke.points.length < 2) continue
-    
-    context.beginPath()
-    context.lineWidth = stroke.width
-    context.lineCap = 'round'
-    context.lineJoin = 'round'
-    context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
-    
-    context.moveTo(stroke.points[0].x, stroke.points[0].y)
-    for (let i = 1; i < stroke.points.length; i++) {
-      context.lineTo(stroke.points[i].x, stroke.points[i].y)
+
+    if (!stroke.hasPressure || stroke.isEraser) {
+      // 非压感笔画：一次性绘制整条路径
+      context.beginPath()
+      context.lineWidth = stroke.width
+      context.lineCap = 'round'
+      context.lineJoin = 'round'
+      context.strokeStyle = stroke.isEraser ? '#ffffff' : stroke.color
+      context.globalAlpha = 1.0
+
+      context.moveTo(stroke.points[0].x, stroke.points[0].y)
+      for (let i = 1; i < stroke.points.length; i++) {
+        context.lineTo(stroke.points[i].x, stroke.points[i].y)
+      }
+      context.stroke()
+    } else {
+      // 压感笔画：逐段绘制以体现压感变化
+      for (let i = 1; i < stroke.points.length; i++) {
+        drawStrokeSegment(context, stroke.points[i - 1], stroke.points[i], stroke)
+      }
     }
-    context.stroke()
   }
 }
 
-const getCanvasCoords = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
+/**
+ * 获取 PointerEvent 在画布上的坐标
+ */
+const getCanvasCoords = (e: PointerEvent): { x: number; y: number } => {
   const canvas = canvasRef.value
   if (!canvas) return { x: 0, y: 0 }
-  
+
   const rect = canvas.getBoundingClientRect()
-  let clientX: number, clientY: number
-  
-  if (e instanceof TouchEvent) {
-    clientX = e.touches[0].clientX
-    clientY = e.touches[0].clientY
-  } else {
-    clientX = e.clientX
-    clientY = e.clientY
-  }
-  
   return {
-    x: clientX - rect.left,
-    y: clientY - rect.top
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
   }
 }
 
-const startDrawing = (e: MouseEvent | TouchEvent) => {
+/**
+ * PointerEvent 事件处理：开始绘制
+ */
+const onPointerDown = (e: PointerEvent) => {
+  // 捕获指针，确保在画布外也能接收到事件
+  const canvas = canvasRef.value
+  if (canvas) {
+    canvas.setPointerCapture(e.pointerId)
+  }
+
   isDrawing.value = true
+  activePointerType.value = e.pointerType as 'pen' | 'touch' | 'mouse'
+
   const coords = getCanvasCoords(e)
-  
+  const pressure = e.pressure
+
+  // 更新压感显示
+  currentPressure.value = pressure
+
+  // 判断是否为压感输入（仅 pen 类型使用压感）
+  const hasPressure = e.pointerType === 'pen' && pressure > 0
+
   currentStroke.value = {
-    points: [coords],
+    points: [{ ...coords, pressure }],
     width: isEraser.value ? strokeWidth.value * 3 : strokeWidth.value,
     color: strokeColor.value,
-    isEraser: isEraser.value
+    isEraser: isEraser.value,
+    hasPressure
   }
 }
 
-const draw = (e: MouseEvent | TouchEvent) => {
+/**
+ * PointerEvent 事件处理：绘制中
+ */
+const onPointerMove = (e: PointerEvent) => {
+  // 更新压感显示
+  if (e.pointerType === 'pen') {
+    currentPressure.value = e.pressure
+  }
+
   if (!isDrawing.value || !currentStroke.value) return
-  
+  if (e.buttons === 0) return
+
   const coords = getCanvasCoords(e)
-  currentStroke.value.points.push(coords)
-  
-  redrawCanvas()
-  
+  const pressure = e.pressure
+
+  currentStroke.value.points.push({ ...coords, pressure })
+
+  // 实时绘制当前笔画段
   const context = getContext()
   if (!context || !currentStroke.value) return
-  
+
   const points = currentStroke.value.points
   if (points.length >= 2) {
-    context.beginPath()
-    context.lineWidth = currentStroke.value.width
-    context.lineCap = 'round'
-    context.lineJoin = 'round'
-    context.strokeStyle = currentStroke.value.isEraser ? '#ffffff' : currentStroke.value.color
-    
-    const prev = points[points.length - 2]
-    const curr = points[points.length - 1]
-    
-    context.moveTo(prev.x, prev.y)
-    context.lineTo(curr.x, curr.y)
-    context.stroke()
+    drawStrokeSegment(context, points[points.length - 2], points[points.length - 1], currentStroke.value)
   }
 }
 
-const stopDrawing = () => {
+/**
+ * PointerEvent 事件处理：停止绘制
+ */
+const onPointerUp = (e: PointerEvent) => {
   if (currentStroke.value && currentStroke.value.points.length > 0) {
     strokes.value.push(currentStroke.value)
   }
   currentStroke.value = null
   isDrawing.value = false
+  currentPressure.value = 0
+  activePointerType.value = ''
 }
 
 const clearCanvas = () => {
@@ -219,7 +317,16 @@ const handleSave = () => {
 }
 
 onMounted(() => {
+  // 设置画布的 touch-action 为 none，防止浏览器默认触控行为
+  if (canvasRef.value) {
+    canvasRef.value.style.touchAction = 'none'
+  }
   redrawCanvas()
+})
+
+onUnmounted(() => {
+  // 释放资源
+  ctx.value = null
 })
 </script>
 

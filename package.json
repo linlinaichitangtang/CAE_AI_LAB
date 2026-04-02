@@ -1,6 +1,6 @@
 {
   "name": "caelab",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "科研与工程创作一体化工作台",
   "type": "module",
   "scripts": {

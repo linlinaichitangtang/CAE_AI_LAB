@@ -99,4 +99,19 @@ const router = createRouter({
   routes
 })
 
+// 移动端路由守卫：限制访问桌面端专属功能
+router.beforeEach((to, _from, next) => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+
+  // 移动端不可访问的路由列表
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai']
+
+  if (isMobile && mobileRestricted.includes(to.path)) {
+    // 移动端访问受限路由时重定向到首页
+    next('/')
+  } else {
+    next()
+  }
+})
+
 export default router

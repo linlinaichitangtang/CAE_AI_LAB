@@ -527,7 +527,49 @@ function initScene() {
   // Controls
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
-  controls.dampingFactor = 0.05
+  controls.dampingFactor = 0.08
+
+  // 触控优化：配置触控手势
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  }
+  controls.minDistance = 0.5
+  controls.maxDistance = 100
+
+  // 防止触控事件与页面滚动冲突
+  renderer.domElement.style.touchAction = 'none'
+
+  // 双击重置视角
+  renderer.domElement.addEventListener('dblclick', resetCamera)
+
+  // 记录默认相机位置
+  const defaultCameraPosition = new THREE.Vector3(5, 5, 5)
+  const defaultCameraTarget = new THREE.Vector3(0, 0, 0)
+
+  function resetCamera() {
+    // 平滑过渡到默认视角
+    const startPosition = camera.position.clone()
+    const startTarget = controls.target.clone()
+    const duration = 500 // ms
+    const startTime = performance.now()
+
+    function animateReset(now: number) {
+      const elapsed = now - startTime
+      const t = Math.min(elapsed / duration, 1)
+      // ease-out cubic
+      const ease = 1 - Math.pow(1 - t, 3)
+
+      camera.position.lerpVectors(startPosition, defaultCameraPosition, ease)
+      controls.target.lerpVectors(startTarget, defaultCameraTarget, ease)
+      controls.update()
+
+      if (t < 1) {
+        requestAnimationFrame(animateReset)
+      }
+    }
+    requestAnimationFrame(animateReset)
+  }
 
   // Lights
   const ambient = new THREE.AmbientLight(0xffffff, 0.6)

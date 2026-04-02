@@ -1,5 +1,5 @@
 <template>
-  <footer class="h-8 bg-[var(--bg-surface)] border-t border-[var(--border-default)] flex items-center px-4 text-xs gap-4">
+  <footer class="desktop-only h-8 bg-[var(--bg-surface)] border-t border-[var(--border-default)] flex items-center px-4 text-xs gap-4">
     <!-- Solver Status -->
     <div class="flex items-center gap-2">
       <span class="status-indicator" :class="solverStatusClass"></span>

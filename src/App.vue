@@ -1,25 +1,31 @@
 <template>
   <div id="app" class="h-screen flex flex-col bg-[var(--bg-base)]">
-    <!-- Top Bar -->
-    <TopBar 
+    <!-- 桌面端顶栏 -->
+    <TopBar
+      v-if="isDesktop"
       :current-layout="currentLayout"
       @change-layout="changeLayout"
       @toggle-sidebar="toggleSidebar"
       @toggle-right-panel="toggleRightPanel"
     />
-    
-    <!-- Main Content Area -->
+
+    <!-- 移动端/平板端简化顶栏 -->
+    <div v-else class="mobile-topbar safe-area-top">
+      <span class="font-semibold text-sm">{{ currentRouteName }}</span>
+    </div>
+
+    <!-- 主内容区 -->
     <div class="flex-1 flex overflow-hidden">
-      <!-- Left Navigation -->
-      <LeftNav 
-        v-if="showSidebar"
+      <!-- 桌面端左侧导航 -->
+      <LeftNav
+        v-if="isDesktop && showSidebar"
         :class="['transition-all duration-300', showSidebar ? 'w-[72px]' : 'w-0']"
       />
-      
-      <!-- Workspace Area -->
-      <main class="flex-1 flex flex-col overflow-hidden" :class="rightPanelClass">
+
+      <!-- 主视图 -->
+      <main class="flex-1 flex flex-col overflow-hidden" :class="{ 'pb-14': isTouchDevice }">
         <!-- Main Workspace with Optional Pane Split -->
-        <div class="flex-1 flex overflow-hidden" v-if="currentLayout === 'quad' || currentLayout === 'split'">
+        <div class="flex-1 flex overflow-hidden" v-if="isDesktop && (currentLayout === 'quad' || currentLayout === 'split')">
           <!-- Primary Pane -->
           <div class="flex-1 overflow-hidden border-r border-[var(--border-subtle)]">
             <router-view />
@@ -29,24 +35,27 @@
             <component :is="secondaryComponent" />
           </div>
         </div>
-        
-        <!-- Single View (Focus, Side-by-Side, Tri-Panel) -->
+
+        <!-- Single View (Focus, Side-by-Side, Tri-Panel, or mobile/tablet) -->
         <div v-else class="flex-1 flex overflow-hidden">
           <div class="flex-1 overflow-hidden">
             <router-view />
           </div>
         </div>
-        
-        <!-- Optional Right Panel (for Tri-Panel and Side-by-Side) -->
-        <RightPanel 
-          v-if="showRightPanel && (currentLayout === 'tri' || currentLayout === 'split')"
+
+        <!-- Optional Right Panel (for Tri-Panel and Side-by-Side, desktop only) -->
+        <RightPanel
+          v-if="isDesktop && showRightPanel && (currentLayout === 'tri' || currentLayout === 'split')"
           :class="['transition-all duration-300', showRightPanel ? 'w-[280px]' : 'w-0']"
         />
       </main>
     </div>
-    
-    <!-- Status Bar -->
-    <StatusBar />
+
+    <!-- 桌面端状态栏 -->
+    <StatusBar v-if="isDesktop" />
+
+    <!-- 移动端底部导航 -->
+    <MobileBottomNav v-if="isTouchDevice" />
   </div>
 </template>
 
@@ -57,10 +66,15 @@ import TopBar from './components/layout/TopBar.vue'
 import LeftNav from './components/layout/LeftNav.vue'
 import RightPanel from './components/layout/RightPanel.vue'
 import StatusBar from './components/layout/StatusBar.vue'
+import MobileBottomNav from './components/layout/MobileBottomNav.vue'
 import CodeView from './views/CodeView.vue'
 import NotesView from './views/NotesView.vue'
 import ModelingView from './views/ModelingView.vue'
 import SimulationView from './views/SimulationView.vue'
+import { usePlatform } from './composables/usePlatform'
+
+// Platform detection for responsive layout
+const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
 
 // Layout mode: 'focus' | 'side' | 'tri' | 'quad'
 const currentLayout = ref<string>(
@@ -74,6 +88,26 @@ const showRightPanel = ref(true)
 // Current route for determining secondary view in quad/split mode
 const route = useRoute()
 
+// Current route name for mobile topbar
+const currentRouteName = computed(() => {
+  const nameMap: Record<string, string> = {
+    '/': '首页',
+    '/notes': '笔记',
+    '/modeling': '建模',
+    '/code': '代码',
+    '/simulation': '仿真',
+    '/fatigue': '疲劳',
+    '/transient': '瞬态',
+    '/explicit': '显式',
+    '/cfd': 'CFD',
+    '/thermal': '热耦合',
+    '/topology': '拓扑',
+    '/settings': '设置',
+    '/more': '更多',
+  }
+  return nameMap[route.path] || 'CAELab'
+})
+
 // Compute secondary component based on current route
 const secondaryComponent = computed(() => {
   const path = route.path
@@ -84,19 +118,11 @@ const secondaryComponent = computed(() => {
   return CodeView // default
 })
 
-// Right panel class
-const rightPanelClass = computed(() => {
-  if (currentLayout.value === 'quad' || currentLayout.value === 'split') {
-    return 'flex-row'
-  }
-  return ''
-})
-
 // Change layout mode
 function changeLayout(layout: string) {
   currentLayout.value = layout
   localStorage.setItem('caelab_layout', layout)
-  
+
   // Auto-adjust panel visibility based on layout
   switch (layout) {
     case 'focus':
@@ -134,5 +160,20 @@ watch(route, () => {
 </script>
 
 <style scoped>
-/* Additional app-specific styles if needed */
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  background: var(--bg-surface, #ffffff);
+  border-bottom: 1px solid var(--border-default, #e5e7eb);
+  color: var(--text-primary, #1f2937);
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mobile-topbar {
+    height: 48px;
+  }
+}
 </style>

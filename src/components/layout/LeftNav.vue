@@ -1,5 +1,5 @@
 <template>
-  <nav class="h-full bg-[var(--bg-surface)] flex flex-col border-r border-[var(--border-default)]">
+  <nav class="desktop-only h-full bg-[var(--bg-surface)] flex flex-col border-r border-[var(--border-default)]">
     <!-- Main Navigation -->
     <div class="flex flex-col items-center py-3 gap-1 flex-1">
       <router-link 

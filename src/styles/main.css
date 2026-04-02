@@ -752,3 +752,96 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ===== 移动端响应式 ===== */
+
+/* 移动端布局变量覆盖 */
+@media (max-width: 767px) {
+  :root {
+    --nav-width: 0px;
+    --side-panel-width: 100%;
+    --topbar-height: 44px;
+    --statusbar-height: 28px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --nav-width: 0px;
+    --side-panel-width: 320px;
+    --topbar-height: 48px;
+    --statusbar-height: 32px;
+  }
+}
+
+/* 触控优化：最小点击区域 44px */
+@media (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* 所有按钮最小触控区域 */
+  button, [role="button"], a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 输入框最小高度 */
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* 防止 iOS 自动缩放 */
+  }
+}
+
+/* 移动端隐藏桌面元素 */
+.mobile-hidden {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .desktop-only {
+    display: block !important;
+  }
+}
+
+/* 安全区域适配（刘海屏/底部横条） */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* 移动端滚动优化 */
+@media (max-width: 767px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 防止文本选择（提升触控体验） */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

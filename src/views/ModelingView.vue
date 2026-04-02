@@ -987,10 +987,46 @@ function initThreeJS() {
   // Controls
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
-  controls.dampingFactor = 0.05
+  controls.dampingFactor = 0.08
   controls.screenSpacePanning = true
   controls.minDistance = 10
   controls.maxDistance = 2000
+
+  // 触控优化：配置触控手势
+  controls.touches = {
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN,
+  }
+
+  // 防止触控事件与页面滚动冲突
+  renderer.domElement.style.touchAction = 'none'
+
+  // 双击重置视角
+  const defaultCameraPosition = new THREE.Vector3(200, 150, 200)
+  const defaultCameraTarget = new THREE.Vector3(0, 0, 0)
+
+  renderer.domElement.addEventListener('dblclick', () => {
+    if (!camera || !controls) return
+    const startPosition = camera.position.clone()
+    const startTarget = controls.target.clone()
+    const duration = 500
+    const startTime = performance.now()
+
+    function animateReset(now: number) {
+      const elapsed = now - startTime
+      const t = Math.min(elapsed / duration, 1)
+      const ease = 1 - Math.pow(1 - t, 3)
+
+      camera!.position.lerpVectors(startPosition, defaultCameraPosition, ease)
+      controls!.target.lerpVectors(startTarget, defaultCameraTarget, ease)
+      controls!.update()
+
+      if (t < 1) {
+        requestAnimationFrame(animateReset)
+      }
+    }
+    requestAnimationFrame(animateReset)
+  })
 
   // Lights
   const ambientLight = new THREE.AmbientLight(0x404040, 1)
