@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "caelab"
+version = "1.2.0"
+description = "CAELab Python API for CAE engineering simulation"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "CAELab Team" },
+]
+keywords = ["cae", "fem", "simulation", "engineering", "structural-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+jupyter = [
+    "ipywidgets>=8.0",
+    "jupyterlab>=4.0",
+]
+dev = [
+    "pytest>=7.0",
+    "sphinx>=6.0",
+    "sphinx-rtd-theme>=1.2",
+]
+plot = [
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+]
+
+[project.urls]
+Homepage = "https://caelab.dev"
+Documentation = "https://docs.caelab.dev"
+Repository = "https://github.com/caelab/caelab-python"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

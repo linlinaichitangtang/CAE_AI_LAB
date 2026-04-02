@@ -837,3 +837,72 @@ pub async fn verify_access_token_cmd(
     let user_id = verify_token(&token, JWT_SECRET, "access")?;
     Ok(user_id)
 }
+
+/// Stripe webhook endpoint (stub - returns 200, empty implementation)
+/// In production, this would verify the Stripe signature and process events
+/// such as payment_intent.succeeded, customer.subscription.updated, etc.
+#[tauri::command]
+pub async fn stripe_webhook(
+    payload: String,
+    _signature: String,
+) -> Result<serde_json::Value, String> {
+    // TODO: Verify Stripe webhook signature using VITE_STRIPE_WEBHOOK_SECRET
+    // TODO: Parse payload and handle Stripe events
+    // Supported events:
+    //   - payment_intent.succeeded → activate membership
+    //   - customer.subscription.updated → update tier
+    //   - customer.subscription.deleted → downgrade to free
+    //   - invoice.payment_failed → notify user
+
+    tracing::info!(
+        "[STRIPE WEBHOOK STUB] Received webhook payload ({} bytes)",
+        payload.len()
+    );
+
+    Ok(serde_json::json!({
+        "received": true,
+        "message": "Stripe webhook endpoint is a stub. Payment processing is not yet implemented."
+    }))
+}
+
+// ============================================================
+// Public helpers for REST API server reuse
+// ============================================================
+
+/// Generate an access token (public wrapper for API server)
+pub fn generate_access_token_public(user_id: &str) -> Result<String, String> {
+    generate_access_token(user_id, JWT_SECRET)
+}
+
+/// Generate a refresh token (public wrapper for API server)
+pub fn generate_refresh_token_public(user_id: &str) -> Result<String, String> {
+    generate_refresh_token(user_id, JWT_SECRET)
+}
+
+/// Verify a JWT token (public wrapper for API server)
+pub fn verify_token_public(token: &str, expected_type: &str) -> Result<String, String> {
+    verify_token(token, JWT_SECRET, expected_type)
+}
+
+/// Hash a token for storage (public wrapper for API server)
+pub fn hash_token_public(token: &str) -> String {
+    hash_token(token)
+}
+
+/// Validate email format (public wrapper for API server)
+pub fn validate_email_public(email: &str) -> Result<(), String> {
+    validate_email(email)
+}
+
+/// Validate password strength (public wrapper for API server)
+pub fn validate_password_public(password: &str) -> Result<(), String> {
+    validate_password(password)
+}
+
+/// Get user profile and membership (public wrapper for API server)
+pub fn get_user_profile_and_membership_public(
+    conn: &rusqlite::Connection,
+    user_id: &str,
+) -> Result<(UserProfile, MembershipStatus), String> {
+    get_user_profile_and_membership(conn, user_id)
+}

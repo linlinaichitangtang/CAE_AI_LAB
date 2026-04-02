@@ -17,9 +17,9 @@
         <button 
           @click="triggerImport"
           class="btn btn-ghost flex items-center gap-2"
-          title="导入项目"
+          title="导入 .caelabzip 项目文件"
         >
-          <span>📥</span>
+          <span>📦</span>
           <span class="hidden sm:inline">导入</span>
         </button>
         <button 
@@ -30,10 +30,10 @@
           <span>📋</span>
           <span class="hidden sm:inline">模板</span>
         </button>
-        <input 
+        <input
           ref="fileInput"
           type="file"
-          accept=".zip"
+          accept=".caelabzip"
           class="hidden"
           @change="handleImport"
         />
@@ -83,7 +83,7 @@
                   @click.stop="doExportProject(project)"
                   class="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
                 >
-                  <span>📤</span> 导出
+                  <span>📦</span> 导出 .caelabzip
                 </button>
                 <button 
                   @click.stop="doSaveAsTemplate(project)"
@@ -95,7 +95,13 @@
                   @click.stop="doShareProject(project)"
                   class="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
                 >
-                  <span>🔗</span> 分享
+                  <span>🔗</span> 分享链接
+                </button>
+                <button 
+                  @click.stop="doTeamShareProject(project)"
+                  class="w-full px-4 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--bg-hover)] flex items-center gap-2"
+                >
+                  <span>👥</span> 团队共享
                 </button>
                 <div class="border-t border-[var(--border-subtle)] my-1"></div>
                 <button 
@@ -108,6 +114,26 @@
             </div>
           </div>
           <p class="text-sm text-[var(--text-secondary)] line-clamp-2">{{ project.description || '暂无描述' }}</p>
+          <!-- Shared Members Avatars -->
+          <div v-if="projectShareMap[project.id] && projectShareMap[project.id].length > 0" class="flex items-center gap-1 mt-2">
+            <div class="flex -space-x-2">
+              <div
+                v-for="(share, idx) in projectShareMap[project.id].slice(0, 4)"
+                :key="share.id"
+                class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-[var(--bg-surface)]"
+                :style="{ backgroundColor: getAvatarColor(share.shared_with_name), zIndex: 4 - idx }"
+                :title="share.shared_with_name + ' (' + getPermissionLabel(share.permission) + ')'"
+              >
+                {{ share.shared_with_name.charAt(0).toUpperCase() }}
+              </div>
+            </div>
+            <span v-if="projectShareMap[project.id].length > 4" class="text-xs text-[var(--text-muted)] ml-1">
+              +{{ projectShareMap[project.id].length - 4 }}
+            </span>
+            <span class="text-xs text-[var(--text-muted)] ml-1">
+              {{ projectShareMap[project.id].length }} 人共享
+            </span>
+          </div>
           <!-- Module Quick Access -->
           <div class="flex gap-2 mt-4 pt-4 border-t border-[var(--border-subtle)]">
             <span 
@@ -349,6 +375,15 @@
       </div>
     </div>
 
+    <!-- Team Share Dialog -->
+    <ShareDialog
+      v-if="showTeamShareDialog && teamSharingProject"
+      :project-id="teamSharingProject.id"
+      :project-name="teamSharingProject.name"
+      @close="showTeamShareDialog = false"
+      @updated="loadAllProjectShares"
+    />
+
     <!-- Templates Management Dialog -->
     <div v-if="showTemplatesDialog" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fade-in" @click.self="showTemplatesDialog = false">
       <div class="bg-[var(--bg-surface)] rounded-xl p-6 w-full max-w-2xl shadow-lg animate-slide-in">
@@ -408,6 +443,18 @@
       </div>
     </div>
 
+    <!-- Export Progress Dialog -->
+    <div v-if="exportingProject" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fade-in">
+      <div class="bg-[var(--bg-surface)] rounded-xl p-6 w-full max-w-sm shadow-lg animate-slide-in text-center">
+        <div class="w-12 h-12 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">正在导出项目</h3>
+        <p class="text-sm text-[var(--text-secondary)]">
+          「{{ exportingProject.name }}」
+        </p>
+        <p class="text-xs text-[var(--text-muted)] mt-2">{{ exportProgress }}</p>
+      </div>
+    </div>
+
     <!-- Import Dialog -->
     <div v-if="showImportDialog" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fade-in" @click.self="closeImportDialog">
       <div class="bg-[var(--bg-surface)] rounded-xl p-6 w-full max-w-md shadow-lg animate-slide-in">
@@ -446,7 +493,7 @@
           >
             <span class="text-4xl block mb-2">📥</span>
             <p class="text-[var(--text-primary)] mb-1">点击或拖拽文件到此处</p>
-            <p class="text-xs text-[var(--text-muted)]">支持 .zip 格式的CAELab项目文件</p>
+            <p class="text-xs text-[var(--text-muted)]">支持 .caelabzip 格式的CAELab项目文件</p>
           </div>
         </div>
         
@@ -475,6 +522,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { listProjects, createProject, updateProject, deleteProject, type Project } from '@/api'
 import { formatProjectDate } from '@/api'
+import ShareDialog from '@/components/collaboration/ShareDialog.vue'
 import { 
   exportProjectAsZip, 
   importProjectFromZip, 
@@ -486,6 +534,7 @@ import {
   copyToClipboard,
   type ProjectTemplate
 } from '@/api/share'
+import { listProjectShares, type ProjectShare } from '@/api/collaboration'
 
 const router = useRouter()
 
@@ -503,6 +552,11 @@ const deletingProject = ref<Project | null>(null)
 const savingAsTemplate = ref<Project | null>(null)
 const sharingProject = ref<Project | null>(null)
 const activeMenu = ref<string | null>(null)
+
+// Team share state
+const showTeamShareDialog = ref(false)
+const teamSharingProject = ref<Project | null>(null)
+const projectShareMap = ref<Record<string, ProjectShare[]>>({})
 
 // Import state
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -590,19 +644,32 @@ async function handleCreateOrUpdate() {
     }
     closeDialog()
     await loadProjects()
+    await loadAllProjectShares()
   } catch (error) {
     console.error('Failed to save project:', error)
   }
 }
 
+// Export state
+const exportingProject = ref<Project | null>(null)
+const exportProgress = ref('')
+
 // Export project
 async function doExportProject(project: Project) {
   try {
-    await exportProjectAsZip(project.id)
+    exportingProject.value = project
+    exportProgress.value = '正在准备导出...'
+    await exportProjectAsZip(project.id, (progress) => {
+      exportProgress.value = progress.message
+    })
     activeMenu.value = null
+    exportingProject.value = null
+    exportProgress.value = ''
   } catch (error) {
     console.error('Failed to export project:', error)
     alert('导出失败: ' + (error as Error).message)
+    exportingProject.value = null
+    exportProgress.value = ''
   }
 }
 
@@ -655,6 +722,48 @@ async function handleCopyLink() {
   }
 }
 
+// Team share functions
+function doTeamShareProject(project: Project) {
+  teamSharingProject.value = project
+  showTeamShareDialog.value = true
+  activeMenu.value = null
+}
+
+async function loadAllProjectShares() {
+  const map: Record<string, ProjectShare[]> = {}
+  for (const project of projects.value) {
+    try {
+      map[project.id] = await listProjectShares(project.id)
+    } catch (e) {
+      console.error(`Failed to load shares for project ${project.id}:`, e)
+      map[project.id] = []
+    }
+  }
+  projectShareMap.value = map
+}
+
+const avatarColors = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#6366F1',
+]
+
+function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length]
+}
+
+function getPermissionLabel(permission: string): string {
+  const labels: Record<string, string> = {
+    read: '只读',
+    write: '可编辑',
+    admin: '管理员',
+  }
+  return labels[permission] || permission
+}
+
 // Template management
 async function createFromTemplate(template: ProjectTemplate) {
   try {
@@ -698,19 +807,18 @@ function closeImportDialog() {
 
 async function handleConfirmImport() {
   if (!importingFile.value) return
-  
+
   try {
-    const newProject = await importProjectFromZip(importingFile.value, {
+    const result = await importProjectFromZip(importingFile.value, {
       name: importForm.value.name || undefined,
       description: importForm.value.description || undefined
     })
     closeImportDialog()
     await loadProjects()
-    router.push({ path: '/notes', query: { projectId: newProject.id } })
+    router.push({ path: '/notes', query: { projectId: result.project.id } })
   } catch (error) {
     console.error('Failed to import project:', error)
     alert('导入失败: ' + (error as Error).message)
-    console.error('Failed to save project:', error)
   }
 }
 
@@ -739,6 +847,7 @@ async function handleDelete() {
     showDeleteDialog.value = false
     deletingProject.value = null
     await loadProjects()
+    await loadAllProjectShares()
   } catch (error) {
     console.error('Failed to delete project:', error)
   }
@@ -785,10 +894,12 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
-onMounted(() => {
-  loadProjects()
+onMounted(async () => {
+  await loadProjects()
   loadTemplates()
   document.addEventListener('click', handleClickOutside)
+  // Load project shares
+  loadAllProjectShares()
 })
 
 onUnmounted(() => {

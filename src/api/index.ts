@@ -163,6 +163,22 @@ export interface SearchResult {
   score: number
 }
 
+export interface KnowledgeGraphNode {
+  id: string
+  title: string
+  file_type: string
+}
+
+export interface KnowledgeGraphEdge {
+  source: string
+  target: string
+}
+
+export interface KnowledgeGraph {
+  nodes: KnowledgeGraphNode[]
+  edges: KnowledgeGraphEdge[]
+}
+
 // Version history API
 export async function saveNoteVersion(noteId: string, title: string, content: string): Promise<NoteVersion> {
   return await invoke<NoteVersion>('save_note_version', { noteId, title, content })
@@ -206,12 +222,20 @@ export async function searchNotes(projectId: string, query: string): Promise<Sea
   return await invoke<SearchResult[]>('search_notes', { projectId, query })
 }
 
+// Knowledge graph API
+export async function getKnowledgeGraph(projectId: string): Promise<KnowledgeGraph> {
+  return await invoke<KnowledgeGraph>('get_knowledge_graph', { projectId })
+}
+
 // ============ 项目分享 API (Phase2) ============
 
 export * from './share'
 export type {
   ExportData,
   ImportOptions,
+  ImportResult,
+  ExportProgress,
+  ImportProgress,
   ProjectTemplate
 } from './share'
 

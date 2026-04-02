@@ -33,7 +33,7 @@
         <button @click="openAiDialog = true" class="btn btn-ghost text-xs border border-purple-300 text-purple-600 hover:bg-purple-50">
           <span class="mr-1">🤖</span> AI生成
         </button>
-        <button @click="showAddGeometry = true" class="btn btn-primary text-xs">
+        <button @click="showAddGeometry = true" class="geometry-add-button btn btn-primary text-xs">
           <span class="mr-1">+</span> 添加几何体
         </button>
       </div>
@@ -42,7 +42,7 @@
     <!-- Main Content -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Left: Scene Tree -->
-      <div class="w-56 bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] flex flex-col">
+      <div class="scene-tree-panel w-56 bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] flex flex-col">
         <div class="px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider border-b border-[var(--border-subtle)]">
           场景树
         </div>
@@ -92,7 +92,7 @@
       </div>
 
       <!-- Center: 3D Viewport -->
-      <div class="flex-1 relative flex flex-col">
+      <div class="modeling-3d-viewport flex-1 relative flex flex-col">
         <!-- Canvas Container -->
         <div ref="canvasContainer" class="flex-1"></div>
         
@@ -179,7 +179,7 @@
       </div>
 
       <!-- Right: Properties Panel -->
-      <div class="w-64 bg-[var(--bg-surface)] border-l border-[var(--border-subtle)] flex flex-col">
+      <div class="modeling-transform-panel w-64 bg-[var(--bg-surface)] border-l border-[var(--border-subtle)] flex flex-col">
         <div class="px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider border-b border-[var(--border-subtle)]">
           属性
         </div>
@@ -807,6 +807,15 @@
         </div>
       </div>
     </div>
+
+    <!-- V1.1-010: Module Guide -->
+    <ModuleGuide
+      :steps="modelingGuideSteps"
+      :active="showModuleGuide"
+      module-key="modeling"
+      @finish="showModuleGuide = false"
+      @skip="showModuleGuide = false"
+    />
   </div>
 </template>
 
@@ -815,6 +824,12 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import ModuleGuide from '../components/common/ModuleGuide.vue'
+import { modelingGuideSteps } from '../utils/moduleGuides'
+import { FrustumCuller, PerformanceMonitor } from '../utils/meshPerformance'
+
+// V1.1-010: Module guide state
+const showModuleGuide = ref(false)
 
 // 移动端检测
 function isMobileDevice(): boolean {
@@ -846,6 +861,10 @@ let scene: THREE.Scene | null = null
 let camera: THREE.PerspectiveCamera | null = null
 let controls: OrbitControls | null = null
 let animationFrameId: number | null = null
+
+// V1.2-001: 性能优化工具
+const frustumCuller = new FrustumCuller()
+const perfMonitor = new PerformanceMonitor()
 
 // Geometry state
 const geometryItems = ref<GeometryItem[]>([])
@@ -1002,6 +1021,9 @@ function initThreeJS() {
   // 手动管理渲染器信息重置，减少内存开销
   renderer.info.autoReset = false
 
+  // V1.2-001: 设置性能监控渲染器
+  perfMonitor.setRenderer(renderer)
+
   // Controls
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
@@ -1068,12 +1090,33 @@ function initThreeJS() {
   // Animation loop
   function animate() {
     animationFrameId = requestAnimationFrame(animate)
+
+    // V1.2-001: 性能监控
+    perfMonitor.beginFrame()
+
     if (controls) {
       controls.update()
     }
+
+    // V1.2-001: 视口裁剪 - 对几何体进行批量裁剪
+    if (camera) {
+      frustumCuller.updateFrustum(camera)
+      geometryItems.value.forEach(item => {
+        if (item.group) {
+          const bounds = item.group.userData.bounds as { min: THREE.Vector3; max: THREE.Vector3 } | undefined
+          if (bounds) {
+            item.group.visible = frustumCuller.isBoxVisible(bounds.min, bounds.max)
+          }
+        }
+      })
+    }
+
     if (renderer && scene && camera) {
       renderer.render(scene, camera)
     }
+
+    // V1.2-001: 结束帧监控
+    perfMonitor.endFrame()
   }
   animate()
 
@@ -1343,6 +1386,13 @@ function addGeometryToScene(type: string) {
   
   scene.add(group)
   
+  // V1.2-001: 计算并存储包围盒用于视口裁剪
+  const box3 = new THREE.Box3().setFromObject(group)
+  group.userData.bounds = {
+    min: box3.min.clone(),
+    max: box3.max.clone(),
+  }
+
   geometryItems.value.push({
     type: type as any,
     name,
@@ -1456,6 +1506,13 @@ function updateBoxGeometry() {
   geom.group = newGroup
   geom.dimensions = `${boxParams.value.width}×${boxParams.value.height}×${boxParams.value.depth}`
   geom.params = { ...boxParams.value }
+
+  // V1.2-001: 重新计算包围盒
+  const box3 = new THREE.Box3().setFromObject(newGroup)
+  newGroup.userData.bounds = {
+    min: box3.min.clone(),
+    max: box3.max.clone(),
+  }
   
   // Select it
   selectGeometry(selectedGeometryIdx.value)
@@ -2244,6 +2301,11 @@ onMounted(() => {
     if (projectStore.hasResult) {
       createResultMesh()
     }
+
+    // V1.1-010: Show module guide on first visit
+    setTimeout(() => {
+      showModuleGuide.value = true
+    }, 1000)
   })
 })
 
@@ -2251,7 +2313,10 @@ onUnmounted(() => {
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId)
   }
-  
+
+  // V1.2-001: 停止性能监控
+  perfMonitor.stopMonitoring()
+
   window.removeEventListener('resize', onWindowResize)
   
   // Dispose Three.js resources

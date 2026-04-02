@@ -244,6 +244,43 @@
         </table>
       </div>
     </div>
+    <!-- Payment Coming Soon Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showPaymentNotice" class="modal-overlay" @click.self="showPaymentNotice = false">
+          <div class="modal-card">
+            <div class="modal-header">
+              <h3>支付功能即将上线</h3>
+              <button class="modal-close" @click="showPaymentNotice = false">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="payment-notice">
+                <div class="notice-icon">
+                  <svg class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                </div>
+                <p class="notice-text">
+                  {{ upgradeTarget === 'enterprise' ? '企业版方案' : 'Pro 方案' }}的在线支付功能正在开发中。
+                </p>
+                <p class="notice-text">
+                  目前您可以通过联系 <strong>support@caelab.com</strong> 进行人工开通。
+                </p>
+                <div class="notice-badge">即将支持 Stripe 支付</div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" @click="showPaymentNotice = false">关闭</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -255,6 +292,9 @@ const authStore = useAuthStore()
 const isAnnual = ref(true)
 
 const currentTier = computed(() => authStore.membership?.tier || 'free')
+
+const upgradeTarget = ref<string | null>(null)
+const showPaymentNotice = ref(false)
 
 const comparisonData = [
   { feature: '本地项目数', free: '不限', pro: '不限', enterprise: '不限' },
@@ -274,13 +314,16 @@ const comparisonData = [
 ]
 
 function handleUpgrade(tier: string) {
-  // TODO: redirect to payment
-  console.log('Upgrade to:', tier)
+  // Stripe payment integration - coming soon
+  upgradeTarget.value = tier
+  showPaymentNotice.value = true
 }
 
 function handleDowngrade(tier: string) {
-  // TODO: confirm and downgrade
-  console.log('Downgrade to:', tier)
+  if (confirm(`确定要降级到 ${tier} 方案吗？降级后部分功能将不可用。`)) {
+    // TODO: call downgrade API when available
+    console.log('Downgrade to:', tier)
+  }
 }
 </script>
 
@@ -594,5 +637,117 @@ function handleDowngrade(tier: string) {
   .page-title {
     font-size: 22px;
   }
+}
+
+/* Payment Notice Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-surface, #ffffff);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #9ca3af);
+  cursor: pointer;
+  border-radius: var(--radius-md, 8px);
+}
+
+.modal-close:hover {
+  background: var(--bg-elevated, #f3f4f6);
+  color: var(--text-primary, #1f2937);
+}
+
+.modal-body {
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 24px 20px;
+}
+
+.payment-notice {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.notice-icon {
+  color: var(--primary, #2563EB);
+  margin-bottom: 4px;
+}
+
+.notice-text {
+  font-size: 14px;
+  color: var(--text-secondary, #4b5563);
+  line-height: 1.6;
+}
+
+.notice-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary, #2563EB);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  margin-top: 4px;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-enter-active .modal-card,
+.modal-leave-active .modal-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-card,
+.modal-leave-to .modal-card {
+  transform: scale(0.95) translateY(10px);
 }
 </style>

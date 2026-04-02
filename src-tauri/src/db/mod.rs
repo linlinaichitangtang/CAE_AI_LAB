@@ -228,6 +228,81 @@ impl Database {
             [],
         )?;
 
+        // ========== Collaboration tables ==========
+
+        // Project shares table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS project_shares (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                shared_with_name TEXT NOT NULL,
+                permission TEXT NOT NULL DEFAULT 'read',
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        // Comments table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS comments (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                note_id TEXT,
+                author_name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                mention_ids TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                resolved INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        // Index for project_shares by project_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_project_shares_project_id ON project_shares(project_id)",
+            [],
+        )?;
+
+        // Index for comments by project_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_comments_project_id ON comments(project_id)",
+            [],
+        )?;
+
+        // Index for comments by note_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_comments_note_id ON comments(note_id)",
+            [],
+        )?;
+
+        // ========== API Keys table ==========
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS api_keys (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                key_hash TEXT NOT NULL,
+                key_prefix TEXT NOT NULL,
+                permissions TEXT NOT NULL DEFAULT 'read',
+                call_count INTEGER NOT NULL DEFAULT 0,
+                last_used_at TEXT,
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        // Index for api_keys by user_id
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)",
+            [],
+        )?;
+
         Ok(())
     }
 

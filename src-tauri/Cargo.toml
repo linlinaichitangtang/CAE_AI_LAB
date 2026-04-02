@@ -34,6 +34,13 @@ nanoid = "0.4"
 rand = "0.8"
 regex = "1"
 hex = "0.4"
+# REST API server
+axum = "0.7"
+http = "1"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+utoipa = "4"
+utoipa-swagger-ui = { version = "7", features = ["axum"] }
 
 [features]
 default = ["custom-protocol"]

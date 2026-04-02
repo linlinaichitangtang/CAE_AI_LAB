@@ -728,3 +728,443 @@ pub async fn run_parametric_scan_async(config: ParametricConfig) -> Result<Param
     .map_err(|e| format!("任务执行失败: {}", e))?
     .map_err(|e| e.to_string())
 }
+
+// ============================================================================
+// V1.1-004: DOE (Design of Experiments) + Sensitivity Analysis
+// ============================================================================
+
+/// DOE 参数定义
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DoeParameter {
+    pub name: String,
+    pub min: f64,
+    pub max: f64,
+    /// 可选：离散层级数（用于 FullFactorial / CentralComposite）
+    pub levels: Option<usize>,
+}
+
+/// DOE 采样方法
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DoeSamplingMethod {
+    FullFactorial,
+    LatinHypercube,
+    Sobol,
+    Random,
+    CentralComposite,
+}
+
+/// DOE 配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DoeConfig {
+    pub parameters: Vec<DoeParameter>,
+    pub sampling_method: DoeSamplingMethod,
+    pub num_samples: u32,
+}
+
+/// DOE 结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DoeResult {
+    pub samples: Vec<HashMap<String, f64>>,
+    pub sampling_method: String,
+    pub total_samples: usize,
+}
+
+/// 灵敏度分析结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SensitivityResult {
+    pub parameter_name: String,
+    pub sensitivity_score: f64,  // -1 to 1
+    pub main_effect: f64,
+    pub interaction_effects: Vec<(String, f64)>,
+}
+
+// ============================================================================
+// DOE Sampling Implementations
+// ============================================================================
+
+/// 生成 DOE 样本
+pub fn generate_doe_samples(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    match config.sampling_method {
+        DoeSamplingMethod::FullFactorial => generate_full_factorial(config),
+        DoeSamplingMethod::LatinHypercube => generate_latin_hypercube(config),
+        DoeSamplingMethod::Sobol => generate_sobol_samples(config),
+        DoeSamplingMethod::Random => generate_random_samples(config),
+        DoeSamplingMethod::CentralComposite => generate_central_composite(config),
+    }
+}
+
+/// Full Factorial: 笛卡尔积
+fn generate_full_factorial(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    let value_lists: Vec<Vec<f64>> = config.parameters.iter().map(|p| {
+        let levels = p.levels.unwrap_or(5).max(2);
+        (0..levels).map(|i| {
+            p.min + (p.max - p.min) * i as f64 / (levels - 1) as f64
+        }).collect()
+    }).collect();
+
+    let mut results = vec![];
+    generate_doe_combinations(&value_lists, &config.parameters, 0, &mut HashMap::new(), &mut results);
+    results
+}
+
+fn generate_doe_combinations(
+    value_lists: &[Vec<f64>],
+    parameters: &[DoeParameter],
+    index: usize,
+    current: &mut HashMap<String, f64>,
+    results: &mut Vec<HashMap<String, f64>>,
+) {
+    if index >= value_lists.len() {
+        results.push(current.clone());
+        return;
+    }
+    let name = &parameters[index].name;
+    for value in &value_lists[index] {
+        current.insert(name.clone(), *value);
+        generate_doe_combinations(value_lists, parameters, index + 1, current, results);
+    }
+}
+
+/// Latin Hypercube Sampling (分层随机)
+fn generate_latin_hypercube(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    let n = config.num_samples as usize;
+    let num_params = config.parameters.len();
+    if n == 0 || num_params == 0 {
+        return vec![];
+    }
+
+    // 为每个参数生成排列
+    let mut samples = vec![];
+    for _ in 0..n {
+        let mut sample = HashMap::new();
+        for p in &config.parameters {
+            sample.insert(p.name.clone(), 0.0);
+        }
+        samples.push(sample);
+    }
+
+    // 对每个参数独立分层
+    for (pi, p) in config.parameters.iter().enumerate() {
+        // 生成 0..n-1 的随机排列
+        let mut indices: Vec<usize> = (0..n).collect();
+        shuffle_vector(&mut indices);
+
+        for (si, &idx) in indices.iter().enumerate() {
+            // 在第 idx 个分层内均匀采样
+            let low = p.min + (p.max - p.min) * idx as f64 / n as f64;
+            let high = p.min + (p.max - p.min) * (idx + 1) as f64 / n as f64;
+            let value = low + (high - low) * pseudo_random(si * 1000 + pi * 100);
+            samples[si].insert(p.name.clone(), value);
+        }
+    }
+
+    samples
+}
+
+/// Sobol 序列采样（使用 Halton 序列作为简化替代）
+fn generate_sobol_samples(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    let n = config.num_samples as usize;
+    let primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+
+    let mut samples = vec![];
+    for i in 0..n {
+        let mut sample = HashMap::new();
+        for (pi, p) in config.parameters.iter().enumerate() {
+            let prime = primes[pi % primes.len()];
+            let halton = halton_sequence(i + 1, prime);
+            let value = p.min + (p.max - p.min) * halton;
+            sample.insert(p.name.clone(), value);
+        }
+        samples.push(sample);
+    }
+
+    samples
+}
+
+/// Halton 序列（用于低差异采样）
+fn halton_sequence(index: usize, base: usize) -> f64 {
+    let mut result = 0.0;
+    let mut f = 1.0;
+    let mut i = index;
+    while i > 0 {
+        f /= base as f64;
+        result += f * (i % base) as f64;
+        i /= base;
+    }
+    result
+}
+
+/// 均匀随机采样
+fn generate_random_samples(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    let n = config.num_samples as usize;
+    let mut samples = vec![];
+
+    for i in 0..n {
+        let mut sample = HashMap::new();
+        for (pi, p) in config.parameters.iter().enumerate() {
+            let r = pseudo_random(i * 1000 + pi * 137);
+            let value = p.min + (p.max - p.min) * r;
+            sample.insert(p.name.clone(), value);
+        }
+        samples.push(sample);
+    }
+
+    samples
+}
+
+/// Central Composite Design (中心复合设计: 2^k + 2k + 1)
+fn generate_central_composite(config: &DoeConfig) -> Vec<HashMap<String, f64>> {
+    let k = config.parameters.len();
+    let mut samples = vec![];
+
+    // 1. 中心点
+    let mut center = HashMap::new();
+    for p in &config.parameters {
+        let mid = (p.min + p.max) / 2.0;
+        center.insert(p.name.clone(), mid);
+    }
+    samples.push(center);
+
+    // 2. 轴向点 (star points): 2k 个
+    for p in &config.parameters {
+        let mid = (p.min + p.max) / 2.0;
+        let half_range = (p.max - p.min) / 2.0;
+
+        // +alpha
+        let mut plus = HashMap::new();
+        for other in &config.parameters {
+            plus.insert(other.name.clone(), (other.min + other.max) / 2.0);
+        }
+        plus.insert(p.name.clone(), mid + half_range);
+        samples.push(plus);
+
+        // -alpha
+        let mut minus = HashMap::new();
+        for other in &config.parameters {
+            minus.insert(other.name.clone(), (other.min + other.max) / 2.0);
+        }
+        minus.insert(p.name.clone(), mid - half_range);
+        samples.push(minus);
+    }
+
+    // 3. 因子点 (2^k): 每个参数取 min 或 max
+    let num_factorial = 1usize << k;
+    for mask in 0..num_factorial {
+        let mut sample = HashMap::new();
+        for (pi, p) in config.parameters.iter().enumerate() {
+            let bit = (mask >> pi) & 1;
+            let value = if bit == 1 { p.max } else { p.min };
+            sample.insert(p.name.clone(), value);
+        }
+        samples.push(sample);
+    }
+
+    samples
+}
+
+// ============================================================================
+// Simple pseudo-random (deterministic, seed-based)
+// ============================================================================
+
+/// 简单的确定性伪随机数生成器（基于线性同余）
+fn pseudo_random(seed: usize) -> f64 {
+    // LCG parameters (Numerical Recipes)
+    let a: u64 = 1664525;
+    let c: u64 = 1013904223;
+    let m: u64 = 1 << 32;
+    let mut state = (seed as u64).wrapping_mul(a).wrapping_add(c) % m;
+    // 再混合一次
+    state = state.wrapping_mul(a).wrapping_add(c) % m;
+    (state as f64) / (m as f64)
+}
+
+/// Fisher-Yates shuffle
+fn shuffle_vector(vec: &mut [usize]) {
+    let n = vec.len();
+    for i in (1..n).rev() {
+        let j = (pseudo_random(i * 31 + 7) * (i + 1) as f64) as usize % (i + 1);
+        vec.swap(i, j);
+    }
+}
+
+// ============================================================================
+// Sensitivity Analysis (Morris Method)
+// ============================================================================
+
+/// 计算灵敏度分析（Morris 一次变化一个参数法）
+pub fn calculate_sensitivity_analysis(
+    results: &[ScanCaseResult],
+    parameters: &[Parameter],
+) -> Vec<SensitivityResult> {
+    if results.is_empty() || parameters.is_empty() {
+        return vec![];
+    }
+
+    // 收集结果值
+    let result_values: Vec<f64> = results.iter().filter_map(|r| {
+        r.max_stress.or(r.max_displacement).or(r.max_von_mises)
+    }).collect();
+
+    if result_values.len() < 2 {
+        return vec![];
+    }
+
+    let result_mean = result_values.iter().sum::<f64>() / result_values.len() as f64;
+    let result_std = {
+        let variance = result_values.iter()
+            .map(|v| (v - result_mean).powi(2))
+            .sum::<f64>() / result_values.len() as f64;
+        variance.sqrt().max(1e-12)
+    };
+
+    let mut sensitivity_results = vec![];
+
+    for param in parameters {
+        // 提取该参数的所有值
+        let param_values: Vec<f64> = results.iter()
+            .filter_map(|r| r.parameter_values.get(&param.name).copied())
+            .collect();
+
+        if param_values.len() < 2 {
+            sensitivity_results.push(SensitivityResult {
+                parameter_name: param.name.clone(),
+                sensitivity_score: 0.0,
+                main_effect: 0.0,
+                interaction_effects: vec![],
+            });
+            continue;
+        }
+
+        let param_mean = param_values.iter().sum::<f64>() / param_values.len() as f64;
+        let param_std = {
+            let variance = param_values.iter()
+                .map(|v| (v - param_mean).powi(2))
+                .sum::<f64>() / param_values.len() as f64;
+            variance.sqrt().max(1e-12)
+        };
+
+        // 计算 Pearson 相关系数作为主效应
+        let n = param_values.len().min(result_values.len());
+        let mut sum_xy = 0.0;
+        let mut sum_x = 0.0;
+        let mut sum_y = 0.0;
+        let mut sum_x2 = 0.0;
+        let mut sum_y2 = 0.0;
+
+        for i in 0..n {
+            sum_xy += param_values[i] * result_values[i];
+            sum_x += param_values[i];
+            sum_y += result_values[i];
+            sum_x2 += param_values[i].powi(2);
+            sum_y2 += result_values[i].powi(2);
+        }
+
+        let denominator = ((n as f64 * sum_x2 - sum_x.powi(2)) * (n as f64 * sum_y2 - sum_y.powi(2))).sqrt();
+        let correlation = if denominator.abs() > 1e-12 {
+            (n as f64 * sum_xy - sum_x * sum_y) / denominator
+        } else {
+            0.0
+        };
+
+        // 标准化灵敏度分数到 [-1, 1]
+        let sensitivity_score = correlation.clamp(-1.0, 1.0);
+
+        // 主效应：参数变化一个标准差时结果变化多少个标准差
+        let main_effect = correlation * (result_std / param_std);
+
+        // 交互效应：与其他参数的交互
+        let mut interaction_effects = vec![];
+        for other_param in parameters {
+            if other_param.name == param.name {
+                continue;
+            }
+            let other_values: Vec<f64> = results.iter()
+                .filter_map(|r| r.parameter_values.get(&other_param.name).copied())
+                .collect();
+
+            if other_values.len() < 2 {
+                continue;
+            }
+
+            // 计算交互项：残差相关性
+            let n_inter = param_values.len().min(other_values.len()).min(result_values.len());
+            let mut sum_res = 0.0;
+            let mut count = 0;
+
+            for i in 0..n_inter {
+                // 简化的交互效应：使用乘积项
+                let product = (param_values[i] - param_mean) * (other_values[i] - other_values.iter().sum::<f64>() / other_values.len() as f64);
+                let residual = result_values[i] - result_mean;
+                sum_res += product * residual;
+                count += 1;
+            }
+
+            if count > 0 {
+                let interaction = sum_res / count as f64;
+                // 标准化
+                let norm = (param_std * other_values.iter().map(|v| (v - other_values.iter().sum::<f64>() / other_values.len() as f64).powi(2)).sum::<f64>() / other_values.len() as f64).sqrt().max(1e-12);
+                let std_interaction = (interaction / norm).clamp(-1.0, 1.0);
+                interaction_effects.push((other_param.name.clone(), std_interaction));
+            }
+        }
+
+        sensitivity_results.push(SensitivityResult {
+            parameter_name: param.name.clone(),
+            sensitivity_score,
+            main_effect,
+            interaction_effects,
+        });
+    }
+
+    // 按灵敏度绝对值排序
+    sensitivity_results.sort_by(|a, b| {
+        b.sensitivity_score.abs().partial_cmp(&a.sensitivity_score.abs()).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    sensitivity_results
+}
+
+// ============================================================================
+// Tauri Commands for DOE
+// ============================================================================
+
+/// 运行 DOE 研究
+#[tauri::command]
+pub fn run_doe_study(config: DoeConfig) -> Result<DoeResult, String> {
+    tracing::info!(
+        "Starting DOE study with {} parameters, method={:?}, samples={}",
+        config.parameters.len(),
+        config.sampling_method,
+        config.num_samples
+    );
+
+    let samples = generate_doe_samples(&config);
+    let total = samples.len();
+
+    tracing::info!("DOE study generated {} samples", total);
+
+    Ok(DoeResult {
+        samples,
+        sampling_method: format!("{:?}", config.sampling_method),
+        total_samples: total,
+    })
+}
+
+/// 计算灵敏度分析
+#[tauri::command]
+pub fn calculate_sensitivity(
+    results: Vec<ScanCaseResult>,
+    parameters: Vec<Parameter>,
+) -> Result<Vec<SensitivityResult>, String> {
+    tracing::info!(
+        "Calculating sensitivity for {} results, {} parameters",
+        results.len(),
+        parameters.len()
+    );
+
+    let sensitivity = calculate_sensitivity_analysis(&results, &parameters);
+
+    tracing::info!("Sensitivity analysis completed: {} results", sensitivity.len());
+
+    Ok(sensitivity)
+}

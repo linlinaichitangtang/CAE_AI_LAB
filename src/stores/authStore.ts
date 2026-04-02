@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshTokenValue = ref<string | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const isFirstLogin = ref(!localStorage.getItem('caelab-onboarding-done'))
 
   const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
   const isPro = computed(() => membership.value?.tier === 'pro' || membership.value?.tier === 'enterprise')
@@ -22,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (savedUser) user.value = JSON.parse(savedUser)
     const savedMembership = localStorage.getItem('caelab-membership')
     if (savedMembership) membership.value = JSON.parse(savedMembership)
+    isFirstLogin.value = !localStorage.getItem('caelab-onboarding-done')
   }
 
   async function register(email: string, password: string, nickname?: string) {
@@ -30,6 +32,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authApi.register(email, password, nickname)
       setAuthData(res)
+      isFirstLogin.value = true
+      localStorage.removeItem('caelab-onboarding-done')
       return res
     } catch (e: any) {
       error.value = e
@@ -52,6 +56,11 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  function completeOnboarding() {
+    isFirstLogin.value = false
+    localStorage.setItem('caelab-onboarding-done', 'true')
   }
 
   function logout() {
@@ -78,8 +87,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, membership, accessToken, refreshToken: refreshTokenValue,
-    isLoading, error,
+    isLoading, error, isFirstLogin,
     isAuthenticated, isPro, isEnterprise,
-    init, register, login, logout,
+    init, register, login, logout, completeOnboarding,
   }
 })

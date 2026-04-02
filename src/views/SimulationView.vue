@@ -18,7 +18,7 @@
           <span>返回笔记</span>
         </button>
         <!-- 分析类型切换 -->
-        <select v-model="analysisType" class="px-3 py-1.5 text-sm border border-blue-300 rounded">
+        <select v-model="analysisType" class="analysis-type-selector px-3 py-1.5 text-sm border border-blue-300 rounded">
           <option value="structural">结构分析</option>
           <option value="modal">模态分析</option>
           <option value="frequency">频率响应分析</option>
@@ -200,7 +200,7 @@
         </div>
 
         <!-- Step 1: Mesh Generation -->
-        <div class="space-y-3">
+        <div class="mesh-config-panel space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
             <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">1</span>
             网格生成
@@ -289,7 +289,7 @@
         </div>
 
         <!-- Step 2: Material (Structural) -->
-        <div v-if="analysisType === 'structural'" class="space-y-3">
+        <div v-if="analysisType === 'structural'" class="material-config-panel space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
             <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
             材料参数
@@ -713,7 +713,7 @@
         </div>
 
         <!-- Step 3: Boundary Conditions (Structural) -->
-        <div v-if="analysisType === 'structural'" class="space-y-3">
+        <div v-if="analysisType === 'structural'" class="boundary-condition-panel space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
             <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">3</span>
             边界条件
@@ -1057,11 +1057,11 @@
           </div>
 
           <!-- 本地运行按钮 -->
-          <button 
+          <button
             v-if="runMode === 'local'"
-            @click="runSolver" 
+            @click="runSolver"
             :disabled="!canRunSolver || runningSolver"
-            class="w-full px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="solver-run-button w-full px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ runningSolver ? '求解中...' : '运行求解器' }}
           </button>
@@ -1868,39 +1868,103 @@
       <!-- 参数化分析视图 -->
       <template v-if="activeTab === 'parametric'">
         <div class="w-80 bg-white border-r overflow-y-auto p-4 space-y-6">
-          <!-- 参数定义面板 -->
+          <!-- V1.1-001: 实时参数滑块 -->
           <div class="space-y-4">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
               <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">1</span>
-              参数定义
+              参数定义（滑块模式）
             </h3>
-            
+
             <div class="space-y-3">
               <!-- 添加参数按钮 -->
-              <button 
-                @click="addParametricParameter"
+              <button
+                @click="parametricStore.addParam({ name: 'param_' + (parametricStore.allParams.length + 1), min: 0, max: 100, step: 1, unit: '', category: 'default' })"
                 class="w-full px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 flex items-center justify-center gap-2"
               >
                 <span>+</span>
                 <span>添加参数</span>
               </button>
-              
-              <!-- 参数列表 -->
-              <div v-for="(param, idx) in parametricParameters" :key="idx" class="border rounded-lg p-3 space-y-2 bg-gray-50">
-                <div class="flex items-center justify-between">
-                  <input 
-                    v-model="param.name" 
+
+              <!-- 参数滑块列表 -->
+              <div
+                v-for="param in parametricStore.allParams"
+                :key="param.id"
+                class="border rounded-lg p-3 bg-gray-50"
+              >
+                <div class="flex items-center justify-between mb-1">
+                  <input
+                    :value="param.name"
+                    @change="(e: Event) => parametricStore.updateParam(param.id, { name: (e.target as HTMLInputElement).value })"
                     placeholder="参数名称"
                     class="px-2 py-1 text-sm border rounded flex-1 mr-2"
                   />
-                  <button 
+                  <button
+                    @click="parametricStore.removeParam(param.id)"
+                    class="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    删除
+                  </button>
+                </div>
+                <ParamSlider
+                  :param="param"
+                  :model-value="param.value"
+                  @update:model-value="(v: number) => parametricStore.updateParamValue(param.id, v)"
+                  @change="(v: number) => onParamSliderChange(param.id, v)"
+                />
+              </div>
+            </div>
+
+            <!-- Preview mode panel -->
+            <PreviewMode
+              v-if="showPreviewMode"
+              :baseline-result="previewBaselineResult"
+              @confirm="confirmParametricPreview"
+              @cancel="cancelParametricPreview"
+            />
+          </div>
+
+          <!-- V1.1-003: 参数链接管理 -->
+          <div class="space-y-3">
+            <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">L</span>
+              参数链接
+            </h3>
+            <ParamLinkManager />
+          </div>
+
+          <!-- 原有参数化扫描配置 -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">2</span>
+              扫描配置
+            </h3>
+
+            <div class="space-y-3">
+              <!-- 添加参数按钮 -->
+              <button
+                @click="addParametricParameter"
+                class="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 flex items-center justify-center gap-2"
+              >
+                <span>+</span>
+                <span>添加扫描参数</span>
+              </button>
+
+              <!-- 参数列表 -->
+              <div v-for="(param, idx) in parametricParameters" :key="idx" class="border rounded-lg p-3 space-y-2 bg-gray-50">
+                <div class="flex items-center justify-between">
+                  <input
+                    v-model="param.name"
+                    placeholder="参数名称"
+                    class="px-2 py-1 text-sm border rounded flex-1 mr-2"
+                  />
+                  <button
                     @click="parametricParameters.splice(idx, 1)"
                     class="text-red-500 hover:text-red-700 text-sm"
                   >
                     删除
                   </button>
                 </div>
-                
+
                 <!-- 参数类型 -->
                 <div class="flex gap-2">
                   <select v-model="param.type" class="px-2 py-1 text-xs border rounded flex-1">
@@ -1909,17 +1973,17 @@
                     <option value="Linspace">等分范围</option>
                   </select>
                 </div>
-                
+
                 <!-- 离散值输入 -->
                 <div v-if="param.type === 'Discrete'" class="space-y-1">
                   <label class="text-xs text-gray-500">离散值（逗号分隔）</label>
-                  <input 
-                    v-model="param.values" 
+                  <input
+                    v-model="param.values"
                     placeholder="1, 2, 3, 4, 5"
                     class="w-full px-2 py-1 text-xs border rounded"
                   />
                 </div>
-                
+
                 <!-- 范围+步长输入 -->
                 <div v-if="param.type === 'Range'" class="grid grid-cols-3 gap-2">
                   <div>
@@ -1935,7 +1999,7 @@
                     <input type="number" v-model.number="param.step" class="w-full px-2 py-1 text-xs border rounded" />
                   </div>
                 </div>
-                
+
                 <!-- 等分范围输入 -->
                 <div v-if="param.type === 'Linspace'" class="grid grid-cols-3 gap-2">
                   <div>
@@ -1953,20 +2017,20 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 预估案例数 -->
             <div v-if="parametricParameters.length > 0" class="text-xs text-indigo-600 bg-indigo-50 rounded p-2">
               预估扫描案例: {{ estimatedCases }} 个
             </div>
           </div>
-          
+
           <!-- 网格配置 -->
           <div class="space-y-3">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">2</span>
+              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">3</span>
               网格配置
             </h3>
-            
+
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-xs text-gray-600 mb-1 block">X 分格</label>
@@ -1977,7 +2041,7 @@
                 <input type="number" v-model.number="parametricYDiv" class="w-full px-2 py-1 text-xs border rounded" min="1" />
               </div>
             </div>
-            
+
             <div>
               <label class="text-xs text-gray-600 mb-1 block">单元类型</label>
               <select v-model="parametricElementType" class="w-full px-2 py-1 text-xs border rounded">
@@ -1988,50 +2052,50 @@
               </select>
             </div>
           </div>
-          
+
           <!-- 材料配置 -->
           <div class="space-y-3">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">3</span>
+              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">4</span>
               材料配置
             </h3>
-            
+
             <div>
               <label class="text-xs text-gray-600 mb-1 block">弹性模量 (MPa)</label>
               <input type="number" v-model.number="parametricElasticModulus" class="w-full px-2 py-1 text-xs border rounded" />
             </div>
-            
+
             <div>
               <label class="text-xs text-gray-600 mb-1 block">泊松比</label>
               <input type="number" v-model.number="parametricPoissonRatio" step="0.01" class="w-full px-2 py-1 text-xs border rounded" />
             </div>
           </div>
-          
+
           <!-- 结果变量 -->
           <div class="space-y-3">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">4</span>
+              <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">5</span>
               结果变量
             </h3>
-            
+
             <select v-model="parametricResultVariable" class="w-full px-2 py-1 text-xs border rounded">
               <option value="max_von_mises">最大 Von Mises 应力</option>
               <option value="max_displacement">最大位移</option>
               <option value="max_stress">最大应力</option>
             </select>
           </div>
-          
+
           <!-- 运行按钮 -->
           <div class="space-y-2">
-            <button 
+            <button
               @click="runParametricScan"
               :disabled="parametricRunning || parametricParameters.length === 0"
               class="w-full px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {{ parametricRunning ? '扫描中...' : '开始参数化扫描' }}
             </button>
-            
-            <button 
+
+            <button
               v-if="parametricRunning"
               @click="cancelParametricScan"
               class="w-full px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
@@ -2040,7 +2104,7 @@
             </button>
           </div>
         </div>
-        
+
         <!-- 参数化结果区域 -->
         <div class="flex-1 flex flex-col overflow-hidden">
           <!-- 进度条 -->
@@ -2050,22 +2114,33 @@
               <span>{{ parametricProgress }}% ({{ parametricCompleted }}/{{ parametricTotal }})</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
-              <div 
+              <div
                 class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                 :style="{ width: parametricProgress + '%' }"
               ></div>
             </div>
           </div>
-          
+
+          <!-- V1.1-004: DOE + 灵敏度分析面板 -->
+          <div class="overflow-auto p-4">
+            <DoePanel
+              :scan-results="parametricResults"
+              :scan-parameters="parametricParameters.map(p => ({
+                name: p.name || 'param',
+                parameter_type: { type: p.type }
+              }))"
+            />
+          </div>
+
           <!-- 结果表格 -->
-          <div v-if="parametricResults.length > 0" class="flex-1 overflow-auto p-4">
+          <div v-if="parametricResults.length > 0" class="flex-1 overflow-auto p-4 pt-0">
             <div class="bg-white rounded-lg shadow overflow-hidden">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">案例</th>
-                    <th 
-                      v-for="param in parametricParameters" 
+                    <th
+                      v-for="param in parametricParameters"
                       :key="param.name"
                       class="px-4 py-2 text-left text-xs font-medium text-gray-500"
                     >
@@ -2077,21 +2152,21 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                  <tr 
-                    v-for="result in parametricResults" 
+                  <tr
+                    v-for="result in parametricResults"
                     :key="result.case_id"
                     :class="result.success ? '' : 'bg-red-50'"
                   >
                     <td class="px-4 py-2 text-sm">{{ result.case_id + 1 }}</td>
-                    <td 
-                      v-for="param in parametricParameters" 
+                    <td
+                      v-for="param in parametricParameters"
                       :key="param.name"
                       class="px-4 py-2 text-sm"
                     >
                       {{ result.parameter_values[param.name]?.toFixed(3) || '-' }}
                     </td>
                     <td class="px-4 py-2">
-                      <span 
+                      <span
                         :class="['text-xs px-2 py-1 rounded', result.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']"
                       >
                         {{ result.success ? '成功' : '失败' }}
@@ -2107,7 +2182,7 @@
                 </tbody>
               </table>
             </div>
-            
+
             <!-- 结果汇总 -->
             <div v-if="parametricSummary" class="mt-4 bg-white rounded-lg shadow p-4">
               <h4 class="text-sm font-medium text-gray-700 mb-3">结果汇总</h4>
@@ -2130,10 +2205,10 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 导出结果按钮 -->
             <div class="mt-4 flex gap-2">
-              <button 
+              <button
                 @click="exportParametricResults"
                 class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700"
               >
@@ -2141,9 +2216,9 @@
               </button>
             </div>
           </div>
-          
+
           <!-- 空状态 -->
-          <div v-else class="flex-1 flex items-center justify-center">
+          <div v-if="parametricResults.length === 0 && !parametricRunning" class="flex-1 flex items-center justify-center">
             <div class="text-center text-gray-400">
               <div class="text-4xl mb-2">📊</div>
               <p>暂无参数化扫描结果</p>
@@ -2423,20 +2498,20 @@
         </div>
       </template>
 
-      <!-- 🤖 自动化脚本视图 -->
+      <!-- 自动化脚本视图 -->
       <template v-if="activeTab === 'automation'">
         <!-- 自动化脚本左侧面板 -->
         <div class="w-80 bg-white border-r overflow-y-auto p-4">
           <AutomationPanel />
         </div>
         
-        <!-- 右侧主区域：可以留空或添加说明 -->
-        <div class="flex-1 flex items-center justify-center bg-gray-50">
-          <div class="text-center text-gray-500">
-            <p class="text-lg mb-2">🤖</p>
-            <p>选择左面板中的功能标签页</p>
-            <p class="text-sm mt-1">录制 / 编辑 / 回放 / 管理 / 模板</p>
+        <!-- 右侧：仿真队列 -->
+        <div class="flex-1 flex flex-col bg-gray-50 p-4 overflow-hidden">
+          <div class="mb-3">
+            <h3 class="text-base font-semibold text-gray-800">仿真队列</h3>
+            <p class="text-xs text-gray-500 mt-0.5">管理批处理仿真任务，支持拖拽排序和自动执行</p>
           </div>
+          <SimulationQueue />
         </div>
       </template>
 
@@ -2983,6 +3058,33 @@
         </div>
       </div>
     </div>
+
+    <!-- V1.1-008: Smart Preset Panel (in left sidebar) -->
+    <div v-if="activeTab === 'simulation'" class="w-72 bg-white border-r overflow-y-auto p-4 space-y-4">
+      <SmartPresetPanel
+        ref="smartPresetRef"
+        @apply="applySmartPreset"
+        @dismiss="smartPresetDismissed = true"
+      />
+    </div>
+
+    <!-- V1.1-009: Result Insight Panel -->
+    <ResultInsightPanel
+      :visible="showResultInsight"
+      :result-data="resultInsightData"
+      @close="showResultInsight = false"
+      @view-report="handleViewReport"
+      @share="handleShareResult"
+    />
+
+    <!-- V1.1-010: Module Guide -->
+    <ModuleGuide
+      :steps="simulationGuideSteps"
+      :active="showModuleGuide"
+      module-key="simulation"
+      @finish="showModuleGuide = false"
+      @skip="showModuleGuide = false"
+    />
   </div>
 </template>
 
@@ -2994,9 +3096,15 @@ import CloudTaskPanel from '../components/simulation/CloudTaskPanel.vue'
 import SolverProgressPanel from '../components/simulation/SolverProgressPanel.vue'
 import MeshQualityPanel from '../components/simulation/MeshQualityPanel.vue'
 import AutomationPanel from '../components/automation/AutomationPanel.vue'
+import SimulationQueue from '../components/automation/SimulationQueue.vue'
 import VersionHistoryPanel from '../components/simulation/VersionHistoryPanel.vue'
 import ContactResults from '../components/contact/ContactResults.vue'
+import ParamSlider from '../components/parametric/ParamSlider.vue'
+import PreviewMode from '../components/parametric/PreviewMode.vue'
+import ParamLinkManager from '../components/parametric/ParamLinkManager.vue'
+import DoePanel from '../components/parametric/DoePanel.vue'
 import { useProjectStore } from '@/stores/project'
+import { useParametricStore } from '@/stores/parametric'
 import { useAiStore } from '@/stores/ai'
 import { useAutoSave } from '@/composables/useAutoSave'
 import * as caeApi from '@/api/cae'
@@ -3016,12 +3124,24 @@ import type { ValidationReport as ValidationReportData, StandardCase } from '@/u
 import ValidationReport from '../components/simulation/ValidationReport.vue'
 import MobileReportViewer from '../components/simulation/MobileReportViewer.vue'
 import { usePlatform } from '@/composables/usePlatform'
+import SmartPresetPanel from '../components/simulation/SmartPresetPanel.vue'
+import ResultInsightPanel from '../components/simulation/ResultInsightPanel.vue'
+import ModuleGuide from '../components/common/ModuleGuide.vue'
+import { simulationGuideSteps } from '../utils/moduleGuides'
+import type { SmartPreset } from '../utils/smartPresets'
+import { extractFeatures, recommendPreset } from '../utils/smartPresets'
 
 // Development mode: uncomment to load sample data
 // import { generateSampleResult } from '../components/simulation/simulationParser'
 
 const projectStore = useProjectStore()
 const aiStore = useAiStore()
+const parametricStore = useParametricStore()
+
+// ========== 参数化 Store 初始化 ==========
+onMounted(() => {
+  parametricStore.hydrate()
+})
 
 // ========== 自动保存 ==========
 const { lastSaveTime: autoSaveLastTime, isAutoSaving: autoSaving } = useAutoSave()
@@ -3031,6 +3151,116 @@ function goBackToNote() {
     router.push({ path: '/notes', query: { noteId: projectStore.currentNoteId } })
   }
 }
+
+// ========== V1.1-008: 智能预设置 ==========
+const smartPresetRef = ref<InstanceType<typeof SmartPresetPanel>>()
+const smartPresetDismissed = ref(false)
+
+function applySmartPreset(preset: SmartPreset) {
+  // Apply mesh recommendations
+  const bboxSize = Math.max(
+    meshXMax.value - meshXMin.value,
+    meshYMax.value - meshYMin.value,
+    meshZMax.value - meshZMin.value
+  )
+  const suggestedDivs = Math.max(1, Math.round(bboxSize / preset.mesh.elementSize))
+  meshXDiv.value = suggestedDivs
+  meshYDiv.value = Math.max(1, Math.round(suggestedDivs * (meshYMax.value - meshYMin.value) / bboxSize))
+  meshZDiv.value = meshDimension.value === '3d' ? Math.max(1, Math.round(suggestedDivs * (meshZMax.value - meshZMin.value) / bboxSize)) : 1
+}
+
+// Auto-generate smart preset when mesh is generated
+watch(() => projectStore.hasMesh, (hasMesh) => {
+  if (hasMesh && smartPresetRef.value && !smartPresetDismissed.value) {
+    const mesh = projectStore.currentMesh!
+    const features = extractFeatures({
+      nodeCount: mesh.nodes.length,
+      elementCount: mesh.elements.length,
+      boundingBox: {
+        x: meshXMax.value - meshXMin.value,
+        y: meshYMax.value - meshYMin.value,
+        z: meshZMax.value - meshZMin.value,
+      },
+      analysisType: analysisType.value,
+      hasContact: contactPairs.value.length > 0,
+    })
+    smartPresetRef.value.updateWithFeatures(features)
+  }
+})
+
+// ========== V1.1-009: 结果解读浮层 ==========
+const showResultInsight = ref(false)
+const resultInsightData = ref({
+  maxDisplacement: 0,
+  maxVonMises: 0,
+  materialYieldStrength: undefined as number | undefined,
+  materialName: undefined as string | undefined,
+  solveTime: undefined as number | undefined,
+  analysisType: 'structural',
+})
+
+function triggerResultInsight() {
+  if (!projectStore.lastResult) return
+
+  const result = projectStore.lastResult
+  let maxDisp = 0
+  let maxStress = 0
+
+  if (result.node_values?.[0]) {
+    for (const nv of result.node_values[0]) {
+      if (Math.abs(nv.value) > maxStress) maxStress = Math.abs(nv.value)
+    }
+  }
+
+  // Try to get displacement from stats or second step
+  if (result.node_values?.[1]) {
+    for (const nv of result.node_values[1]) {
+      if (Math.abs(nv.value) > maxDisp) maxDisp = Math.abs(nv.value)
+    }
+  }
+
+  const material = getCurrentMaterial()
+  resultInsightData.value = {
+    maxDisplacement: maxDisp,
+    maxVonMises: maxStress,
+    materialYieldStrength: materialType.value === 'plastic' ? plasticParams.value.yield_stress : 250,
+    materialName: '结构钢',
+    solveTime: undefined, // Could be tracked from solver timing
+    analysisType: analysisType.value,
+  }
+
+  // Show with a short delay for UX
+  setTimeout(() => {
+    showResultInsight.value = true
+  }, 500)
+}
+
+function handleViewReport() {
+  showResultInsight.value = false
+  showGenerateReportDialog()
+}
+
+function handleShareResult() {
+  showResultInsight.value = false
+  // Trigger share dialog if available
+}
+
+// Watch for result changes to auto-trigger insight
+watch(() => projectStore.hasResult, (hasResult) => {
+  if (hasResult) {
+    triggerResultInsight()
+  }
+})
+
+// ========== V1.1-010: 模块引导 ==========
+const showModuleGuide = ref(false)
+
+onMounted(() => {
+  // Show module guide on first visit (delayed to allow DOM to render)
+  setTimeout(() => {
+    showModuleGuide.value = true
+  }, 1000)
+})
 
 // ========== 分析类型 ==========
 const analysisType = ref<'structural' | 'buckling' | 'thermal' | 'cfd' | 'modal' | 'frequency'>('structural')
@@ -3423,6 +3653,34 @@ const parametricTotal = ref(0)
 const parametricResults = ref<any[]>([])
 const parametricSummary = ref<any | null>(null)
 let parametricCancelToken = false
+
+// ========== V1.1 预览模式状态 ==========
+const showPreviewMode = ref(false)
+const previewBaselineResult = ref<number | null>(null)
+
+function enterParametricPreview() {
+  parametricStore.enterPreviewMode()
+  showPreviewMode.value = true
+}
+
+function confirmParametricPreview() {
+  parametricStore.confirmPreview()
+  showPreviewMode.value = false
+  // 提交求解
+  runParametricScan()
+}
+
+function cancelParametricPreview() {
+  parametricStore.cancelPreview()
+  showPreviewMode.value = false
+}
+
+function onParamSliderChange(paramId: string, value: number) {
+  parametricStore.updateParamValue(paramId, value)
+  if (!showPreviewMode.value) {
+    enterParametricPreview()
+  }
+}
 
 // ========== 优化设计功能 ==========
 const optimizationType = ref<'topology' | 'shape' | 'size'>('topology')

@@ -696,6 +696,92 @@ pub fn update_embed_record(
     Ok(())
 }
 
+// ============ Knowledge Graph Commands ============
+
+/// Knowledge graph node
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeGraphNode {
+    pub id: String,
+    pub title: String,
+    pub file_type: String,
+}
+
+/// Knowledge graph edge
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeGraphEdge {
+    pub source: String,
+    pub target: String,
+}
+
+/// Knowledge graph data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeGraph {
+    pub nodes: Vec<KnowledgeGraphNode>,
+    pub edges: Vec<KnowledgeGraphEdge>,
+}
+
+/// Get the knowledge graph for a project (all notes and their links)
+#[command]
+pub fn get_knowledge_graph(
+    db: State<'_, Database>,
+    project_id: String,
+) -> Result<KnowledgeGraph, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+
+    // 1. Query all note files in the project
+    let mut stmt = conn
+        .prepare("SELECT id, file_name, file_type FROM project_files WHERE project_id = ?1 AND file_type = 'note'")
+        .map_err(|e| e.to_string())?;
+
+    let note_ids: Vec<(String, String, String)> = stmt
+        .query_map([&project_id], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let note_id_set: std::collections::HashSet<String> =
+        note_ids.iter().map(|(id, _, _)| id.clone()).collect();
+
+    // 2. Build nodes
+    let nodes: Vec<KnowledgeGraphNode> = note_ids
+        .into_iter()
+        .map(|(id, title, file_type)| KnowledgeGraphNode {
+            id,
+            title,
+            file_type,
+        })
+        .collect();
+
+    // 3. Query all note_links where both source and target are in this project
+    let mut link_stmt = conn
+        .prepare("SELECT source_note_id, target_note_id FROM note_links")
+        .map_err(|e| e.to_string())?;
+
+    let all_links: Vec<(String, String)> = link_stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    // 4. Build edges (only include links where both endpoints are in the project)
+    let edges: Vec<KnowledgeGraphEdge> = all_links
+        .into_iter()
+        .filter(|(source, target)| note_id_set.contains(source) && note_id_set.contains(target))
+        .map(|(source, target)| KnowledgeGraphEdge { source, target })
+        .collect();
+
+    tracing::info!(
+        "Knowledge graph for project {}: {} nodes, {} edges",
+        project_id,
+        nodes.len(),
+        edges.len()
+    );
+
+    Ok(KnowledgeGraph { nodes, edges })
+}
+
 // ============ Category Commands ============
 
 /// Update a file's category

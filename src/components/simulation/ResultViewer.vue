@@ -6,6 +6,22 @@
       <div class="text-gray-500">加载中...</div>
     </div>
 
+    <!-- V1.2-001: FPS 计数器 -->
+    <div v-if="showFPS" class="absolute top-2 left-2 bg-black/60 text-green-400 text-[10px] font-mono px-2 py-1 rounded z-20 pointer-events-none select-none">
+      <div>FPS: {{ perfStats.fps }}</div>
+      <div>LOD: {{ perfStats.lodLevel }}</div>
+      <div v-if="perfStats.frameTime > 0">Frame: {{ perfStats.frameTime }}ms</div>
+    </div>
+
+    <!-- V1.2-002: 分块加载进度覆盖层 -->
+    <MeshLoadingOverlay
+      :visible="chunkLoadingActive"
+      :progress="chunkLoadProgress"
+      :cancelable="true"
+      message="大模型分块加载中..."
+      @cancel="onCancelChunkLoading"
+    />
+
     <!-- 剖切面控制 -->
     <div v-if="result" class="absolute top-2 right-2 bg-white/90 dark:bg-gray-800/90 rounded-lg shadow-lg p-2 text-xs space-y-1.5 z-10">
       <label class="flex items-center gap-1.5">
@@ -60,6 +76,18 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import {
+  LODManager,
+  FrustumCuller,
+  PerformanceMonitor,
+  AdaptiveQualityController,
+  type PerformanceStats,
+} from '@/utils/meshPerformance'
+import {
+  ChunkedMeshLoader,
+  type LoadProgress,
+} from '@/utils/meshStreaming'
+import MeshLoadingOverlay from './MeshLoadingOverlay.vue'
 
 // 移动端检测
 function isMobileDevice(): boolean {
@@ -137,6 +165,29 @@ let controls: OrbitControls
 let mesh: THREE.Mesh
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let wireframeMesh: any = null
+
+// ---- V1.2-001: 性能优化状态 ----
+const lodManager = new LODManager()
+const frustumCuller = new FrustumCuller()
+const performanceMonitor = new PerformanceMonitor()
+const adaptiveQuality = new AdaptiveQualityController(lodManager, performanceMonitor)
+const showFPS = ref(false)
+const perfStats = ref<PerformanceStats>({
+  fps: 0, frameTime: 0, memoryUsage: 0, drawCalls: 0, triangles: 0, lodLevel: 0,
+})
+const useInstancedMesh = ref(false)
+const INSTANCED_MESH_THRESHOLD = 50000
+
+// ---- V1.2-002: 分块加载状态 ----
+const chunkedLoader = new ChunkedMeshLoader()
+const chunkLoadingActive = ref(false)
+const chunkLoadProgress = ref<LoadProgress>({
+  loaded: 0, total: 0, percentage: 0,
+  loadedNodes: 0, loadedElements: 0, estimatedTimeRemaining: 0,
+})
+const CHUNK_LOAD_THRESHOLD = 100000
+let chunkMeshes: THREE.Mesh[] = []
+let chunkLoadCancelled = false
 
 // ---- Clipping plane state ----
 const clippingOn = ref(false)
@@ -606,6 +657,12 @@ function initScene() {
 
   // Initialize clipping plane object
   clippingPlaneObj = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0)
+
+  // V1.2-001: 初始化性能监控
+  performanceMonitor.setRenderer(renderer)
+  performanceMonitor.startMonitoring((stats) => {
+    perfStats.value = stats
+  })
 }
 
 function buildGeometry(result: SimulationResult) {
@@ -704,7 +761,37 @@ function buildGeometry(result: SimulationResult) {
     }
   })
 
-  return { positions, normals, indices, nodeIndexMap }
+  // V1.2-001: 当单元数 > 50000 时，根据当前 LOD 级别生成简化几何体
+  let finalPositions = positions
+  let finalNormals = normals
+  let finalIndices = indices
+  const currentLODLevel = lodManager.getCurrentLevel()
+
+  if (result.elements.length > 50000 && currentLODLevel > 0) {
+    const fullGeometry = new THREE.BufferGeometry()
+    fullGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    fullGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+    if (indices.length > 0) {
+      fullGeometry.setIndex(indices)
+    }
+
+    const factor = lodManager.getFactor(currentLODLevel)
+    const simplifiedGeometry = lodManager.generateLODMesh(fullGeometry, factor)
+
+    const posAttr = simplifiedGeometry.getAttribute('position')
+    const normAttr = simplifiedGeometry.getAttribute('normal')
+    const idxAttr = simplifiedGeometry.getIndex()
+
+    finalPositions = Array.from(posAttr.array as Float32Array)
+    finalNormals = normAttr ? Array.from(normAttr.array as Float32Array) : normals
+    finalIndices = idxAttr ? Array.from(idxAttr.array as Uint16Array | Uint32Array) : indices
+
+    // 清理临时几何体
+    fullGeometry.dispose()
+    simplifiedGeometry.dispose()
+  }
+
+  return { positions: finalPositions, normals: finalNormals, indices: finalIndices, nodeIndexMap }
 }
 
 function applyDisplacement(result: SimulationResult, scale: number, positions: number[], nodeIndexMap: Map<number, number>) {
@@ -852,7 +939,30 @@ function updateMesh(result: SimulationResult) {
 
 function animate() {
   requestAnimationFrame(animate)
-  controls.update()
+
+  // V1.2-001: 性能监控 beginFrame
+  performanceMonitor.beginFrame()
+
+  if (controls) {
+    controls.update()
+  }
+
+  // V1.2-001: 视口裁剪
+  if (mesh) {
+    frustumCuller.updateFrustum(camera)
+    mesh.visible = frustumCuller.isVisible(mesh)
+  }
+
+  // V1.2-001: FPS 自适应 LOD
+  const fps = performanceMonitor.endFrame()
+  if (fps > 0) {
+    const newLevel = lodManager.updateByFPS(fps)
+    performanceMonitor.setLODLevel(newLevel)
+  }
+
+  // V1.2-001: 自适应质量控制
+  adaptiveQuality.update()
+
   renderer.render(scene, camera)
   // 手动重置渲染器信息
   renderer.info.reset()
@@ -879,9 +989,16 @@ onMounted(() => {
     clipMax.value = Math.max(bounds.max.x, bounds.max.y, bounds.max.z) + 0.5
     clipPosition.value = (clipMin.value + clipMax.value) / 2
 
-    updateMesh(props.result)
-    loading.value = false
-    emit('ready')
+    // V1.2-002: 大模型分块加载
+    if (props.result.elements.length > CHUNK_LOAD_THRESHOLD) {
+      loadMeshChunked(props.result)
+    } else {
+      // V1.2-001: 检查是否使用 LOD
+      useInstancedMesh.value = props.result.elements.length > INSTANCED_MESH_THRESHOLD
+      updateMesh(props.result)
+      loading.value = false
+      emit('ready')
+    }
   }
 })
 
@@ -893,6 +1010,20 @@ onUnmounted(() => {
     planeHelperObj.dispose()
     planeHelperObj = null
   }
+
+  // V1.2-001: 停止性能监控
+  performanceMonitor.stopMonitoring()
+
+  // V1.2-002: 取消分块加载并释放资源
+  chunkedLoader.cancelLoading()
+  chunkedLoader.dispose()
+  chunkMeshes.forEach(m => {
+    scene.remove(m)
+    m.geometry.dispose()
+    if (m.material) (m.material as THREE.Material).dispose()
+  })
+  chunkMeshes = []
+
   renderer?.dispose()
 })
 
@@ -906,8 +1037,13 @@ watch(() => props.result, (newResult) => {
       clipMax.value = Math.max(bounds.max.x, bounds.max.y, bounds.max.z) + 0.5
       clipPosition.value = (clipMin.value + clipMax.value) / 2
 
-      updateMesh(newResult)
-      loading.value = false
+      // V1.2-002: 大模型分块加载
+      if (newResult.elements.length > CHUNK_LOAD_THRESHOLD) {
+        loadMeshChunked(newResult)
+      } else {
+        updateMesh(newResult)
+        loading.value = false
+      }
     })
   }
 }, { deep: true })
@@ -1149,6 +1285,71 @@ function updateMeshWithModeShape(result: SimulationResult, modeShapeData: ModeSh
   scene.add(mesh)
 
   mesh.userData = { minVal, maxVal, colorValues: vertexValues }
+}
+
+// ---- V1.2-002: 分块加载逻辑 ----
+
+async function loadMeshChunked(result: SimulationResult) {
+  chunkLoadingActive.value = true
+  chunkLoadCancelled = false
+  chunkMeshes.forEach(m => {
+    scene.remove(m)
+    m.geometry.dispose()
+    if (m.material) (m.material as THREE.Material).dispose()
+  })
+  chunkMeshes = []
+
+  // 准备 MeshData
+  const meshData = {
+    nodes: result.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, z: n.z })),
+    elements: result.elements.map(e => ({ id: e.id, type: e.type, nodeIds: e.nodeIds })),
+  }
+
+  // 分割为块
+  chunkedLoader.splitIntoChunks(meshData)
+
+  // 获取视口内可见的块并按距离排序
+  const visibleChunkIds = chunkedLoader.getVisibleChunks(camera)
+  chunkedLoader.setProgressCallback((progress) => {
+    chunkLoadProgress.value = progress
+  })
+
+  // 按优先级加载块
+  await chunkedLoader.loadChunksByPriority(visibleChunkIds, (chunk, chunkIndex) => {
+    if (!chunk.geometry || chunkLoadCancelled) return
+
+    // 计算顶点值用于着色
+    const vertexValues = computeVertexValues(result, new Map(), [])
+
+    // 为块创建网格
+    const clippingPlanes = getClippingPlanes()
+    const material = new THREE.MeshPhongMaterial({
+      vertexColors: false,
+      color: 0x4488cc,
+      side: THREE.DoubleSide,
+      shininess: 30,
+      clippingPlanes: clippingPlanes,
+      clipShadows: true,
+      transparent: true,
+      opacity: 0.85,
+    })
+
+    const chunkMesh = new THREE.Mesh(chunk.geometry, material)
+    chunkMesh.userData.chunkIndex = chunkIndex
+    scene.add(chunkMesh)
+    chunkMeshes.push(chunkMesh)
+  })
+
+  chunkLoadingActive.value = false
+  loading.value = false
+  emit('ready')
+}
+
+function onCancelChunkLoading() {
+  chunkLoadCancelled = true
+  chunkedLoader.cancelLoading()
+  chunkLoadingActive.value = false
+  loading.value = false
 }
 
 // Expose color data for legend and animation controls

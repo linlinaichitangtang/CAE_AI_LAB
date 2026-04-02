@@ -397,20 +397,35 @@ async function handleRegister() {
       return
     }
     await authStore.register(registerForm.email, registerForm.password, registerForm.nickname || undefined)
-    router.push('/')
+    router.push('/onboarding')
   } catch {
     // error is set in store
   }
 }
 
 function handleGoogleLogin() {
-  // TODO: implement Google OAuth
-  console.log('Google login placeholder')
+  // Google OAuth flow: redirect to Google's consent screen
+  // In production, this would use the actual Google Client ID from .env
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+  if (!clientId) {
+    authStore.error = 'Google 登录暂未配置，请联系管理员'
+    return
+  }
+  const redirectUri = encodeURIComponent(window.location.origin + '/auth/google/callback')
+  const scope = encodeURIComponent('openid email profile')
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`
 }
 
 function handleGithubLogin() {
-  // TODO: implement GitHub OAuth
-  console.log('GitHub login placeholder')
+  // GitHub OAuth flow: redirect to GitHub's authorization page
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID || ''
+  if (!clientId) {
+    authStore.error = 'GitHub 登录暂未配置，请联系管理员'
+    return
+  }
+  const redirectUri = encodeURIComponent(window.location.origin + '/auth/github/callback')
+  const scope = encodeURIComponent('read:user user:email')
+  window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`
 }
 
 async function handleForgotSendCode() {

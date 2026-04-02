@@ -1,8 +1,12 @@
 /**
- * CAE API - STL Export for Topology Optimization
+ * CAE API - Optimization (Topology + Shape)
  */
 
 import { invoke } from '@tauri-apps/api/core'
+
+// ============================================================================
+// Topology Optimization
+// ============================================================================
 
 /** Generate STL file from optimized density field */
 export async function exportTopologyToStl(request: {
@@ -110,4 +114,51 @@ export async function exportStlAscii(request: {
   output_path: string
 }): Promise<{ success: boolean; file_path: string; triangle_count: number }> {
   return await invoke('export_stl_ascii', { request })
+}
+
+// ============================================================================
+// Shape Optimization
+// ============================================================================
+
+export interface ShapeOptConfig {
+  mesh_nodes: Array<[number, number, number]>
+  mesh_elements: Array<[number, number, number, number]> // tetrahedra
+  boundary_node_ids: number[]
+  fixed_node_ids: number[]
+  load_node_ids: number[]
+  load_values: number[]
+  objective: string // "minimize_compliance"
+  max_movement: number
+  max_iterations: number
+  convergence_tolerance: number
+}
+
+export interface ShapeOptResult {
+  optimized_nodes: Array<[number, number, number]>
+  iterations: ShapeOptIteration[]
+  converged: boolean
+  final_compliance: number
+  elapsed_time_seconds: number
+  error_message?: string
+}
+
+export interface ShapeOptIteration {
+  iteration: number
+  compliance: number
+  max_movement: number
+  node_displacements: Array<[number, number, number]>
+}
+
+/** Run shape optimization */
+export async function runShapeOptimization(config: ShapeOptConfig): Promise<ShapeOptResult> {
+  return await invoke('run_shape_optimization_v2', { config })
+}
+
+/** Export shape optimization result to STL */
+export async function exportShapeOptToStl(request: {
+  nodes: Array<[number, number, number]>
+  elements: Array<[number, number, number, number]>
+  output_path: string
+}): Promise<{ success: boolean; file_path: string; triangle_count: number }> {
+  return await invoke('export_shape_opt_to_stl', { request })
 }

@@ -12,6 +12,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/HomeView.vue')
   },
   {
+    path: '/onboarding',
+    name: 'Onboarding',
+    component: () => import('./views/OnboardingView.vue'),
+    meta: { public: true }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('./views/AuthView.vue'),
@@ -108,6 +114,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/SettingsView.vue')
   },
   {
+    path: '/plugins',
+    name: 'Plugins',
+    component: () => import('./views/PluginManager.vue')
+  },
+  {
+    path: '/developer',
+    name: 'DeveloperConsole',
+    component: () => import('./views/DeveloperConsole.vue')
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')
@@ -134,6 +150,17 @@ router.beforeEach((to, _from, next) => {
   // 检查登录状态
   const accessToken = localStorage.getItem('caelab-access-token')
   const isAuthenticated = !!accessToken
+
+  // Onboarding redirect: if authenticated user hasn't completed onboarding, redirect to /onboarding
+  if (to.path !== '/onboarding' && isAuthenticated && !localStorage.getItem('caelab-onboarding-done')) {
+    next('/onboarding')
+    return
+  }
+  // If user is trying to access onboarding but already completed it, redirect to home
+  if (to.path === '/onboarding' && localStorage.getItem('caelab-onboarding-done')) {
+    next('/')
+    return
+  }
 
   if (!isPublicRoute && !isAuthenticated) {
     // 未登录用户访问受保护路由，重定向到登录页

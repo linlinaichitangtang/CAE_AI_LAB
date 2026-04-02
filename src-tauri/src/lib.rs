@@ -1,14 +1,115 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration};
 pub mod solver;
+pub mod plugin;
 mod db;
 mod models;
+pub mod api_server;
 
 use db::Database;
+
+/// Shared state for the API server
+struct ApiServerState {
+    port: StdMutex<u16>,
+    is_running: Arc<AtomicBool>,
+    shutdown_tx: StdMutex<Option<tokio::sync::watch::Sender<bool>>>,
+}
+
+/// Start the REST API server
+#[tauri::command]
+async fn start_api_server_cmd(
+    app: tauri::AppHandle,
+    port: Option<u16>,
+    api_state: tauri::State<'_, ApiServerState>,
+    db: tauri::State<'_, Database>,
+) -> Result<serde_json::Value, String> {
+    // Check if already running
+    if api_state.is_running.load(std::sync::atomic::Ordering::Relaxed) {
+        let current_port = *api_state.port.lock().map_err(|e| e.to_string())?;
+        return Err(format!("API server is already running on port {}", current_port));
+    }
+
+    let actual_port = port.unwrap_or_else(|| *api_state.port.lock().unwrap_or_else(|e| e.into_inner()));
+    *api_state.port.lock().map_err(|e| e.to_string())? = actual_port;
+
+    // Create shutdown channel
+    let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+    *api_state.shutdown_tx.lock().map_err(|e| e.to_string())? = Some(shutdown_tx);
+
+    // Get database reference for the API server
+    let db_path = app.path().app_data_dir()
+        .expect("Failed to get app data dir")
+        .join("caelab.db");
+    let database = Database::new(db_path).map_err(|e| format!("Failed to open database for API server: {}", e))?;
+    let db_arc = Arc::new(std::sync::Mutex::new(database));
+
+    api_state.is_running.store(true, std::sync::atomic::Ordering::Relaxed);
+
+    // Spawn the API server in a background task
+    let is_running_flag = api_state.is_running.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = api_server::start_api_server(actual_port, db_arc, shutdown_rx).await {
+            tracing::error!("API server error: {}", e);
+        }
+        is_running_flag.store(false, std::sync::atomic::Ordering::Relaxed);
+    });
+
+    tracing::info!("REST API server started on port {}", actual_port);
+
+    Ok(serde_json::json!({
+        "status": "started",
+        "port": actual_port,
+        "message": format!("API server is running on http://127.0.0.1:{}", actual_port),
+        "docs_url": format!("http://127.0.0.1:{}/docs/swagger-ui", actual_port),
+    }))
+}
+
+/// Stop the REST API server
+#[tauri::command]
+async fn stop_api_server_cmd(
+    api_state: tauri::State<'_, ApiServerState>,
+) -> Result<serde_json::Value, String> {
+    if !api_state.is_running.load(std::sync::atomic::Ordering::Relaxed) {
+        return Err("API server is not running".to_string());
+    }
+
+    // Send shutdown signal
+    if let Ok(mut tx_guard) = api_state.shutdown_tx.lock() {
+        if let Some(tx) = tx_guard.take() {
+            let _ = tx.send(true);
+        }
+    }
+
+    api_state.is_running.store(false, std::sync::atomic::Ordering::Relaxed);
+
+    tracing::info!("REST API server stopped");
+
+    Ok(serde_json::json!({
+        "status": "stopped",
+        "message": "API server has been stopped",
+    }))
+}
+
+/// Get API server status
+#[tauri::command]
+async fn get_api_server_status(
+    api_state: tauri::State<'_, ApiServerState>,
+) -> Result<serde_json::Value, String> {
+    let is_running = api_state.is_running.load(std::sync::atomic::Ordering::Relaxed);
+    let port = *api_state.port.lock().map_err(|e| e.to_string())?;
+
+    Ok(serde_json::json!({
+        "is_running": is_running,
+        "port": port,
+        "docs_url": if is_running { Some(format!("http://127.0.0.1:{}/docs/swagger-ui", port)) } else { None },
+        "base_url": if is_running { Some(format!("http://127.0.0.1:{}/api/v1", port)) } else { None },
+    }))
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,7 +138,19 @@ pub fn run() {
             // Initialize global cancel flag for solver
             let cancel_flag = Arc::new(AtomicBool::new(false));
             app.manage(commands::cae_api::GlobalCancelFlag(cancel_flag));
-            
+
+            // Initialize API server state
+            app.manage(ApiServerState {
+                port: StdMutex::new(3001),
+                is_running: Arc::new(AtomicBool::new(false)),
+                shutdown_tx: StdMutex::new(None),
+            });
+
+            // Initialize plugin system state (V1.2-010)
+            let plugin_dir = app_data_dir.join("plugins");
+            std::fs::create_dir_all(&plugin_dir).ok();
+            app.manage(plugin::api::PluginState::new(plugin_dir));
+
             tracing::info!("Database initialized successfully");
             
             Ok(())
@@ -68,6 +181,8 @@ pub fn run() {
             commands::file::get_note_links,
             commands::file::get_note_backlinks,
             commands::file::delete_note_link,
+            // Knowledge graph command
+            commands::file::get_knowledge_graph,
             // Search commands
             commands::file::search_notes,
             // Embed record commands
@@ -126,6 +241,8 @@ pub fn run() {
             // Parametric analysis commands
             commands::parametric::run_parametric_scan,
             commands::parametric::run_parametric_scan_async,
+            commands::parametric::run_doe_study,
+            commands::parametric::calculate_sensitivity,
             // Transient dynamics commands
             commands::transient_dynamics::get_tutorial_examples,
             commands::transient_dynamics::generate_transient_inp_file,
@@ -170,6 +287,9 @@ pub fn run() {
             commands::optimization_commands::calculate_oc_sensitivity,
             commands::optimization_commands::generate_optimization_inp_file,
             commands::optimization_commands::generate_optimization_inp,
+            // Shape optimization commands (V1.1-006)
+            commands::optimization_commands::run_shape_optimization_v2,
+            commands::optimization_commands::export_shape_opt_to_stl,
             // Fatigue analysis commands
             commands::fatigue::fatigue_analysis,
             commands::fatigue::rainflow_analysis,
@@ -224,6 +344,8 @@ pub fn run() {
             // STEP/IGES file import commands
             commands::step_import::import_step_file,
             commands::step_import::check_step_import_available,
+            // Abaqus INP import commands (V1.2-009)
+            commands::step_import::import_abaqus_inp,
             // Auth commands
             commands::auth::register,
             commands::auth::login,
@@ -238,6 +360,25 @@ pub fn run() {
             commands::auth::send_verification_code,
             commands::auth::verify_code,
             commands::auth::verify_access_token_cmd,
+            // Collaboration commands
+            commands::collaboration::share_project,
+            commands::collaboration::list_project_shares,
+            commands::collaboration::remove_project_share,
+            commands::collaboration::update_share_permission,
+            commands::collaboration::add_comment,
+            commands::collaboration::list_comments,
+            commands::collaboration::update_comment,
+            commands::collaboration::delete_comment,
+            commands::collaboration::resolve_comment,
+            // REST API server commands
+            start_api_server_cmd,
+            stop_api_server_cmd,
+            get_api_server_status,
+            // Plugin system commands (V1.2-010)
+            plugin::api::list_plugins,
+            plugin::api::load_plugin,
+            plugin::api::unload_plugin,
+            plugin::api::get_plugin_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

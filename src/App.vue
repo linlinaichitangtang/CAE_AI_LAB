@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import TopBar from './components/layout/TopBar.vue'
 import LeftNav from './components/layout/LeftNav.vue'
 import RightPanel from './components/layout/RightPanel.vue'
@@ -87,6 +87,7 @@ import SimulationView from './views/SimulationView.vue'
 import { usePlatform } from './composables/usePlatform'
 import { useOrientation } from './composables/useOrientation'
 import { useAuthStore } from './stores/authStore'
+import { useHotkeys } from './composables/useHotkeys'
 
 // Platform detection for responsive layout
 const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
@@ -96,6 +97,10 @@ const { isPortrait, isLandscape } = useOrientation()
 
 // Auth store
 const authStore = useAuthStore()
+
+// V1.1-011: Hotkeys
+const { registerHotkey, setActiveContext } = useHotkeys()
+const router = useRouter()
 
 // Layout mode: 'focus' | 'side' | 'tri' | 'quad'
 const currentLayout = ref<string>(
@@ -181,14 +186,94 @@ function toggleRightPanel() {
   showRightPanel.value = !showRightPanel.value
 }
 
-// Watch for route changes to sync layout
-watch(route, () => {
-  // Could sync layout based on route if needed
+// Route-to-hotkey-context mapping
+const routeContextMap: Record<string, string> = {
+  '/notes': 'notes',
+  '/modeling': 'modeling',
+  '/code': 'code',
+  '/simulation': 'simulation',
+  '/fatigue': 'simulation',
+  '/transient': 'simulation',
+  '/explicit': 'simulation',
+  '/cfd': 'simulation',
+  '/thermal': 'simulation',
+  '/topology': 'simulation',
+}
+
+// Watch for route changes to update hotkey context
+watch(route, (newRoute) => {
+  const context = routeContextMap[newRoute.path] || 'global'
+  setActiveContext(context)
 })
 
-// Initialize auth store from localStorage
+// Register global hotkeys
 onMounted(() => {
   authStore.init()
+
+  // Global: Ctrl+S -> Save (prevent default browser save)
+  registerHotkey({
+    id: 'global.save',
+    keys: 'ctrl+s',
+    description: '保存',
+    category: 'global',
+    action: () => {
+      // Dispatch a custom event that views can listen to
+      window.dispatchEvent(new CustomEvent('caelab:save'))
+    },
+    enabled: true,
+  })
+
+  // Global: Ctrl+, -> Settings
+  registerHotkey({
+    id: 'global.settings',
+    keys: 'ctrl+,',
+    description: '设置',
+    category: 'global',
+    action: () => {
+      router.push('/settings')
+    },
+    enabled: true,
+  })
+
+  // Global: Ctrl+K -> Search
+  registerHotkey({
+    id: 'global.search',
+    keys: 'ctrl+k',
+    description: '搜索',
+    category: 'global',
+    action: () => {
+      window.dispatchEvent(new CustomEvent('caelab:search'))
+    },
+    enabled: true,
+  })
+
+  // Global: F1 -> Help
+  registerHotkey({
+    id: 'global.help',
+    keys: 'f1',
+    description: '帮助',
+    category: 'global',
+    action: () => {
+      router.push('/help')
+    },
+    enabled: true,
+  })
+
+  // Global: Escape -> Close panel
+  registerHotkey({
+    id: 'global.close-panel',
+    keys: 'escape',
+    description: '关闭面板/弹窗',
+    category: 'global',
+    action: () => {
+      window.dispatchEvent(new CustomEvent('caelab:close-panel'))
+    },
+    enabled: true,
+  })
+
+  // Set initial context based on current route
+  const initialContext = routeContextMap[route.path] || 'global'
+  setActiveContext(initialContext)
 })
 </script>
 
