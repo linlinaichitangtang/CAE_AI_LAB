@@ -268,6 +268,72 @@ const DftIcon = {
   ])
 }
 
+const OntologyIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' }),
+    h('path', { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' }),
+    h('line', { x1: '8', y1: '7', x2: '16', y2: '7' }),
+    h('line', { x1: '8', y1: '11', x2: '14', y2: '11' })
+  ])
+}
+
+const CoordMapIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '10' }),
+    h('line', { x1: '2', y1: '12', x2: '22', y2: '12' }),
+    h('line', { x1: '12', y1: '2', x2: '12', y2: '22' }),
+    h('path', { d: 'M12 8l4 4-4 4' })
+  ])
+}
+
+const CoarseGrainIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '6', cy: '6', r: '1.5' }),
+    h('circle', { cx: '12', cy: '4', r: '1.5' }),
+    h('circle', { cx: '18', cy: '7', r: '1.5' }),
+    h('circle', { cx: '8', cy: '12', r: '1.5' }),
+    h('circle', { cx: '16', cy: '13', r: '1.5' }),
+    h('circle', { cx: '5', cy: '18', r: '1.5' }),
+    h('circle', { cx: '14', cy: '19', r: '1.5' }),
+    h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', strokeDasharray: '3 3' })
+  ])
+}
+
+const ErrorTrackIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M22 12h-4l-3 9L9 3l-3 9H2' }),
+    h('line', { x1: '18', y1: '2', x2: '18', y2: '6' }),
+    h('line', { x1: '16', y1: '4', x2: '20', y2: '4' })
+  ])
+}
+
+const BenchmarkIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 15l-2 5l2-1l2 1l-2-5z' }),
+    h('circle', { cx: '12', cy: '9', r: '6' }),
+    h('path', { d: 'M9 9l2 2l4-4' })
+  ])
+}
+
+const AuditIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }),
+    h('path', { d: 'M3 9h18' }),
+    h('path', { d: 'M9 21V9' }),
+    h('circle', { cx: '15', cy: '15', r: '2' })
+  ])
+}
+
+const CrossScaleIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '8', cy: '8', r: '3' }),
+    h('circle', { cx: '16', cy: '16', r: '3' }),
+    h('line', { x1: '10.5', y1: '10.5', x2: '13.5', y2: '13.5' }),
+    h('circle', { cx: '8', cy: '8', r: '6', strokeDasharray: '2 2' }),
+    h('circle', { cx: '16', cy: '16', r: '6', strokeDasharray: '2 2' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -308,6 +374,13 @@ const mainNavItems: Array<{
   { path: '/atom-builder', icon: AtomIcon, label: '原子建模' },
   { path: '/phase-field', icon: PhaseFieldIcon, label: '相场' },
   { path: '/dft-input', icon: DftIcon, label: 'DFT' },
+  { path: '/ontology', icon: OntologyIcon, label: '本体' },
+  { path: '/coordinate-mapping', icon: CoordMapIcon, label: '坐标映射' },
+  { path: '/coarse-graining', icon: CoarseGrainIcon, label: '粗粒化' },
+  { path: '/error-tracking', icon: ErrorTrackIcon, label: '误差追踪' },
+  { path: '/benchmark', icon: BenchmarkIcon, label: '算例库' },
+  { path: '/audit-log', icon: AuditIcon, label: '审计' },
+  { path: '/cross-scale-viz', icon: CrossScaleIcon, label: '跨尺度可视化' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

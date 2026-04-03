@@ -7,6 +7,28 @@
 
 ---
 
+## [V1.8-dev] - 2026-04-03
+
+### 新增
+
+- **V1.8-001 多尺度物理量本体库**：新增 `ontology.ts` API + `OntologyView.vue` 视图，50+ 物理量定义，SI/原子单位/cgs 自动转换，分类搜索，批量换算
+- **V1.8-002 跨尺度坐标映射引擎**：新增 `coordinateMapping.ts` API + `CoordinateMappingView.vue` 视图，MD 原子盒 ↔ 相场网格 ↔ FE 网格自动对齐，晶向/原点/周期性边界映射
+- **V1.8-003 粗粒化策略库**：新增 `coarseGraining.ts` API + `CoarseGrainingView.vue` 视图，QC/MQC/径向平均/傅里叶滤波/ML映射/Voronoi 6 种方法，自动推荐
+- **V1.8-004 误差传播追踪框架**：新增 `errorTracking.ts` API + `ErrorTrackingView.vue` 视图，每步变换记录 Δpropagation，累积不确定度，蒙特卡洛采样，灵敏度分析
+- **V1.8-005 多尺度标准算例库**：新增 `benchmark.ts` API + `BenchmarkView.vue` 视图，10+ 已验证算例（凝固/相变/断裂/蠕变/扩散/弹性/热学），含 DFT/MD/相场/FE 四级数据
+- **V1.8-006 多尺度回归测试 CI**：新增 `regressionCI.ts` API + `RegressionCIView.vue` 视图，自动跑标准算例，误差超标阻断，Slack/邮件/Webhook 通知
+- **V1.8-007 仿真结果审计日志**：新增 `auditLog.ts` API + `AuditLogView.vue` 视图，hash chain 不可篡改，可导出 ISO 9001/AS9100 审计报告
+- **V1.8-008 跨尺度数据可视化映射**：新增 `crossScaleViz.ts` API + `CrossScaleVizView.vue` 视图，原子颜色映射到场变量，相场浓度云图叠加原子轨迹，尺度桥接动画
+
+### 变更
+
+- **路由**：新增 8 条路由（`/ontology`、`/coordinate-mapping`、`/coarse-graining`、`/error-tracking`、`/benchmark`、`/regression-ci`、`/audit-log`、`/cross-scale-viz`）
+- **导航**：左侧导航栏新增 7 个模块入口（本体、坐标映射、粗粒化、误差追踪、算例库、审计、跨尺度可视化）
+- **国际化**：中英文语言包新增 V1.8 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.7-dev] - 2026-04-03
 
 ### 新增

@@ -274,6 +274,46 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/DftBridgeView.vue')
   },
   {
+    path: '/ontology',
+    name: 'Ontology',
+    component: () => import('./views/OntologyView.vue')
+  },
+  {
+    path: '/coordinate-mapping',
+    name: 'CoordinateMapping',
+    component: () => import('./views/CoordinateMappingView.vue')
+  },
+  {
+    path: '/coarse-graining',
+    name: 'CoarseGraining',
+    component: () => import('./views/CoarseGrainingView.vue')
+  },
+  {
+    path: '/error-tracking',
+    name: 'ErrorTracking',
+    component: () => import('./views/ErrorTrackingView.vue')
+  },
+  {
+    path: '/benchmark',
+    name: 'Benchmark',
+    component: () => import('./views/BenchmarkView.vue')
+  },
+  {
+    path: '/regression-ci',
+    name: 'RegressionCI',
+    component: () => import('./views/RegressionCIView.vue')
+  },
+  {
+    path: '/audit-log',
+    name: 'AuditLog',
+    component: () => import('./views/AuditLogView.vue')
+  },
+  {
+    path: '/cross-scale-viz',
+    name: 'CrossScaleViz',
+    component: () => import('./views/CrossScaleVizView.vue')
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')
@@ -328,7 +368,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge', '/dft-input', '/dft-task', '/dft-postprocess', '/dft-bridge']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge', '/dft-input', '/dft-task', '/dft-postprocess', '/dft-bridge', '/ontology', '/coordinate-mapping', '/coarse-graining', '/error-tracking', '/benchmark', '/regression-ci', '/audit-log', '/cross-scale-viz']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

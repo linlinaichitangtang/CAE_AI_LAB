@@ -381,3 +381,14 @@ export interface CodeOutput {
 export async function executeCode(language: string, code: string, workingDir?: string): Promise<CodeOutput> {
   return invoke<CodeOutput>('execute_code', { language, code, workingDir: workingDir || null })
 }
+
+// ============ V1.8 多尺度数据管理与验证 API ============
+
+// V1.8-001: 多尺度物理量本体库
+export * from './ontology'
+
+// V1.8-002: 跨尺度坐标映射引擎
+export * from './coordinateMapping'
+
+// V1.8-003: 粗粒化策略库
+export * from './coarseGraining'
