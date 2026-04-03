@@ -1,9 +1,7 @@
 use crate::plugin::interface::PluginInfo;
 use crate::plugin::manager::PluginManager;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::State;
 
 /// 插件系统状态（由 Tauri 管理）
 pub struct PluginState {

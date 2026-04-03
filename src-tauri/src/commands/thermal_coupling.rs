@@ -862,7 +862,7 @@ pub fn run_bidirectional_thermal_structural(
     // Thermal conductivity for simplified heat solve
     let k = mat.thermal_conductivity;
     let alpha = mat.expansion_coefficient;
-    let E = mat.youngs_modulus;
+    let e = mat.youngs_modulus;
     let nu = mat.poisson_ratio;
 
     // Compute mesh dimensions
@@ -935,8 +935,8 @@ pub fn run_bidirectional_thermal_structural(
 
         // Compute max temperature
         let max_temp = temperatures.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let min_temp = temperatures.iter().cloned().fold(f64::INFINITY, f64::min);
-        let avg_temp = temperatures.iter().sum::<f64>() / num_nodes as f64;
+        let _min_temp = temperatures.iter().cloned().fold(f64::INFINITY, f64::min);
+        let _avg_temp = temperatures.iter().sum::<f64>() / num_nodes as f64;
 
         // ---- Step 2: Structural analysis (simplified thermo-elastic) ----
         // Thermal strain: eps_th = alpha * (T - T_ref)
@@ -965,14 +965,14 @@ pub fn run_bidirectional_thermal_structural(
             max_displacement = max_displacement.max(disp);
 
             // Von Mises stress (simplified for thermo-elastic)
-            let stress = E * alpha * delta_t.abs() / (1.0 - 2.0 * nu) * 0.577; // 1/sqrt(3) factor
+            let stress = e * alpha * delta_t.abs() / (1.0 - 2.0 * nu) * 0.577; // 1/sqrt(3) factor
             max_stress = max_stress.max(stress);
         }
 
         // ---- Step 3: Geometry update (deformation affects thermal BCs) ----
         // Update node positions based on displacements
         // For staggered scheme, the geometry change feeds back into the thermal solve
-        let geometry_factor = 1.0 + (max_displacement / (lx + ly + lz).max(1e-10)).min(0.05);
+        let _geometry_factor = 1.0 + (max_displacement / (lx + ly + lz).max(1e-10)).min(0.05);
 
         // ---- Step 4: Convergence check ----
         let temp_change = if prev_max_temperature.abs() > 1e-10 {

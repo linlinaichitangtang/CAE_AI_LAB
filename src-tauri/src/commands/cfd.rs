@@ -1371,13 +1371,13 @@ pub fn run_conjugate_heat_transfer(
     let rho_f = fluid.density;
     let mu = fluid.viscosity;
     let cp_f = fluid.specific_heat;
-    let Pr = fluid.prandtl_number.unwrap_or(0.71);
+    let pr = fluid.prandtl_number.unwrap_or(0.71);
 
     // Compute geometry
     let (base_area, channel_length, hydraulic_diameter) = if let Some(hs) = heat_sink {
         let base_area = hs.base_width * hs.base_length;
         let fin_spacing = if hs.fin_count > 1 {
-            (hs.base_width - hs.fin_thickness * hs.fin_count as f64) / (hs.fin_count as f64 - 1)
+            (hs.base_width as f64 - hs.fin_thickness * hs.fin_count as f64) / (hs.fin_count as f64 - 1.0)
         } else {
             hs.base_width
         };
@@ -1392,56 +1392,52 @@ pub fn run_conjugate_heat_transfer(
     };
 
     // Reynolds number
-    let Re = rho_f * config.inlet_velocity * hydraulic_diameter / mu;
+    let re = rho_f * config.inlet_velocity * hydraulic_diameter / mu;
 
     // Nusselt number (Dittus-Boelter for turbulent, or developing flow correlation)
-    let Nu = if Re > 2300.0 {
-        // Turbulent: Nu = 0.023 * Re^0.8 * Pr^0.4
-        0.023 * Re.powf(0.8) * Pr.powf(0.4)
+    let nu = if re > 2300.0 {
+        0.023 * re.powf(0.8) * pr.powf(0.4)
     } else {
-        // Laminar developing flow: Nu ~ 7.54 for uniform heat flux
-        let Gz = Re * Pr * (hydraulic_diameter / channel_length).max(1e-10);
-        if Gz > 10.0 {
-            1.953 * Gz.powf(1.0 / 3.0)
+        let gz = re * pr * (hydraulic_diameter / channel_length).max(1e-10);
+        if gz > 10.0 {
+            1.953 * gz.powf(1.0 / 3.0)
         } else {
             7.54
         }
     };
 
     // Heat transfer coefficient
-    let h_conv = Nu * k_fluid / hydraulic_diameter;
+    let h_conv = nu * k_fluid / hydraulic_diameter;
 
     // Friction factor and pressure drop
-    let f = if Re > 2300.0 {
-        // Turbulent: Blasius
-        0.316 * Re.powf(-0.25)
+    let f = if re > 2300.0 {
+        0.316 * re.powf(-0.25)
     } else {
-        // Laminar: f = 64/Re
-        64.0 / Re.max(1.0)
+        64.0 / re.max(1.0)
     };
     let pressure_drop = f * (channel_length / hydraulic_diameter) * 0.5 * rho_f * config.inlet_velocity * config.inlet_velocity;
 
     // Thermal resistance network
     // R_total = R_conv + R_cond + R_spreading
-    let R_conv = 1.0 / (h_conv * base_area);
+    let r_conv = 1.0 / (h_conv * base_area);
     let base_thickness = heat_sink.map(|hs| hs.base_thickness).unwrap_or(0.005);
-    let R_cond = base_thickness / (k_solid * base_area);
-    let R_total = R_conv + R_cond;
+    let r_cond = base_thickness / (k_solid * base_area);
+    let r_total = r_conv + r_cond;
 
     // Temperature distribution
-    let T_ambient = config.ambient_temperature;
-    let T_inlet = config.inlet_temperature;
-    let Q = config.heat_source_power;
+    let _t_ambient = config.ambient_temperature;
+    let t_inlet = config.inlet_temperature;
+    let q = config.heat_source_power;
 
-    let T_base = T_inlet + Q * R_total;
-    let T_max = T_base;
-    let T_min = T_inlet;
-    let T_avg = (T_max + T_min) / 2.0;
+    let t_base = t_inlet + q * r_total;
+    let t_max = t_base;
+    let t_min = t_inlet;
+    let t_avg = (t_max + t_min) / 2.0;
 
     // Heat exchanger effectiveness
-    let C_min = rho_f * config.inlet_velocity * base_area * cp_f; // W/K
-    let Q_max = C_min * (T_base - T_inlet);
-    let effectiveness = if Q_max > 1e-10 { Q / Q_max } else { 0.0 };
+    let c_min = rho_f * config.inlet_velocity * base_area * cp_f;
+    let q_max = c_min * (t_base - t_inlet);
+    let effectiveness = if q_max > 1e-10 { q / q_max } else { 0.0 };
 
     // Generate heat flux distribution
     let mut heat_flux_distribution = Vec::new();
@@ -1457,8 +1453,8 @@ pub fn run_conjugate_heat_transfer(
                 let z = (iz as f64 + 0.5) / nz as f64;
 
                 // Temperature varies along flow direction (x) and height (z)
-                let T_local = T_inlet + (T_base - T_inlet) * (1.0 - (1.0 - x).exp()) * (1.0 - z * 0.3);
-                let q_local = h_conv * (T_local - T_inlet);
+                let t_local = t_inlet + (t_base - t_inlet) * (1.0 - (1.0 - x).exp()) * (1.0 - z * 0.3);
+                let q_local = h_conv * (t_local - t_inlet);
 
                 let surface_type = if iz == 0 {
                     "fluid_solid_interface"
@@ -1475,7 +1471,7 @@ pub fn run_conjugate_heat_transfer(
                     y: y * 0.05,
                     z: z * (heat_sink.map(|hs| hs.fin_height).unwrap_or(0.05)),
                     heat_flux: q_local,
-                    temperature: T_local,
+                    temperature: t_local,
                     surface_type: surface_type.to_string(),
                 });
             }
@@ -1484,19 +1480,19 @@ pub fn run_conjugate_heat_transfer(
 
     tracing::info!(
         "CHT complete: T_max={:.2}K, T_min={:.2}K, R_th={:.4}K/W, dP={:.2}Pa, h={:.1}W/(m2.K), Nu={:.2}",
-        T_max, T_min, R_total, pressure_drop, h_conv, Nu
+        t_max, t_min, r_total, pressure_drop, h_conv, nu
     );
 
     Ok(CHTResult {
-        max_temperature: T_max,
-        min_temperature: T_min,
-        avg_temperature: T_avg,
+        max_temperature: t_max,
+        min_temperature: t_min,
+        avg_temperature: t_avg,
         heat_flux_distribution,
         pressure_drop,
-        thermal_resistance: R_total,
+        thermal_resistance: r_total,
         heat_transfer_coefficient: h_conv,
         effectiveness,
-        nusselt_number: Nu,
+        nusselt_number: nu,
     })
 }
 
@@ -1518,22 +1514,22 @@ pub fn optimize_heat_sink(
     let mut history = Vec::new();
     let mut best_objective = f64::INFINITY;
     let mut best_params: Option<HeatSinkParams> = None;
-    let mut best_Rth = 0.0_f64;
-    let mut best_dP = 0.0_f64;
+    let mut best_rth = 0.0_f64;
+    let mut best_dp = 0.0_f64;
     let mut best_h = 0.0_f64;
-    let mut best_Tmax = 0.0_f64;
+    let mut best_tmax = 0.0_f64;
 
     // Fluid properties (air)
-    let rho_f = 1.225;
-    let mu = 1.81e-5;
-    let k_f = 0.026;
-    let cp_f = 1005.0;
-    let Pr = 0.71;
-    let k_s = 167.0; // Aluminum
+    let rho_f: f64 = 1.225;
+    let mu: f64 = 1.81e-5;
+    let k_f: f64 = 0.026;
+    let _cp_f: f64 = 1005.0;
+    let pr: f64 = 0.71;
+    let k_s: f64 = 167.0; // Aluminum
 
-    let Q = config.heat_source_power;
-    let T_in = config.inlet_temperature;
-    let V_in = config.inlet_velocity;
+    let q = config.heat_source_power;
+    let t_in = config.inlet_temperature;
+    let v_in = config.inlet_velocity;
 
     let n_iter = config.optimization_iterations.max(10).min(200);
 
@@ -1570,7 +1566,7 @@ pub fn optimize_heat_sink(
 
         // Compute thermal and hydraulic performance
         let fin_spacing = if fin_count > 1 {
-            (config.base_width - fin_thickness * fin_count as f64) / (fin_count as f64 - 1)
+            (config.base_width as f64 - fin_thickness * fin_count as f64) / (fin_count as f64 - 1.0)
         } else {
             config.base_width
         };
@@ -1585,57 +1581,57 @@ pub fn optimize_heat_sink(
 
         // Flow velocity in channels (continuity)
         let total_flow_area = fin_spacing * fin_height * (fin_count as f64);
-        let V_channel = if total_flow_area > 1e-10 {
-            V_in * config.base_width * fin_height / total_flow_area
+        let v_channel = if total_flow_area > 1e-10 {
+            v_in * config.base_width * fin_height / total_flow_area
         } else {
-            V_in
+            v_in
         };
 
-        let Re = rho_f * V_channel * dh / mu;
-        let Nu = if Re > 2300.0 {
-            0.023 * Re.powf(0.8) * Pr.powf(0.4)
+        let re = rho_f * v_channel * dh / mu;
+        let nu = if re > 2300.0 {
+            0.023 * re.powf(0.8) * pr.powf(0.4)
         } else {
-            let Gz = Re * Pr * (dh / fin_height.max(1e-10));
-            if Gz > 10.0 { 1.953 * Gz.powf(1.0 / 3.0) } else { 7.54 }
+            let gz = re * pr * (dh / fin_height.max(1e-10));
+            if gz > 10.0 { 1.953 * gz.powf(1.0 / 3.0) } else { 7.54 }
         };
 
-        let h_conv = Nu * k_f / dh;
+        let h_conv = nu * k_f / dh;
 
         // Total wetted area
-        let A_fin = 2.0 * fin_height * config.base_length * fin_count as f64;
-        let A_base = config.base_width * config.base_length;
-        let A_total = A_fin + A_base;
+        let a_fin = 2.0 * fin_height * config.base_length * fin_count as f64;
+        let a_base = config.base_width * config.base_length;
+        let a_total = a_fin + a_base;
 
         // Thermal resistance
-        let R_conv = 1.0 / (h_conv * A_total);
-        let R_cond = base_thickness / (k_s * A_base);
-        let R_fin = if fin_height > 0.0 {
+        let r_conv = 1.0 / (h_conv * a_total);
+        let r_cond = base_thickness / (k_s * a_base);
+        let r_fin = if fin_height > 0.0 {
             // Fin efficiency
             let m = (2.0 * h_conv / (k_s * fin_thickness)).sqrt();
-            let mL = m * fin_height;
-            let eta_fin = if mL > 0.01 {
-                mL.tanh() / mL
+            let m_l = m * fin_height;
+            let eta_fin = if m_l > 0.01 {
+                m_l.tanh() / m_l
             } else {
                 1.0
             };
-            1.0 / (h_conv * A_fin * eta_fin)
+            1.0 / (h_conv * a_fin * eta_fin)
         } else {
             0.0
         };
-        let R_total = R_conv.max(R_fin) + R_cond;
+        let r_total = r_conv.max(r_fin) + r_cond;
 
         // Pressure drop
-        let f = if Re > 2300.0 { 0.316 * Re.powf(-0.25) } else { 64.0 / Re.max(1.0) };
-        let dP = f * (fin_height / dh) * 0.5 * rho_f * V_channel * V_channel;
+        let f = if re > 2300.0 { 0.316 * re.powf(-0.25) } else { 64.0 / re.max(1.0) };
+        let dp = f * (fin_height / dh) * 0.5 * rho_f * v_channel * v_channel;
 
         // Check pressure drop constraint
-        if dP > config.max_pressure_drop * 1.01 {
+        if dp > config.max_pressure_drop * 1.01 {
             continue;
         }
 
         // Objective: minimize thermal resistance (weighted with constraint violations)
-        let dP_penalty = if dP > config.max_pressure_drop {
-            1000.0 * (dP / config.max_pressure_drop - 1.0)
+        let dp_penalty = if dp > config.max_pressure_drop {
+            1000.0 * (dp / config.max_pressure_drop - 1.0)
         } else {
             0.0
         };
@@ -1645,9 +1641,9 @@ pub fn optimize_heat_sink(
             0.0
         };
 
-        let objective = R_total + dP_penalty + vol_penalty;
+        let objective = r_total + dp_penalty + vol_penalty;
 
-        let T_max = T_in + Q * R_total;
+        let t_max = t_in + q * r_total;
 
         history.push(HeatSinkOptIteration {
             iteration: iter + 1,
@@ -1655,17 +1651,17 @@ pub fn optimize_heat_sink(
             fin_height,
             fin_thickness,
             base_thickness,
-            thermal_resistance: R_total,
-            pressure_drop: dP,
+            thermal_resistance: r_total,
+            pressure_drop: dp,
             objective_value: objective,
         });
 
         if objective < best_objective {
             best_objective = objective;
-            best_Rth = R_total;
-            best_dP = dP;
+            best_rth = r_total;
+            best_dp = dp;
             best_h = h_conv;
-            best_Tmax = T_max;
+            best_tmax = t_max;
             best_params = Some(HeatSinkParams {
                 base_width: config.base_width,
                 base_length: config.base_length,
@@ -1682,16 +1678,19 @@ pub fn optimize_heat_sink(
 
     tracing::info!(
         "Optimization complete: R_th={:.4}K/W, dP={:.2}Pa, fins={}, h={:.1}W/(m2.K)",
-        best_Rth, best_dP, optimal.fin_count, best_h
+        best_rth, best_dp, optimal.fin_count, best_h
     );
+
+    let volume = optimal.base_thickness * optimal.base_width * optimal.base_length
+        + optimal.fin_height * optimal.fin_thickness * optimal.fin_count as f64 * optimal.base_length;
 
     Ok(HeatSinkOptResult {
         optimal_params: optimal,
-        thermal_resistance: best_Rth,
-        pressure_drop: best_dP,
-        max_temperature: best_Tmax,
+        thermal_resistance: best_rth,
+        pressure_drop: best_dp,
+        max_temperature: best_tmax,
         heat_transfer_coefficient: best_h,
-        volume: optimal.base_thickness * optimal.base_width * optimal.base_length + optimal.fin_height * optimal.fin_thickness * optimal.fin_count as f64 * optimal.base_length,
+        volume,
         optimization_history: history,
     })
 }

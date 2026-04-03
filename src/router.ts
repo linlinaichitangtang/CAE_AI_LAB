@@ -344,6 +344,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/MultiscaleWorkspaceView.vue')
   },
   {
+    path: '/solver-installer',
+    name: 'SolverInstaller',
+    component: () => import('./views/SolverInstallerView.vue'),
+    meta: { title: '求解器安装' }
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')

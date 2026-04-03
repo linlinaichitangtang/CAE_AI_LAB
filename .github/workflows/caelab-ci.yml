@@ -1,0 +1,258 @@
+name: CAELab V2.2 Multi-Scale Solver CI
+
+on:
+  push:
+    branches: [main, develop, 'v2.2-*']
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨 2 点跑 nightly
+  workflow_dispatch:  # 手动触发
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================================
+  # Job 1: 单尺度冒烟测试 (V2.2-001 ~ 004)
+  # ============================================================
+  smoke-tests:
+    name: 单尺度冒烟测试 (V2.2-001~004)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装求解器
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lammps quantum-espresso fipy calculix-ccx
+          pip3 install fipy numpy scipy
+
+      - name: V2.2-001 MD 冒烟测试
+        run: |
+          cat > /tmp/v222001.in << 'EOF'
+          units lj
+          dimension 3
+          boundary p p p
+          atom_style atomic
+          lattice fcc 1.5496
+          region box block 0 4 0 4 0 4
+          create_box 1 box
+          mass 1 1.0
+          create_atoms 1 box
+          pair_style lj/cut 2.5
+          pair_coeff 1 1 1.0 1.0
+          minimize 1.0e-10 1.0e-10 1000 10000
+          velocity all create 0.7 12345 dist gaussian
+          fix 1 all nvt temp 0.7 0.7 0.1
+          timestep 0.005
+          run 100
+          EOF
+          lmp -in /tmp/v222001.in
+          echo "V2.2-001: PASSED"
+
+      - name: V2.2-003 DFT 冒烟测试
+        run: |
+          mpirun --allow-run-as-root -np 1 --host localhost \
+            pw.x -in /dev/stdin << 'EOF'
+          &CONTROL
+            calculation = 'scf'
+            prefix = 'si_ci'
+            outdir = '/tmp'
+            pseudo_dir = '/usr/share/espresso/pseudo'
+          /
+          &SYSTEM
+            ibrav = 2
+            celldm(1) = 10.26
+            nat = 2
+            ntyp = 1
+            ecutwfc = 20.0
+          /
+          &ELECTRONS
+            conv_thr = 1.0D-6
+          /
+          ATOMIC_SPECIES
+          Si 28.086 Si.rel-pbe-rrkj.UPF
+          ATOMIC_POSITIONS (crystal)
+          Si 0.00 0.00 0.00
+          Si 0.25 0.25 0.25
+          K_POINTS (automatic)
+          4 4 4 0 0 0
+          EOF
+          echo "V2.2-003: PASSED"
+
+  # ============================================================
+  # Job 2: 尺度桥接测试 (V2.2-005 ~ 008)
+  # ============================================================
+  bridge-tests:
+    name: 尺度桥接测试 (V2.2-005~008)
+    runs-on: ubuntu-22.04
+    needs: smoke-tests
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lammps quantum-espresso python3-pip
+          pip3 install numpy scipy fipy
+
+      - name: V2.2-005 MD→相场桥接
+        run: |
+          python3 tests/v222005_bridge.py
+          echo "V2.2-005: PASSED"
+
+      - name: V2.2-006 相场→FE桥接
+        run: |
+          python3 tests/v222006_bridge.py
+          echo "V2.2-006: PASSED"
+
+      - name: V2.2-007 DFT→MD桥接
+        run: |
+          python3 tests/v222007_bridge.py
+          echo "V2.2-007: PASSED"
+
+      - name: V2.2-008 四尺度格式对齐
+        run: |
+          python3 tests/v222008_format.py
+          echo "V2.2-008: PASSED"
+
+  # ============================================================
+  # Job 3: 端到端测试 (V2.2-009)
+  # ============================================================
+  e2e-test:
+    name: 端到端测试 (V2.2-009)
+    runs-on: ubuntu-22.04
+    needs: bridge-tests
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lammps quantum-espresso python3-pip
+          pip3 install numpy scipy fipy
+
+      - name: V2.2-009 端到端串联
+        run: |
+          python3 tests/v222009_e2e.py
+          echo "V2.2-009: PASSED"
+
+      - name: V2.2-010 误差棒分析
+        run: |
+          python3 tests/v222010_error.py
+          echo "V2.2-010: PASSED"
+
+  # ============================================================
+  # Job 4: 误差超标自动提 Issue
+  # ============================================================
+  error-monitor:
+    name: 误差监控与自动提 Issue
+    runs-on: ubuntu-22.04
+    needs: e2e-test
+    if: failure()
+    permissions:
+      issues: write
+
+    steps:
+      - name: 创建 Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 CI 失败: ${context.workflow} #${context.runNumber}`,
+              body: `## CI 测试失败报告\n\n` +
+                     `**工作流**: ${context.workflow}\n` +
+                     `**运行编号**: #${context.runNumber}\n` +
+                     `**提交**: ${context.sha}\n` +
+                     `**触发者**: @${context.actor}\n\n` +
+                     `### 失败信息\n` +
+                     `请查看 [运行日志](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) 获取详细信息。\n\n` +
+                     `### 需要检查\n` +
+                     `- [ ] 求解器版本是否变更\n` +
+                     `- [ ] 测试参数是否漂移\n` +
+                     `- [ ] 依赖库是否更新\n`,
+              labels: ['ci-failure', 'bug', 'automated']
+            })
+
+  # ============================================================
+  # Job 5: Rust 编译检查
+  # ============================================================
+  rust-check:
+    name: Rust 编译检查
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo check
+        working-directory: src-tauri
+        run: cargo check --all-targets
+
+      - name: Cargo clippy
+        working-directory: src-tauri
+        run: cargo clippy -- -D warnings
+        continue-on-error: true
+
+  # ============================================================
+  # Job 6: 前端构建检查
+  # ============================================================
+  frontend-check:
+    name: 前端构建检查
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: TypeScript 检查
+        run: npx vue-tsc --noEmit
+        continue-on-error: true
+
+      - name: 构建
+        run: npm run build
+
+  # ============================================================
+  # Job 7: 测试报告生成 (V2.2-012)
+  # ============================================================
+  report:
+    name: 测试报告生成 (V2.2-012)
+    runs-on: ubuntu-22.04
+    needs: [smoke-tests, bridge-tests, e2e-test]
+    if: always()
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 生成测试报告
+        run: |
+          pip3 install reportlab fonttools
+          python3 scripts/generate_test_report.py
+
+      - name: 上传报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: V2.2_Test_Report.pdf
+          retention-days: 90

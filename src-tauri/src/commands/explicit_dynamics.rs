@@ -1264,9 +1264,9 @@ pub fn run_explicit_solver(config: ExplicitSolverConfig) -> Result<ExplicitSolve
     let total_final = final_ke + final_ie;
     let total_initial = initial_ke;
     let energy_error = if total_initial.abs() > 1e-10 {
-        ((total_final - total_initial).abs() / total_initial * 100.0)
+        (total_final - total_initial).abs() / total_initial * 100.0
     } else if total_final.abs() > 1e-10 {
-        ((total_final - total_initial).abs() / total_final * 100.0)
+        (total_final - total_initial).abs() / total_final * 100.0
     } else {
         0.0
     };

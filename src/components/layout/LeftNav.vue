@@ -397,6 +397,81 @@ const WorkspaceIcon = {
   ])
 }
 
+const WfEditorIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '5', cy: '6', r: '3' }),
+    h('circle', { cx: '19', cy: '6', r: '3' }),
+    h('circle', { cx: '12', cy: '18', r: '3' }),
+    h('path', { d: 'M8 6h8' }),
+    h('path', { d: 'M7 8.5l4 7.5' }),
+    h('path', { d: 'M17 8.5l-4 7.5' })
+  ])
+}
+
+const DataTransferIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 3v13' }),
+    h('polyline', { points: '8 13 12 17 16 13' }),
+    h('path', { d: 'M20 17H4' }),
+    h('rect', { x: '3', y: '19', width: '18', height: '2', rx: '1' })
+  ])
+}
+
+const SchedulerIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '10' }),
+    h('polyline', { points: '12 6 12 12 16 14' }),
+    h('path', { d: 'M17 2l3 3-3 3' }),
+    h('path', { d: 'M20 5h-4' })
+  ])
+}
+
+const ParamMapIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M4 7h4' }),
+    h('path', { d: 'M16 7h4' }),
+    h('path', { d: 'M4 17h4' }),
+    h('path', { d: 'M16 17h4' }),
+    h('path', { d: 'M8 7l8 10' }),
+    h('path', { d: 'M8 17l8-10' })
+  ])
+}
+
+const PresetIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '3', y: '3', width: '7', height: '7' }),
+    h('rect', { x: '14', y: '3', width: '7', height: '7' }),
+    h('rect', { x: '3', y: '14', width: '7', height: '7' }),
+    h('rect', { x: '14', y: '14', width: '7', height: '7' })
+  ])
+}
+
+const ComparisonIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('line', { x1: '18', y1: '20', x2: '18', y2: '10' }),
+    h('line', { x1: '12', y1: '20', x2: '12', y2: '4' }),
+    h('line', { x1: '6', y1: '20', x2: '6', y2: '14' }),
+    h('line', { x1: '2', y1: '20', x2: '22', y2: '20' })
+  ])
+}
+
+const ReportIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+    h('polyline', { points: '14 2 14 8 20 8' }),
+    h('line', { x1: '16', y1: '13', x2: '8', y2: '13' }),
+    h('line', { x1: '16', y1: '17', x2: '8', y2: '17' })
+  ])
+}
+
+const AdaptiveIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z' }),
+    h('circle', { cx: '12', cy: '12', r: '3' }),
+    h('path', { d: 'M4 4l16 16' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -450,6 +525,14 @@ const mainNavItems: Array<{
   { path: '/ai-recommend', icon: AiRecommendIcon, label: 'AI推荐' },
   { path: '/nightly-ci', icon: NightlyIcon, label: 'Nightly' },
   { path: '/multiscale-workspace', icon: WorkspaceIcon, label: '工作区' },
+  { path: '/workflow-editor', icon: WfEditorIcon, label: '编排' },
+  { path: '/data-transfer', icon: DataTransferIcon, label: '传递' },
+  { path: '/workflow-scheduler', icon: SchedulerIcon, label: '调度' },
+  { path: '/param-mapping', icon: ParamMapIcon, label: '映射' },
+  { path: '/workflow-presets', icon: PresetIcon, label: '预设' },
+  { path: '/result-comparison', icon: ComparisonIcon, label: '对比' },
+  { path: '/report-generator', icon: ReportIcon, label: '报告' },
+  { path: '/adaptive-precision', icon: AdaptiveIcon, label: '自适应' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

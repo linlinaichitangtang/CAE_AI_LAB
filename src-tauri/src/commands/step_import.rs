@@ -753,11 +753,11 @@ pub fn parse_abaqus_inp(content: &str) -> Result<AbaqusInpModel, String> {
     // 当前解析状态
     let mut current_keyword = String::new();
     let mut current_element_type = String::new();
-    let mut current_material_name = String::new();
+    let mut current_material_name: String;
     let mut current_step_name = String::new();
     let mut current_nset_name: Option<String> = None;
     let mut current_elset_name: Option<String> = None;
-    let mut current_amplitude_name = String::new();
+    let mut current_amplitude_name: String;
     let mut amplitude_parsing_time = true;
     let mut nset_generate = false;
     let mut elset_generate = false;

@@ -7,6 +7,53 @@
 
 ---
 
+## [V0.10.0] - 2026-04-02
+
+### 新增
+
+- **V0.10-001 邮箱注册 + 验证码**：`auth.ts` API，支持邮箱注册、6位数字验证码、60s倒计时、15min有效
+- **V0.10-002 邮箱登录 + JWT 会话**：JWT AccessToken(15min) + RefreshToken(7d)，自动续期
+- **V0.10-003 第三方 OAuth**：支持 Google / GitHub 一键登录
+- **V0.10-004 忘记密码 + 重置链接**：30min有效，密码强度校验
+- **V0.10-005 用户 profile 管理**：头像上传/裁剪、个人信息修改、账号安全
+- **V0.10-006 会员体系设计**：Free / Pro / Enterprise 三档权益分层
+- **V0.10-007 会员订阅页面**：订阅方案对比表、在线支付流程
+- **V0.10-008 会员状态管理**：本地加密存储、登录验证、到期提醒
+- **V0.10-009 启动画面**：品牌页 → 登录/注册 → 首页，1.5s过渡，自动判断登录状态
+- **V0.10-010 首次使用引导**：3步引导（创建项目/导入模型/运行仿真）
+- **V0.10-011 会员权益浮窗**：Free用户点击Pro功能时浮窗提示+升级按钮
+- **V0.10-012 设备管理**：登录设备列表、IP/设备/时间、可远程登出
+
+### 变更
+
+- **启动流程**：未登录用户跳转登录页（commit a6b0f40）
+
+---
+
+## [V2.0] - 2026-04-03
+
+### 新增（前端完成）
+
+- **V2.0-001 工作流图编辑器**：新增 `workflowEditor.ts` API + `WorkflowEditorView.vue` 视图，拖拽式四尺度节点编辑，连线定义数据流，条件分支，图验证
+- **V2.0-002 尺度间数据传递引擎**：新增 `dataTransfer.ts` API + `DataTransferView.vue` 视图，JSON Schema 定义输出格式，自动校验类型/维度，单位自动转换
+- **V2.0-003 工作流调度器**：新增 `workflowScheduler.ts` API + `WorkflowSchedulerView.vue` 视图，DAG 依赖执行，断点续跑，错误自动回滚，检查点管理
+- **V2.0-004 跨尺度参数映射表**：新增 `paramMapping.ts` API + `ParamMappingView.vue` 视图，上级关键结果自动作为下级参数，灵敏度分析，自动映射推荐
+- **V2.0-005 典型工作流模板**：新增 `workflowPresets.ts` API + `WorkflowPresetsView.vue` 视图，5 种预设（蠕变/凝固/析出/断裂/扩散），参数可自定义，智能推荐
+- **V2.0-006 多尺度结果对比面板**：新增 `resultComparison.ts` API + `ResultComparisonView.vue` 视图，四尺度同屏对比，一致性评分，尺度间点击穿透
+- **V2.0-007 多尺度综合报告生成**：新增 `reportGenerator.ts` API + `ReportGeneratorView.vue` 视图，PDF/HTML/Markdown 导出，模板系统，报告历史管理
+- **V2.0-008 自适应精度控制**：新增 `adaptivePrecision.ts` API + `AdaptivePrecisionView.vue` 视图，中间尺度偏差自动加密，收敛监控，多种策略可选
+
+### 变更
+
+- **路由**：新增 8 条路由（`/workflow-editor`、`/data-transfer`、`/workflow-scheduler`、`/param-mapping`、`/workflow-presets`、`/result-comparison`、`/report-generator`、`/adaptive-precision`）
+- **导航**：左侧导航栏新增 8 个模块入口（编排、传递、调度、映射、预设、对比、报告、自适应）
+- **国际化**：中英文语言包新增 V2.0 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+> **注意**：V2.0 前端已完成，后端 Rust 命令尚未实现（见 V2.0.1）。
+
+---
+
 ## [V1.9-dev] - 2026-04-03
 
 ### 新增

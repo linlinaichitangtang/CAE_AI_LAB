@@ -3,7 +3,6 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use rand::Rng;
 
 // Use the http crate directly to avoid Tauri's http re-export conflict

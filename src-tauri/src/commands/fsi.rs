@@ -121,7 +121,7 @@ pub fn run_fsi_analysis(config: FSIConfig) -> Result<FSIResult, String> {
 
     // Compute pressure statistics
     let max_pressure = pressure_nodes.iter().map(|n| n.value).fold(f64::NEG_INFINITY, f64::max);
-    let min_pressure = pressure_nodes.iter().map(|n| n.value).fold(f64::INFINITY, f64::min);
+    let _min_pressure = pressure_nodes.iter().map(|n| n.value).fold(f64::INFINITY, f64::min);
     let avg_pressure = pressure_nodes.iter().map(|n| n.value).sum::<f64>() / pressure_nodes.len() as f64;
 
     // Step 1: Map CFD pressure to structural nodes
@@ -132,9 +132,9 @@ pub fn run_fsi_analysis(config: FSIConfig) -> Result<FSIResult, String> {
     // Step 2: Compute structural response
     // Simplified plate/beam bending under pressure load
     let thickness = mat.thickness.unwrap_or(0.002);
-    let E = mat.youngs_modulus;
+    let e = mat.youngs_modulus;
     let nu = mat.poisson_ratio;
-    let rho = mat.density;
+    let _rho = mat.density;
 
     // Compute bounding box of pressure field
     let x_min = pressure_nodes.iter().map(|n| n.x).fold(f64::INFINITY, f64::min);
@@ -146,13 +146,13 @@ pub fn run_fsi_analysis(config: FSIConfig) -> Result<FSIResult, String> {
 
     let lx = (x_max - x_min).max(1e-6);
     let ly = (y_max - y_min).max(1e-6);
-    let lz = (z_max - z_min).max(1e-6);
+    let _lz = (z_max - z_min).max(1e-6);
 
     // Flexural rigidity D = E * h^3 / (12 * (1 - nu^2))
-    let D = E * thickness.powi(3) / (12.0 * (1.0 - nu * nu));
+    let d = e * thickness.powi(3) / (12.0 * (1.0 - nu * nu));
 
     // Characteristic length
-    let L = lx.max(ly);
+    let l = lx.max(ly);
 
     // For a simply supported plate under uniform pressure q:
     // max_deflection = alpha * q * L^4 / D
@@ -164,12 +164,12 @@ pub fn run_fsi_analysis(config: FSIConfig) -> Result<FSIResult, String> {
     let q_eff = avg_pressure.abs();
 
     // Maximum displacement (plate bending)
-    let max_displacement = alpha * q_eff * L.powi(4) / D;
+    let max_displacement = alpha * q_eff * l.powi(4) / d;
 
     // Maximum bending stress: sigma = 6 * M / h^2
     // M_max ~ q * L^2 / 8 for simply supported beam
-    let M_max = q_eff * L * L / 8.0;
-    let max_stress = 6.0 * M_max / (thickness * thickness);
+    let m_max = q_eff * l * l / 8.0;
+    let max_stress = 6.0 * m_max / (thickness * thickness);
 
     // Total force = integral of pressure over area
     let total_force = q_eff * lx * ly;
@@ -193,7 +193,7 @@ pub fn run_fsi_analysis(config: FSIConfig) -> Result<FSIResult, String> {
         // Parabolic distribution: max at center, zero at edges
         let shape = 4.0 * xn * (1.0 - xn) * 4.0 * yn * (1.0 - yn);
         let local_pressure = node.value.abs();
-        let local_disp = alpha * local_pressure * L.powi(4) / D * shape;
+        let local_disp = alpha * local_pressure * l.powi(4) / d * shape;
 
         displacement_field.push(FSINodeData {
             node_id: node.node_id,
@@ -349,7 +349,7 @@ pub fn map_cfd_to_structural(
             let sy_max = structural_nodes.iter().map(|n| n.y).fold(f64::NEG_INFINITY, f64::max);
             let struct_area = (sx_max - sx_min) * (sy_max - sy_min).max(1e-10);
 
-            let area_ratio = cfd_area / struct_area;
+            let _area_ratio = cfd_area / struct_area;
 
             // For each structural node, use RBF-like interpolation then scale to conserve force
             let sigma = compute_rbf_radius(&cfd_nodes);
