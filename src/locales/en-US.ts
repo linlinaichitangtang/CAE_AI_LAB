@@ -49,6 +49,10 @@ export default {
     atomBuilder: 'Atom Builder',
     trajectory: 'Trajectory',
     mdPostProcess: 'MD Post',
+    phaseField: 'Phase Field',
+    phaseFieldAnalysis: 'PF Analysis',
+    phaseFieldGpu: 'GPU',
+    phaseFieldBridge: 'PF Bridge',
   },
   simulation: {
     title: 'Simulation',

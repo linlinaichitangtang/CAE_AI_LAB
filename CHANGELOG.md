@@ -7,6 +7,30 @@
 
 ---
 
+## [V1.6-dev] - 2026-04-03
+
+### 新增
+
+- **V1.6-001 相场方程求解器**：新增 `phaseField.ts` API + `PhaseFieldView.vue` 视图，支持 Cahn-Hilliard/Allen-Cahn/相场晶体/Karma 模型，双势阱/多项式/Landau 自由能，显式/隐式/半隐式/RK4 时间积分
+- **V1.6-002 组织初始化器**：随机/形核/层状/圆形/导入 5 种初始条件，形核位点管理
+- **V1.6-003 相场-温度耦合**：单向/双向热耦合，潜热释放，热焓项
+- **V1.6-004 相场-力学耦合**：新增 `phaseFieldPostProcess.ts` API，弹性能驱动组织演变，应力辅助析出，von Mises 场
+- **V1.6-005 场可视化**：新增 `PhaseFieldAnalysisView.vue` 视图，5 种色谱，等高线，晶界叠加，Z 切片
+- **V1.6-006 晶粒统计**：晶粒尺寸分布直方图，取向分布，Grain ID 可视化，尺寸 vs 时间曲线
+- **V1.6-007 GPU 加速**：新增 `phaseFieldGpu.ts` API + `PhaseFieldGpuView.vue` 视图，CUDA/OpenCL/WebGPU/WASM SIMD 后端，基准测试，性能分析
+- **V1.6-008 MD→相场桥接**：新增 `phaseFieldBridge.ts` API + `PhaseFieldBridgeView.vue` 视图，原子密度/键序参量/Voronoi 粗粒化
+- **V1.6-009 相场→FE 均匀化**：Voigt/Reuss/Mori-Tanaka/自洽/数值方法，6×6 弹性张量，应力-应变曲线，屈服面 π 平面投影
+- **V1.6-010 相场模板库**：晶粒长大/相分离/枝晶凝固/沉淀析出/裂纹扩展 5 种模板
+
+### 变更
+
+- **路由**：新增 4 条路由（`/phase-field`、`/phase-field-analysis`、`/phase-field-gpu`、`/phase-field-bridge`）
+- **导航**：左侧导航栏新增 1 个模块入口（相场）
+- **国际化**：中英文语言包新增 V1.6 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.5-dev] - 2026-04-02
 
 ### 新增

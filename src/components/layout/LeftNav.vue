@@ -249,6 +249,16 @@ const AtomIcon = {
   ])
 }
 
+const PhaseFieldIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z' }),
+    h('path', { d: 'M12 2c3 3.5 3 8.5 0 10' }),
+    h('path', { d: 'M12 2c-3 3.5-3 8.5 0 10' }),
+    h('path', { d: 'M2 12c3.5-3 8.5-3 10 0' }),
+    h('path', { d: 'M2 12c3.5 3 8.5 3 10 0' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -287,6 +297,7 @@ const mainNavItems: Array<{
   { path: '/certification', icon: CertIcon, label: '认证' },
   { path: '/md', icon: MdIcon, label: 'MD' },
   { path: '/atom-builder', icon: AtomIcon, label: '原子建模' },
+  { path: '/phase-field', icon: PhaseFieldIcon, label: '相场' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

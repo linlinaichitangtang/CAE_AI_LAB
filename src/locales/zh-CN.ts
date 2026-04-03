@@ -49,6 +49,10 @@ export default {
     atomBuilder: '原子建模',
     trajectory: '轨迹可视化',
     mdPostProcess: 'MD后处理',
+    phaseField: '相场法',
+    phaseFieldAnalysis: '相场后处理',
+    phaseFieldGpu: 'GPU加速',
+    phaseFieldBridge: '尺度桥接',
   },
   simulation: {
     title: '仿真分析',

@@ -204,6 +204,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/MdPostProcessView.vue')
   },
   {
+    path: '/phase-field',
+    name: 'PhaseField',
+    component: () => import('./views/PhaseFieldView.vue')
+  },
+  {
+    path: '/phase-field-analysis',
+    name: 'PhaseFieldAnalysis',
+    component: () => import('./views/PhaseFieldAnalysisView.vue')
+  },
+  {
+    path: '/phase-field-gpu',
+    name: 'PhaseFieldGpu',
+    component: () => import('./views/PhaseFieldGpuView.vue')
+  },
+  {
+    path: '/phase-field-bridge',
+    name: 'PhaseFieldBridge',
+    component: () => import('./views/PhaseFieldBridgeView.vue')
+  },
+  {
     path: '/data-asset',
     name: 'DataAsset',
     component: () => import('./views/DataAssetView.vue')
@@ -288,7 +308,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页
