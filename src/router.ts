@@ -254,6 +254,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/DeveloperConsole.vue')
   },
   {
+    path: '/dft-input',
+    name: 'DftInput',
+    component: () => import('./views/DftInputView.vue')
+  },
+  {
+    path: '/dft-task',
+    name: 'DftTask',
+    component: () => import('./views/DftTaskView.vue')
+  },
+  {
+    path: '/dft-postprocess',
+    name: 'DftPostProcess',
+    component: () => import('./views/DftPostProcessView.vue')
+  },
+  {
+    path: '/dft-bridge',
+    name: 'DftBridge',
+    component: () => import('./views/DftBridgeView.vue')
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')
@@ -308,7 +328,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge', '/dft-input', '/dft-task', '/dft-postprocess', '/dft-bridge']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

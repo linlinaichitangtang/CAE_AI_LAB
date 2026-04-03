@@ -7,6 +7,29 @@
 
 ---
 
+## [V1.7-dev] - 2026-04-03
+
+### 新增
+
+- **V1.7-001 VASP 输入生成器**：新增 `dftInput.ts` API + `DftInputView.vue` 视图，支持 POSCAR/INCAR/KPOINTS 可视化编辑，LDA+U 参数，6 种模板
+- **V1.7-002 QE 输入生成器**：支持 PW/CP/PP 类型，Control/System/Electrons 块编辑，原子种类/坐标表，文件实时预览
+- **V1.7-003 DFT 任务管理器**：新增 `dftTask.ts` API + `DftTaskView.vue` 视图，任务队列/状态监控，SLURM/PBS 脚本生成
+- **V1.7-004 DFT 结果解析器**：新增 `dftPostProcess.ts` API，支持 VASP/QE/ABINIT 输出解析，能量/力/DOS/能带/电荷密度
+- **V1.7-005 能量/力验证**：5 个标准算例 (Si/Al/Fe/Cu/Diamond)，误差 < meV/atom 验证
+- **V1.7-006 DFT→MD 势函数训练**：新增 `dftBridge.ts` API + `DftBridgeView.vue` 视图，支持 NEP/MTP/EAM/MEAM，训练/验证/测试集划分，损失曲线
+- **V1.7-007 DFT→相场 GL 参数**：Ginzburg-Landau 系数提取，T-x 二元相图计算，化学势对齐
+- **V1.7-008 DFT 云端提交**：SLURM/PBS 脚本生成，队列配置，分区/账户/QoS 设置
+- **V1.7-009 能带/DOS 可视化**：新增 `DftPostProcessView.vue` 视图，能带图(SVG)+费米能级标注，总DOS+PDOS叠加，电荷密度热力图
+
+### 变更
+
+- **路由**：新增 4 条路由（`/dft-input`、`/dft-task`、`/dft-postprocess`、`/dft-bridge`）
+- **导航**：左侧导航栏新增 1 个模块入口（DFT）
+- **国际化**：中英文语言包新增 V1.7 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.6-dev] - 2026-04-03
 
 ### 新增

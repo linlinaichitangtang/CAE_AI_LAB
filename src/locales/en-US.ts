@@ -53,6 +53,10 @@ export default {
     phaseFieldAnalysis: 'PF Analysis',
     phaseFieldGpu: 'GPU',
     phaseFieldBridge: 'PF Bridge',
+    dftInput: 'DFT Input',
+    dftTask: 'DFT Task',
+    dftPostProcess: 'DFT Post',
+    dftBridge: 'DFT Bridge',
   },
   simulation: {
     title: 'Simulation',

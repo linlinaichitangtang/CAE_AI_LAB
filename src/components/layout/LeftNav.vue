@@ -259,6 +259,15 @@ const PhaseFieldIcon = {
   ])
 }
 
+const DftIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '12', cy: '12', r: '3' }),
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4' }),
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4', transform: 'rotate(60 12 12)' }),
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4', transform: 'rotate(-60 12 12)' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -298,6 +307,7 @@ const mainNavItems: Array<{
   { path: '/md', icon: MdIcon, label: 'MD' },
   { path: '/atom-builder', icon: AtomIcon, label: '原子建模' },
   { path: '/phase-field', icon: PhaseFieldIcon, label: '相场' },
+  { path: '/dft-input', icon: DftIcon, label: 'DFT' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

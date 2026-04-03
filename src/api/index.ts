@@ -366,6 +366,10 @@ export async function getFileCategories(projectId: string) {
 
 export * from './biomechanics'
 
+// ============ DFT 输入生成器 API ============
+
+export * from './dftInput'
+
 // ============ 代码执行 API ============
 
 export interface CodeOutput {

@@ -53,6 +53,10 @@ export default {
     phaseFieldAnalysis: '相场后处理',
     phaseFieldGpu: 'GPU加速',
     phaseFieldBridge: '尺度桥接',
+    dftInput: 'DFT输入',
+    dftTask: 'DFT任务',
+    dftPostProcess: 'DFT后处理',
+    dftBridge: 'DFT桥接',
   },
   simulation: {
     title: '仿真分析',
