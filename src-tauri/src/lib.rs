@@ -468,6 +468,7 @@ pub fn run() {
             commands::atom_builder::get_atom_builder_templates,
             // V1.6: Phase field commands
             commands::phase_field::run_phase_field_simulation,
+            commands::phase_field::run_fipy_ch_local,
             commands::phase_field::generate_pf_initial_condition,
             commands::phase_field::calculate_pf_free_energy,
             commands::phase_field::get_phase_field_templates,
@@ -497,6 +498,7 @@ pub fn run() {
             commands::dft_input::export_input_files,
             // V1.7: DFT task commands
             commands::dft_task::submit_dft_job,
+            commands::dft_task::run_qe_local,
             commands::dft_task::cancel_dft_job,
             commands::dft_task::get_dft_job_status,
             commands::dft_task::get_dft_job_list,
@@ -639,6 +641,25 @@ pub fn run() {
             commands::solver_manager::uninstall_solver,
             commands::solver_manager::get_install_methods,
             commands::solver_manager::get_solver_info,
+            // V2.3: CalculiX version check (V2.3-011)
+            commands::solver_manager::check_calculix_version,
+            // V2.3: CalculiX job commands (V2.3-013~015)
+            commands::calculix_job::submit_calculix_job,
+            commands::calculix_job::get_calculix_job_status,
+            commands::calculix_job::parse_calculix_dat,
+            commands::calculix_job::parse_calculix_frd,
+            // V2.3-016: Dependency resolution
+            commands::solver_manager::resolve_solver_dependencies,
+            // V2.3-017: Multi-version management
+            commands::solver_manager::list_solver_versions,
+            // V2.3-019: Installation verification
+            commands::solver_manager::verify_solver_installation,
+            // V2.3: Gaussian coarse graining (V2.3-020, KI-002)
+            commands::coarse_graining::run_gaussian_coarse_graining,
+            // V2.3: Unit conversion (V2.3-022, KI-004)
+            commands::data_transfer::convert_units,
+            // V2.3: Coordinate mapping (V2.3-022, KI-004)
+            commands::param_mapping::map_coordinates,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

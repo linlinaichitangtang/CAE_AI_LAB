@@ -103,6 +103,14 @@ pub struct QeTemplate {
     pub electrons_params: HashMap<String, serde_json::Value>,
 }
 
+/// QE KPOINTS configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QeKpointsConfig {
+    pub scheme: String,
+    pub grid: [u32; 3],
+    pub shift: [i64; 3],
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -420,6 +428,99 @@ fn get_element_mass(element: &str) -> f64 {
     }
 }
 
+/// Converts VASP POSCAR to Quantum ESPRESSO pw.in format.
+fn poscar_to_pw_in(poscar: &VaspPoscar, config: &QeInputConfig) -> (String, String) {
+    let elements = poscar.element_names.clone();
+    let nat = poscar.basis.len();
+    let ibrav = 0; // General lattice vectors
+
+    let mut lines = vec![
+        format!("&CONTROL"),
+        format!("    calculation = '{}{}'", config.calculation_type, if config.task.is_empty() { "" } else { "" }),
+        format!("    title = '{} - Converted from POSCAR'", poscar.comment),
+    ];
+
+    // Control parameters
+    let mut control_keys: Vec<_> = config.control_params.keys().cloned().collect();
+    control_keys.sort();
+    for key in &control_keys {
+        if let Some(value) = config.control_params.get(key) {
+            let value_str = format_qe_param(value);
+            lines.push(format!("    {} = {}", key, value_str));
+        }
+    }
+    lines.push("/".to_string());
+    lines.push("".to_string());
+
+    // System section
+    lines.push("&SYSTEM".to_string());
+    lines.push(format!("    ibrav = {}", ibrav));
+    lines.push(format!("    nat = {}", nat));
+    lines.push(format!("    ntyp = {}", elements.len()));
+
+    let mut system_keys: Vec<_> = config.system_params.keys().cloned().collect();
+    system_keys.sort();
+    for key in &system_keys {
+        if let Some(value) = config.system_params.get(key) {
+            let value_str = format_qe_param(value);
+            lines.push(format!("    {} = {}", key, value_str));
+        }
+    }
+    lines.push("/".to_string());
+    lines.push("".to_string());
+
+    // Electrons section
+    lines.push("&ELECTRONS".to_string());
+    let mut electrons_keys: Vec<_> = config.electrons_params.keys().cloned().collect();
+    electrons_keys.sort();
+    for key in &electrons_keys {
+        if let Some(value) = config.electrons_params.get(key) {
+            let value_str = format_qe_param(value);
+            lines.push(format!("    {} = {}", key, value_str));
+        }
+    }
+    lines.push("/".to_string());
+    lines.push("".to_string());
+
+    // Atomic species
+    lines.push("ATOMIC_SPECIES".to_string());
+    for (_i, el) in elements.iter().enumerate() {
+        let mass = get_element_mass(el);
+        let pseudo = format!("{}.upf", el.to_lowercase());
+        lines.push(format!("  {:6}  {:.3}  {}", el, mass, pseudo));
+    }
+    lines.push("".to_string());
+
+    // Cell parameters
+    lines.push("CELL_PARAMETERS { angstrom }".to_string());
+    for vec in &poscar.lattice_vectors {
+        lines.push(format!("{:20.16} {:20.16} {:20.16}", vec[0], vec[1], vec[2]));
+    }
+    lines.push("".to_string());
+
+    // Atomic positions
+    let is_cartesian = poscar.coordinate_type.starts_with('C') || poscar.coordinate_type.starts_with('c');
+    lines.push(if is_cartesian {
+        "ATOMIC_POSITIONS { angstrom }".to_string()
+    } else {
+        "ATOMIC_POSITIONS { crystal }".to_string()
+    });
+    for atom in &poscar.basis {
+        lines.push(format!("{:<4} {:20.16} {:20.16} {:20.16}",
+            atom.element,
+            atom.position[0],
+            atom.position[1],
+            atom.position[2],
+        ));
+    }
+    lines.push("".to_string());
+
+    // K-points
+    let kpoints_content = build_qe_kpoints(&config.control_params);
+
+    (lines.join("\n"), kpoints_content)
+}
+
 // ============================================================================
 // Tauri Commands
 // ============================================================================
@@ -537,6 +638,54 @@ pub fn generate_qe_input(config: QeInputConfig) -> Result<DftInputResult, String
     let elements: Vec<String> = elements_str.split_whitespace().map(String::from).collect();
 
     info!("QE input generation complete with {} warnings", warnings.len());
+
+    Ok(DftInputResult {
+        poscar_content: input_content,
+        incar_content: String::new(), // QE uses a single input file
+        kpoints_content,
+        potcar_elements: elements,
+        warnings,
+    })
+}
+
+/// Converts VASP POSCAR to Quantum ESPRESSO pw.in format.
+#[command]
+pub fn convert_poscar_to_pw_in(poscar: VaspPoscar, config: QeInputConfig) -> Result<DftInputResult, String> {
+    info!("Converting POSCAR to QE pw.in format");
+
+    // Validate calculation type
+    let valid_calc_types = ["pw", "cp", "pp"];
+    if !valid_calc_types.contains(&config.calculation_type.as_str()) {
+        return Err(format!(
+            "Invalid calculation type '{}'. Must be one of: {}",
+            config.calculation_type,
+            valid_calc_types.join(", ")
+        ));
+    }
+
+    let valid_tasks = ["scf", "relax", "md", "bands", "dos"];
+    if !valid_tasks.contains(&config.task.as_str()) {
+        return Err(format!(
+            "Invalid task '{}'. Must be one of: {}",
+            config.task,
+            valid_tasks.join(", ")
+        ));
+    }
+
+    let (input_content, kpoints_content) = poscar_to_pw_in(&poscar, &config);
+
+    let mut warnings = Vec::new();
+
+    if config.system_params.get("ecutwfc").is_none() {
+        warnings.push("ecutwfc not specified in system parameters. QE requires this for plane-wave cutoff.".to_string());
+    }
+    if config.system_params.get("ecutrho").is_none() {
+        warnings.push("ecutrho not specified. Default charge density cutoff may be insufficient.".to_string());
+    }
+
+    let elements = poscar.element_names;
+
+    info!("POSCAR to QE conversion complete with {} warnings", warnings.len());
 
     Ok(DftInputResult {
         poscar_content: input_content,
@@ -927,6 +1076,33 @@ pub fn export_input_files(
         .map_err(|e| format!("Failed to write KPOINTS: {}", e))?;
 
     info!("Input files exported successfully to {}", output_dir);
+    Ok(())
+}
+
+/// Exports Quantum ESPRESSO input files to a specified directory.
+#[command]
+pub fn export_qe_input_files(
+    pw_in_content: String,
+    kpoints_content: String,
+    output_dir: String,
+) -> Result<(), String> {
+    info!(output_dir = %output_dir, "Exporting QE input files");
+
+    // Create output directory if it doesn't exist
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|e| format!("Failed to create output directory '{}': {}", output_dir, e))?;
+
+    // Write pw.in
+    let pw_in_path = std::path::Path::new(&output_dir).join("pw.in");
+    std::fs::write(&pw_in_path, &pw_in_content)
+        .map_err(|e| format!("Failed to write pw.in: {}", e))?;
+
+    // Write KPOINTS
+    let kpoints_path = std::path::Path::new(&output_dir).join("KPOINTS");
+    std::fs::write(&kpoints_path, &kpoints_content)
+        .map_err(|e| format!("Failed to write KPOINTS: {}", e))?;
+
+    info!("QE input files exported successfully to {}", output_dir);
     Ok(())
 }
 

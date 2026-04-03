@@ -83,3 +83,4 @@ pub mod ai_recommend;
 pub mod nightly_ci;
 pub mod multiscale_workspace;
 pub mod solver_manager;
+pub mod calculix_job;

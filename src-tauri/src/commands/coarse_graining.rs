@@ -490,3 +490,109 @@ pub fn get_coarse_graining_presets() -> Result<Vec<CoarseGrainingPreset>, String
     tracing::info!("Found {} presets", presets.len());
     Ok(presets)
 }
+
+/// Performs real Gaussian coarse graining from atom positions to density field (V2.3-020, KI-002).
+#[command]
+pub fn run_gaussian_coarse_graining(
+    atom_positions: Vec<Vec<f64>>,
+    grid_size: [u32; 3],
+    box_min: Vec<f64>,
+    box_max: Vec<f64>,
+    sigma: f64,
+) -> Result<CoarseGrainingRealResult, String> {
+    tracing::info!(
+        n_atoms = atom_positions.len(),
+        grid = ?grid_size,
+        sigma = sigma,
+        "Running Gaussian coarse graining"
+    );
+
+    if atom_positions.is_empty() {
+        return Err("No atom positions provided".to_string());
+    }
+    if grid_size[0] == 0 || grid_size[1] == 0 || grid_size[2] == 0 {
+        return Err("Grid size must be non-zero".to_string());
+    }
+
+    let nx = grid_size[0] as usize;
+    let ny = grid_size[1] as usize;
+    let nz = grid_size[2] as usize;
+
+    let dx = if box_max[0] > box_min[0] {
+        (box_max[0] - box_min[0]) / nx as f64
+    } else {
+        1.0
+    };
+
+    let mut density = vec![0.0f64; nx * ny * nz];
+    let cutoff = 3.0 * sigma;
+    let two_sigma_sq = 2.0 * sigma * sigma;
+
+    for atom in &atom_positions {
+        if atom.len() < 3 { continue; }
+        let ax = atom[0];
+        let ay = atom[1];
+        let az = atom[2];
+
+        let ix_lo = ((ax - box_min[0] - cutoff) / dx).floor().max(0.0) as usize;
+        let ix_hi = ((ax - box_min[0] + cutoff) / dx).ceil().min(nx as f64) as usize;
+        let iy_lo = ((ay - box_min[1] - cutoff) / dx).floor().max(0.0) as usize;
+        let iy_hi = ((ay - box_min[1] + cutoff) / dx).ceil().min(ny as f64) as usize;
+        let iz_lo = ((az - box_min[2] - cutoff) / dx).floor().max(0.0) as usize;
+        let iz_hi = ((az - box_min[2] + cutoff) / dx).ceil().min(nz as f64) as usize;
+
+        for ni in ix_lo..ix_hi {
+            for nj in iy_lo..iy_hi {
+                for nk in iz_lo..iz_hi {
+                    let gx = box_min[0] + (ni as f64 + 0.5) * dx;
+                    let gy = box_min[1] + (nj as f64 + 0.5) * dx;
+                    let gz = box_min[2] + (nk as f64 + 0.5) * dx;
+                    let r2 = (ax-gx)*(ax-gx) + (ay-gy)*(ay-gy) + (az-gz)*(az-gz);
+                    if r2 < cutoff * cutoff {
+                        density[ni * ny * nz + nj * nz + nk] += (-r2 / two_sigma_sq).exp();
+                    }
+                }
+            }
+        }
+    }
+
+    // Normalize
+    let max_val = density.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    if max_val > 0.0 {
+        for d in density.iter_mut() {
+            *d /= max_val;
+        }
+    }
+
+    let field_min = density.iter().cloned().fold(f64::INFINITY, f64::min);
+    let field_max = max_val;
+    let field_mean: f64 = density.iter().sum::<f64>() / density.len() as f64;
+    let nonzero: usize = density.iter().filter(|&&d| d > 1e-10).count();
+
+    tracing::info!(
+        field_range = format!("[{:.4}, {:.4}]", field_min, field_max),
+        nonzero_fraction = nonzero as f64 / density.len() as f64,
+        "Coarse graining completed"
+    );
+
+    Ok(CoarseGrainingRealResult {
+        density,
+        grid_size,
+        field_min,
+        field_max,
+        field_mean,
+        nonzero_points: nonzero as u32,
+        total_points: (nx * ny * nz) as u32,
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoarseGrainingRealResult {
+    pub density: Vec<f64>,
+    pub grid_size: [u32; 3],
+    pub field_min: f64,
+    pub field_max: f64,
+    pub field_mean: f64,
+    pub nonzero_points: u32,
+    pub total_points: u32,
+}

@@ -612,6 +612,91 @@ pub fn get_queue_status() -> Result<QueueStatus, String> {
     Ok(status)
 }
 
+/// Runs a Quantum ESPRESSO calculation locally (V2.3-003).
+/// Executes `mpirun --allow-run-as-root -np {cores} --host localhost pw.x -in {input_file}`
+/// and returns the output content.
+#[command]
+pub fn run_qe_local(
+    input_file: String,
+    output_file: String,
+    num_cores: u32,
+    work_dir: String,
+) -> Result<QeLocalResult, String> {
+    use std::process::Command;
+    use std::path::Path;
+
+    info!(
+        input = %input_file,
+        output = %output_file,
+        cores = num_cores,
+        work_dir = %work_dir,
+        "Running QE locally"
+    );
+
+    if !Path::new(&input_file).exists() {
+        return Err(format!("Input file not found: {}", input_file));
+    }
+
+    if num_cores == 0 {
+        return Err("Number of cores must be > 0".to_string());
+    }
+
+    let out_path = Path::new(&output_file);
+    let out_file = std::fs::File::create(out_path)
+        .map_err(|e| format!("Cannot create output file: {}", e))?;
+
+    let result = Command::new("mpirun")
+        .args([
+            "--allow-run-as-root",
+            "-np", &num_cores.to_string(),
+            "--host", "localhost",
+            "pw.x",
+            "-in", &input_file,
+        ])
+        .current_dir(&work_dir)
+        .env("OMP_NUM_THREADS", "1")
+        .stdout(std::process::Stdio::from(out_file))
+        .stderr(std::process::Stdio::piped())
+        .output()
+        .map_err(|e| format!("Failed to execute pw.x: {}", e))?;
+
+    let stderr = String::from_utf8_lossy(&result.stderr).to_string();
+    let success = result.status.success();
+
+    // Read output file
+    let output_content = std::fs::read_to_string(&output_file)
+        .unwrap_or_default();
+
+    let status = if success { "completed" } else { "failed" };
+
+    info!(
+        status = status,
+        exit_code = ?result.status.code(),
+        output_len = output_content.len(),
+        "QE local execution finished"
+    );
+
+    Ok(QeLocalResult {
+        success,
+        status: status.to_string(),
+        exit_code: result.status.code().unwrap_or(-1),
+        output_file: output_file.clone(),
+        output_length: output_content.len(),
+        error_message: if success { None } else { Some(stderr) },
+    })
+}
+
+/// Result of a local QE execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QeLocalResult {
+    pub success: bool,
+    pub status: String,
+    pub exit_code: i32,
+    pub output_file: String,
+    pub output_length: usize,
+    pub error_message: Option<String>,
+}
+
 // ============================================================================
 // Mock Helpers
 // ============================================================================

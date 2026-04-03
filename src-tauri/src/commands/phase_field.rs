@@ -12,6 +12,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::command;
+use tracing::info;
 
 // ============================================================================
 // Data Structures
@@ -526,6 +527,171 @@ fn generate_mock_karma_evolution(
 // ============================================================================
 // Tauri Commands
 // ============================================================================
+
+/// Runs a Cahn-Hilliard simulation using FiPy locally (V2.3-008).
+/// Generates a Python script, executes it, and parses results.
+#[command]
+pub fn run_fipy_ch_local(
+    grid_size: [u32; 3],
+    domain_size: [f64; 3],
+    dt: f64,
+    num_steps: u32,
+    mobility: f64,
+    kappa: f64,
+    initial_condition: String,
+    work_dir: String,
+) -> Result<FipyChResult, String> {
+    use std::process::Command;
+    use std::path::Path;
+
+    info!(
+        grid = ?grid_size,
+        dt = dt,
+        steps = num_steps,
+        "Running FiPy CH simulation locally"
+    );
+
+    let work_dir_clone = work_dir.clone();
+    let work_path = Path::new(&work_dir_clone);
+    std::fs::create_dir_all(work_path)
+        .map_err(|e| format!("Cannot create work dir: {}", e))?;
+
+    // Generate Python script
+    let script_path = work_path.join("fipy_ch_solver.py");
+    let script = format!(r#"
+import numpy as np
+import json
+import sys
+
+# FiPy native Cahn-Hilliard solver (V2.3-008 fix)
+from fipy import Grid3D, CellVariable
+
+Ng = [{nx}, {ny}, {nz}]
+Lx, Ly, Lz = {dx}, {dy}, {dz}
+dx = Lx / Ng[0]
+dt = {dt_val}
+steps = {steps_val}
+M = {mob}
+kappa = {kap}
+
+# Create FiPy mesh
+mesh = Grid3D(dx=dx, dy=dx, dz=dx, nx=Ng[0], ny=Ng[1], nz=Ng[2])
+
+# Initial condition
+np.random.seed(42)
+if "{init_cond}" == "spinodal":
+    phi_val = 0.5 + 0.05 * np.random.randn(Ng[0], Ng[1], Ng[2])
+elif "{init_cond}" == "nucleation":
+    phi_val = 0.3 * np.ones((Ng[0], Ng[1], Ng[2]))
+    phi_val[Ng[0]//3:2*Ng[0]//3, Ng[1]//3:2*Ng[1]//3, Ng[2]//3:2*Ng[2]//3] = 0.7
+else:
+    phi_val = 0.5 + 0.05 * np.random.randn(Ng[0], Ng[1], Ng[2])
+
+# Create FiPy CellVariable
+phi = CellVariable(name="concentration", mesh=mesh, value=phi_val.ravel())
+initial_mass = float(np.sum(phi.value) * dx * dx * dx)
+
+# Time integration using FiPy's native gradient/laplacian
+# No clip to preserve mass conservation
+for step in range(steps):
+    p = phi.value
+    df_dphi = 2.0 * p * (1.0 - p) * (1.0 - 2.0 * p)
+    lap_phi = phi.faceGrad.divergence
+    mu = df_dphi - kappa * lap_phi
+    mu_var = CellVariable(name="mu", mesh=mesh, value=mu)
+    lap_mu = mu_var.faceGrad.divergence
+    phi.value = phi.value + dt * M * lap_mu
+
+final_mass = float(np.sum(phi.value) * dx * dx * dx)
+mass_error = abs(final_mass - initial_mass) / abs(initial_mass) * 100 if initial_mass != 0 else 0
+
+result = {{
+    "success": True,
+    "grid_size": list(Ng),
+    "num_steps": steps,
+    "initial_mass": initial_mass,
+    "final_mass": final_mass,
+    "mass_error_pct": mass_error,
+    "field_min": float(phi.value.min()),
+    "field_max": float(phi.value.max()),
+    "field_mean": float(phi.value.mean()),
+    "phase_fraction_high": float(np.mean(phi.value > 0.5)),
+    "used_fipy": True
+}}
+
+with open("{work_dir}/fipy_ch_result.json", "w") as f:
+    json.dump(result, f, indent=2)
+print(json.dumps(result))
+"#,
+        nx=grid_size[0], ny=grid_size[1], nz=grid_size[2],
+        dx=domain_size[0], dy=domain_size[1], dz=domain_size[2],
+        dt_val=dt, steps_val=num_steps,
+        mob=mobility, kap=kappa,
+        init_cond=initial_condition,
+        work_dir=work_dir,
+    );
+
+    std::fs::write(&script_path, &script)
+        .map_err(|e| format!("Cannot write script: {}", e))?;
+
+    let result = Command::new("python3")
+        .arg(&script_path)
+        .current_dir(work_dir)
+        .output()
+        .map_err(|e| format!("Failed to execute python3: {}", e))?;
+
+    let _stdout = String::from_utf8_lossy(&result.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&result.stderr).to_string();
+
+    if !result.status.success() {
+        return Err(format!("FiPy script failed: {}", stderr));
+    }
+
+    info!("FiPy CH simulation completed successfully");
+
+    // Parse result JSON
+    let result_path = work_path.join("fipy_ch_result.json");
+    let result_json = std::fs::read_to_string(&result_path)
+        .map_err(|e| format!("Cannot read result: {}", e))?;
+
+    let parsed: serde_json::Value = serde_json::from_str(&result_json)
+        .map_err(|e| format!("Cannot parse result JSON: {}", e))?;
+
+    let fipy_result = FipyChResult {
+        success: parsed["success"].as_bool().unwrap_or(false),
+        grid_size: grid_size,
+        num_steps,
+        initial_mass: parsed["initial_mass"].as_f64().unwrap_or(0.0),
+        final_mass: parsed["final_mass"].as_f64().unwrap_or(0.0),
+        mass_error_pct: parsed["mass_error_pct"].as_f64().unwrap_or(999.0),
+        field_min: parsed["field_min"].as_f64().unwrap_or(0.0),
+        field_max: parsed["field_max"].as_f64().unwrap_or(0.0),
+        field_mean: parsed["field_mean"].as_f64().unwrap_or(0.0),
+        phase_fraction_high: parsed["phase_fraction_high"].as_f64().unwrap_or(0.0),
+    };
+
+    info!(
+        mass_error = fipy_result.mass_error_pct,
+        "FiPy CH simulation completed"
+    );
+
+    Ok(fipy_result)
+}
+
+/// Result of a local FiPy CH simulation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FipyChResult {
+    pub success: bool,
+    pub grid_size: [u32; 3],
+    pub num_steps: u32,
+    pub initial_mass: f64,
+    pub final_mass: f64,
+    pub mass_error_pct: f64,
+    pub field_min: f64,
+    pub field_max: f64,
+    pub field_mean: f64,
+    pub phase_fraction_high: f64,
+}
 
 /// Run a phase field simulation.
 ///

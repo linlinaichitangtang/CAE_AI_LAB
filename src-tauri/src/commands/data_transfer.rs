@@ -406,3 +406,205 @@ pub fn get_transfer_history(limit: Option<usize>) -> Result<Vec<TransferHistoryE
     tracing::info!("Returned {} history entries", entries.len().min(limit));
     Ok(entries.into_iter().take(limit).collect())
 }
+
+/// Converts physical quantities between unit systems (V2.3-022, KI-004).
+/// Supports SI, CGS, atomic units (a.u.), and reduced LJ units.
+#[command]
+pub fn convert_units(
+    value: f64,
+    from_unit: String,
+    to_unit: String,
+    quantity: String,
+) -> Result<UnitConversionResult, String> {
+    tracing::info!(
+        value = value,
+        from = %from_unit,
+        to = %to_unit,
+        quantity = %quantity,
+        "Converting units"
+    );
+
+    let converted = match quantity.to_lowercase().as_str() {
+        "length" => convert_length(value, &from_unit, &to_unit)?,
+        "energy" => convert_energy(value, &from_unit, &to_unit)?,
+        "force" => convert_force(value, &from_unit, &to_unit)?,
+        "pressure" | "stress" => convert_pressure(value, &from_unit, &to_unit)?,
+        "temperature" => convert_temperature(value, &from_unit, &to_unit)?,
+        "mass" => convert_mass(value, &from_unit, &to_unit)?,
+        "time" => convert_time(value, &from_unit, &to_unit)?,
+        "velocity" => convert_velocity(value, &from_unit, &to_unit)?,
+        _ => return Err(format!("Unknown quantity: {}. Supported: length, energy, force, pressure, temperature, mass, time, velocity", quantity)),
+    };
+
+    Ok(UnitConversionResult {
+        input_value: value,
+        output_value: converted,
+        from_unit,
+        to_unit,
+        quantity,
+    })
+}
+
+fn convert_length(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    // All to Angstrom first
+    let a = match from.to_lowercase().as_str() {
+        "angstrom" | "a" => v,
+        "bohr" | "a.u." => v * 0.529177,
+        "nm" => v * 10.0,
+        "m" => v * 1e10,
+        "cm" => v * 1e8,
+        "pm" => v * 0.01,
+        _ => return Err(format!("Unknown length unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "angstrom" | "a" => Ok(a),
+        "bohr" | "a.u." => Ok(a / 0.529177),
+        "nm" => Ok(a / 10.0),
+        "m" => Ok(a / 1e10),
+        "cm" => Ok(a / 1e8),
+        "pm" => Ok(a / 0.01),
+        _ => Err(format!("Unknown length unit: {}", to)),
+    }
+}
+
+fn convert_energy(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let e = match from.to_lowercase().as_str() {
+        "ev" => v,
+        "ry" => v * 13.605698,
+        "hartree" | "ha" | "a.u." => v * 27.211386,
+        "j" => v / 1.602176634e-19,
+        "kcal/mol" => v / 23.060548,
+        "kj/mol" => v / 96.485336,
+        _ => return Err(format!("Unknown energy unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "ev" => Ok(e),
+        "ry" => Ok(e / 13.605698),
+        "hartree" | "ha" | "a.u." => Ok(e / 27.211386),
+        "j" => Ok(e * 1.602176634e-19),
+        "kcal/mol" => Ok(e * 23.060548),
+        "kj/mol" => Ok(e * 96.485336),
+        _ => Err(format!("Unknown energy unit: {}", to)),
+    }
+}
+
+fn convert_force(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let f = match from.to_lowercase().as_str() {
+        "ev/a" => v,
+        "ry/bohr" => v * 25.711043,
+        "n" => v / 8.9875518e9,
+        "dyne" => v * 1.602176634e-8,
+        _ => return Err(format!("Unknown force unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "ev/a" => Ok(f),
+        "ry/bohr" => Ok(f / 25.711043),
+        "n" => Ok(f * 8.9875518e9),
+        "dyne" => Ok(f / 1.602176634e-8),
+        _ => Err(format!("Unknown force unit: {}", to)),
+    }
+}
+
+fn convert_pressure(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let p = match from.to_lowercase().as_str() {
+        "gpa" => v,
+        "pa" => v * 1e-9,
+        "bar" => v * 0.0001,
+        "atm" => v * 0.000101325,
+        "ev/ang3" => v * 160.2176634,
+        "ry/bohr3" => v * 14710.804,
+        "kbar" => v * 0.1,
+        "mbar" => v * 1e-4,
+        _ => return Err(format!("Unknown pressure unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "gpa" => Ok(p),
+        "pa" => Ok(p / 1e-9),
+        "bar" => Ok(p / 0.0001),
+        "atm" => Ok(p / 0.000101325),
+        "ev/ang3" => Ok(p / 160.2176634),
+        "ry/bohr3" => Ok(p / 14710.804),
+        "kbar" => Ok(p / 0.1),
+        "mbar" => Ok(p / 1e-4),
+        _ => Err(format!("Unknown pressure unit: {}", to)),
+    }
+}
+
+fn convert_temperature(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let k = match from.to_lowercase().as_str() {
+        "k" => v,
+        "c" => v + 273.15,
+        "f" => (v - 32.0) * 5.0/9.0 + 273.15,
+        "ry" => v * 157887.3, // 1 Ry = 157887.3 K
+        "ev" => v * 11604.518, // 1 eV = 11604.518 K
+        _ => return Err(format!("Unknown temperature unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "k" => Ok(k),
+        "c" => Ok(k - 273.15),
+        "f" => Ok((k - 273.15) * 9.0/5.0 + 32.0),
+        "ry" => Ok(k / 157887.3),
+        "ev" => Ok(k / 11604.518),
+        _ => Err(format!("Unknown temperature unit: {}", to)),
+    }
+}
+
+fn convert_mass(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let m = match from.to_lowercase().as_str() {
+        "amu" | "u" => v,
+        "kg" => v * 6.02214076e26,
+        "g" => v * 6.02214076e23,
+        "electron_mass" | "me" => v * 1822.888486,
+        _ => return Err(format!("Unknown mass unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "amu" | "u" => Ok(m),
+        "kg" => Ok(m / 6.02214076e26),
+        "g" => Ok(m / 6.02214076e23),
+        "electron_mass" | "me" => Ok(m / 1822.888486),
+        _ => Err(format!("Unknown mass unit: {}", to)),
+    }
+}
+
+fn convert_time(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let t = match from.to_lowercase().as_str() {
+        "s" => v,
+        "fs" => v * 1e-15,
+        "ps" => v * 1e-12,
+        "ns" => v * 1e-9,
+        "lj" => v, // reduced unit, identity
+        _ => return Err(format!("Unknown time unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "s" => Ok(t),
+        "fs" => Ok(t / 1e-15),
+        "ps" => Ok(t / 1e-12),
+        "ns" => Ok(t / 1e-9),
+        "lj" => Ok(t),
+        _ => Err(format!("Unknown time unit: {}", to)),
+    }
+}
+
+fn convert_velocity(v: f64, from: &str, to: &str) -> Result<f64, String> {
+    let vel = match from.to_lowercase().as_str() {
+        "m/s" => v,
+        "angstrom/fs" | "a/fs" => v * 100.0,
+        "km/s" => v * 1000.0,
+        _ => return Err(format!("Unknown velocity unit: {}", from)),
+    };
+    match to.to_lowercase().as_str() {
+        "m/s" => Ok(vel),
+        "angstrom/fs" | "a/fs" => Ok(vel / 100.0),
+        "km/s" => Ok(vel / 1000.0),
+        _ => Err(format!("Unknown velocity unit: {}", to)),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnitConversionResult {
+    pub input_value: f64,
+    pub output_value: f64,
+    pub from_unit: String,
+    pub to_unit: String,
+    pub quantity: String,
+}

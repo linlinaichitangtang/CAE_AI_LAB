@@ -457,30 +457,65 @@ pub fn parse_qe_output(content: String) -> Result<DftEnergyData, String> {
         return Err("QE output content is empty".to_string());
     }
 
-    // In a real implementation, this would parse the actual QE output file.
-    // Here we generate realistic mock data for an 8-step relaxation.
-    let num_steps = 8;
-    let mut energies = Vec::with_capacity(num_steps);
-    let mut energy_per_atom = Vec::with_capacity(num_steps);
-    let mut ionic_steps = Vec::with_capacity(num_steps);
+    let mut energies = Vec::new();
+    let mut energy_per_atom = Vec::new();
+    let mut ionic_steps = Vec::new();
+    let mut converged = false;
+    let mut final_energy = 0.0;
+    let mut num_atoms = 2.0; // default
 
-    let initial_energy = -15.100;
-    let final_energy = -15.432187;
-    let num_atoms = 4.0;
-
-    for i in 0..num_steps {
-        let progress = i as f64 / (num_steps - 1) as f64;
-        let energy = initial_energy + (final_energy - initial_energy) * (1.0 - (-4.0 * progress).exp());
-        energies.push(energy);
-        energy_per_atom.push(energy / num_atoms);
-        ionic_steps.push(i as f64);
+    // Parse number of atoms
+    for line in content.lines() {
+        if line.contains("number of atoms/cell") {
+            if let Some(idx) = line.find('=') {
+                let val: f64 = line[idx+1..].trim().parse().unwrap_or(2.0);
+                num_atoms = val;
+            }
+        }
     }
+
+    // Parse energy at each ionic step (lines with "!")
+    let mut step = 0u32;
+    for line in content.lines() {
+        if line.contains('!') && line.contains("total energy") {
+            if let Some(idx) = line.find('=') {
+                let val_str: String = line[idx+1..].trim()
+                    .chars().take_while(|c| c.is_digit(10) || *c == '.' || *c == '-' || *c == 'E' || *c == 'e' || *c == '+')
+                    .collect();
+                if let Ok(energy) = val_str.parse::<f64>() {
+                    energies.push(energy);
+                    energy_per_atom.push(energy / num_atoms);
+                    ionic_steps.push(step as f64);
+                    final_energy = energy;
+                    step += 1;
+                }
+            }
+        }
+    }
+
+    // Check convergence
+    for line in content.lines() {
+        if line.contains("convergence has been achieved") || line.contains("End of BFGS") {
+            converged = true;
+        }
+    }
+
+    if energies.is_empty() {
+        return Err("No energy values found in QE output".to_string());
+    }
+
+    info!(
+        steps = energies.len(),
+        final_energy = final_energy,
+        converged = converged,
+        "QE output parsed successfully"
+    );
 
     Ok(DftEnergyData {
         energies,
         energy_per_atom,
         ionic_steps,
-        converged: true,
+        converged,
         final_energy,
     })
 }

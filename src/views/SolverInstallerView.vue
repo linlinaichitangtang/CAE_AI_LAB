@@ -348,6 +348,7 @@ function getSolverDescription(name: string): string {
     lammps: t('installer.md.desc'),
     quantum_espresso: t('installer.dft.desc'),
     fipy: t('installer.phaseField.desc'),
+    openfoam: '开源计算流体力学软件，支持相场模拟',
     calculix: t('installer.fe.desc'),
   }
   return descs[name] || ''

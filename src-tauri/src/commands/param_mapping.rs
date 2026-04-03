@@ -431,3 +431,99 @@ pub fn get_mapping_sensitivity(
     tracing::info!("Returned {} sensitivity entries", sensitivities.len());
     Ok(sensitivities)
 }
+
+/// Maps coordinates between different scale representations (V2.3-022, KI-004).
+/// Supports atom box -> phase field grid, fractional -> Cartesian, etc.
+#[command]
+pub fn map_coordinates(
+    positions: Vec<Vec<f64>>,
+    from_system: String,
+    to_system: String,
+    box_vectors: Option<Vec<Vec<f64>>>,
+    grid_size: Option<Vec<u32>>,
+    domain_size: Option<Vec<f64>>,
+) -> Result<CoordinateMappingResult, String> {
+    tracing::info!(
+        n_points = positions.len(),
+        from = %from_system,
+        to = %to_system,
+        "Mapping coordinates"
+    );
+
+    if positions.is_empty() {
+        return Err("No positions provided".to_string());
+    }
+
+    let mapped = match (from_system.as_str(), to_system.as_str()) {
+        ("cartesian", "fractional") => {
+            let bv = box_vectors.as_ref().ok_or("box_vectors required for cartesian->fractional")?;
+            if bv.len() < 3 { return Err("box_vectors must have 3 vectors".to_string()); }
+            let a = &bv[0]; let b = &bv[1]; let c = &bv[2];
+            // Inverse of matrix [a,b,c]
+            let det = a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]);
+            if det.abs() < 1e-15 { return Err("Singular box matrix".to_string()); }
+            let inv_det = 1.0 / det;
+            positions.iter().map(|p| {
+                let x = p.get(0).copied().unwrap_or(0.0);
+                let y = p.get(1).copied().unwrap_or(0.0);
+                let z = p.get(2).copied().unwrap_or(0.0);
+                let fx = inv_det * ((b[1]*c[2]-b[2]*c[1])*x + (a[2]*c[1]-a[1]*c[2])*y + (a[1]*b[2]-a[2]*b[1])*z);
+                let fy = inv_det * ((b[2]*c[0]-b[0]*c[2])*x + (a[0]*c[2]-a[2]*c[0])*y + (a[2]*b[0]-a[0]*b[2])*z);
+                let fz = inv_det * ((b[0]*c[1]-b[1]*c[0])*x + (a[1]*c[0]-a[0]*c[1])*y + (a[0]*b[1]-a[1]*b[0])*z);
+                vec![fx, fy, fz]
+            }).collect()
+        }
+        ("fractional", "cartesian") => {
+            let bv = box_vectors.as_ref().ok_or("box_vectors required for fractional->cartesian")?;
+            if bv.len() < 3 { return Err("box_vectors must have 3 vectors".to_string()); }
+            let a = &bv[0]; let b = &bv[1]; let c = &bv[2];
+            positions.iter().map(|p| {
+                let fx = p.get(0).copied().unwrap_or(0.0);
+                let fy = p.get(1).copied().unwrap_or(0.0);
+                let fz = p.get(2).copied().unwrap_or(0.0);
+                vec![
+                    a[0]*fx + b[0]*fy + c[0]*fz,
+                    a[1]*fx + b[1]*fy + c[1]*fz,
+                    a[2]*fx + b[2]*fy + c[2]*fz,
+                ]
+            }).collect()
+        }
+        ("cartesian", "grid_index") => {
+            let gs = grid_size.as_ref().ok_or("grid_size required for cartesian->grid_index")?;
+            let ds = domain_size.as_ref().ok_or("domain_size required for cartesian->grid_index")?;
+            if gs.len() < 3 || ds.len() < 3 { return Err("grid_size and domain_size must have 3 elements".to_string()); }
+            let dx = ds[0] / gs[0] as f64;
+            let dy = ds[1] / gs[1] as f64;
+            let dz = ds[2] / gs[2] as f64;
+            positions.iter().map(|p| {
+                let x = p.get(0).copied().unwrap_or(0.0);
+                let y = p.get(1).copied().unwrap_or(0.0);
+                let z = p.get(2).copied().unwrap_or(0.0);
+                vec![
+                    (x / dx).floor().max(0.0).min((gs[0]-1) as f64),
+                    (y / dy).floor().max(0.0).min((gs[1]-1) as f64),
+                    (z / dz).floor().max(0.0).min((gs[2]-1) as f64),
+                ]
+            }).collect()
+        }
+        _ => return Err(format!(
+            "Unsupported conversion: {} -> {}. Supported: cartesian<->fractional, cartesian->grid_index",
+            from_system, to_system
+        )),
+    };
+
+    Ok(CoordinateMappingResult {
+        mapped_positions: mapped,
+        num_points: positions.len() as u32,
+        from_system,
+        to_system,
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoordinateMappingResult {
+    pub mapped_positions: Vec<Vec<f64>>,
+    pub num_points: u32,
+    pub from_system: String,
+    pub to_system: String,
+}

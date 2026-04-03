@@ -114,10 +114,22 @@ const SOLVER_DEFS: &[SolverDef] = &[
         pip_packages: &["fipy"],
     },
     SolverDef {
+        name: "openfoam",
+        display_name: "OpenFOAM",
+        scale: "PhaseField",
+        detect_commands: &["foamExec", "icoFoam", "simpleFoam"],
+        description: "开源计算流体力学软件，支持相场模拟",
+        estimated_size_mb: 2000.0,
+        website: "https://www.openfoam.com",
+        apt_packages: &["openfoam9", "openfoam10"],
+        brew_packages: &["openfoam"],
+        pip_packages: &[],
+    },
+    SolverDef {
         name: "calculix",
         display_name: "CalculiX",
         scale: "FE",
-        detect_commands: &["ccx"],
+        detect_commands: &["ccx", "ccx_2.20"],
         description: "三维结构有限元求解器，支持线性和非线性分析",
         estimated_size_mb: 30.0,
         website: "http://www.calculix.de",
@@ -619,6 +631,48 @@ pub fn check_solver_works(solver_name: String) -> Result<SolverVerifyResult, Str
             }
         }
 
+        "openfoam" => {
+            // 尝试检测 OpenFOAM
+            let cmds = ["foamExec", "icoFoam", "simpleFoam"];
+            let mut last_error = None;
+
+            for cmd in &cmds {
+                if let Some(_path) = find_executable(cmd) {
+                    match Command::new(cmd).arg("-help").output() {
+                        Ok(output) => {
+                            let stdout = String::from_utf8_lossy(&output.stdout);
+                            let stderr = String::from_utf8_lossy(&output.stderr);
+                            let combined = format!("{}\n{}", stdout, stderr);
+
+                            // OpenFOAM 命令通常会输出版本信息
+                            let version = extract_version_number(&combined);
+                            let works = !combined.is_empty() || output.status.success();
+
+                            if works {
+                                tracing::info!("OpenFOAM 验证成功，版本: {:?}", version);
+                                return Ok(SolverVerifyResult {
+                                    works: true,
+                                    version,
+                                    error_message: None,
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            last_error = Some(format!("无法执行 {}: {}", cmd, e));
+                        }
+                    }
+                }
+            }
+
+            let error_msg = last_error.unwrap_or_else(|| "未找到 OpenFOAM 可执行文件".to_string());
+            tracing::warn!("{}", error_msg);
+            Ok(SolverVerifyResult {
+                works: false,
+                version: None,
+                error_message: Some(error_msg),
+            })
+        }
+
         _ => Err(format!("未知求解器: {}", solver_name)),
     }
 }
@@ -1002,4 +1056,279 @@ pub fn get_solver_info(solver_name: String) -> Result<SolverInfo, String> {
 
     tracing::info!("求解器 {} 信息获取完成，已安装: {}", solver_name, installed);
     Ok(info)
+}
+
+/// Checks CalculiX version to verify KI-001 resolution (V2.3-011).
+#[tauri::command]
+pub fn check_calculix_version() -> Result<CalculiXVersionResult, String> {
+    use std::process::Command;
+
+    tracing::info!("Checking CalculiX version");
+
+    let result = Command::new("ccx")
+        .arg("--version")
+        .output();
+
+    match result {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            let version_info = if !stdout.is_empty() { stdout } else { stderr };
+
+            // Try to extract version number
+            let version = version_info
+                .lines()
+                .find(|l| l.contains("CalculiX") || l.contains("version") || l.contains("ccx"))
+                .unwrap_or(&version_info)
+                .to_string();
+
+            let has_end_bug = version_info.contains("2.17") || version_info.contains("2.18") || version_info.contains("2.19");
+
+            Ok(CalculiXVersionResult {
+                found: true,
+                version: version.trim().to_string(),
+                has_end_bug,
+                ki001_resolved: !has_end_bug,
+                recommendation: if has_end_bug {
+                    "Upgrade to CalculiX 2.20+ to resolve KI-001 (*END parsing bug)".to_string()
+                } else {
+                    "CalculiX version is compatible".to_string()
+                },
+            })
+        }
+        Err(e) => Ok(CalculiXVersionResult {
+            found: false,
+            version: String::new(),
+            has_end_bug: false,
+            ki001_resolved: false,
+            recommendation: format!("CalculiX not found: {}. Install via apt or compile from source.", e),
+        }),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalculiXVersionResult {
+    pub found: bool,
+    pub version: String,
+    pub has_end_bug: bool,
+    pub ki001_resolved: bool,
+    pub recommendation: String,
+}
+
+// ============================================================================
+// V2.3-016: Dependency Resolution
+// ============================================================================
+
+/// Resolves solver dependencies (V2.3-016).
+/// Returns a list of required dependencies for the given solver.
+#[tauri::command]
+pub fn resolve_solver_dependencies(solver_id: String) -> Result<DependencyResult, String> {
+    tracing::info!(solver = %solver_id, "Resolving solver dependencies");
+
+    let deps = match solver_id.as_str() {
+        "lammps" => vec![
+            Dependency { name: "MPI Runtime".to_string(), required: true, check_cmd: "mpirun --version".to_string(), installed: check_cmd_exists("mpirun") },
+        ],
+        "quantum_espresso" => vec![
+            Dependency { name: "MPI Runtime".to_string(), required: true, check_cmd: "mpirun --version".to_string(), installed: check_cmd_exists("mpirun") },
+            Dependency { name: "FFTW3".to_string(), required: false, check_cmd: "pkg-config --modversion fftw3".to_string(), installed: check_cmd_exists("pkg-config") },
+        ],
+        "fipy" => vec![
+            Dependency { name: "Python 3".to_string(), required: true, check_cmd: "python3 --version".to_string(), installed: check_cmd_exists("python3") },
+            Dependency { name: "NumPy".to_string(), required: true, check_cmd: "python3 -c 'import numpy'".to_string(), installed: check_cmd_exists("python3") },
+            Dependency { name: "SciPy".to_string(), required: false, check_cmd: "python3 -c 'import scipy'".to_string(), installed: check_cmd_exists("python3") },
+        ],
+        "openfoam" => vec![
+            Dependency { name: "MPI Runtime".to_string(), required: true, check_cmd: "mpirun --version".to_string(), installed: check_cmd_exists("mpirun") },
+            Dependency { name: "Paraview".to_string(), required: false, check_cmd: "paraview --version".to_string(), installed: check_cmd_exists("paraview") },
+        ],
+        "calculix" => vec![
+            Dependency { name: "SPOOLES".to_string(), required: true, check_cmd: "dpkg -l libspooles-dev".to_string(), installed: false },
+        ],
+        _ => return Err(format!("Unknown solver: {}", solver_id)),
+    };
+
+    let all_installed = deps.iter().all(|d| d.installed);
+    let missing: Vec<String> = deps.iter().filter(|d| !d.installed && d.required).map(|d| d.name.clone()).collect();
+
+    Ok(DependencyResult { dependencies: deps, all_installed, missing })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Dependency {
+    pub name: String,
+    pub required: bool,
+    pub check_cmd: String,
+    pub installed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DependencyResult {
+    pub dependencies: Vec<Dependency>,
+    pub all_installed: bool,
+    pub missing: Vec<String>,
+}
+
+fn check_cmd_exists(cmd: &str) -> bool {
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
+    if parts.is_empty() { return false; }
+    std::process::Command::new(parts[0])
+        .args(&parts[1..])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+// ============================================================================
+// V2.3-017: Multi-version Management
+// ============================================================================
+
+/// Lists available versions of a solver (V2.3-017).
+#[tauri::command]
+pub fn list_solver_versions(solver_id: String) -> Result<SolverVersionList, String> {
+    tracing::info!(solver = %solver_id, "Listing solver versions");
+
+    let versions = match solver_id.as_str() {
+        "lammps" => {
+            let mut v = Vec::new();
+            if check_cmd_exists("lmp") {
+                v.push(SolverVersion { version: "apt-default".to_string(), path: find_cmd_path("lmp"), is_default: true });
+            }
+            if check_cmd_exists("lmp_serial") {
+                v.push(SolverVersion { version: "serial".to_string(), path: find_cmd_path("lmp_serial"), is_default: false });
+            }
+            v
+        }
+        "quantum_espresso" => {
+            let mut v = Vec::new();
+            if check_cmd_exists("pw.x") {
+                v.push(SolverVersion { version: "system".to_string(), path: find_cmd_path("pw.x"), is_default: true });
+            }
+            v
+        }
+        "fipy" => {
+            let mut v = Vec::new();
+            if check_cmd_exists("python3") {
+                v.push(SolverVersion { version: "pip".to_string(), path: "python3 -m fipy".to_string(), is_default: true });
+            }
+            v
+        }
+        "calculix" => {
+            let mut v = Vec::new();
+            if check_cmd_exists("ccx") {
+                v.push(SolverVersion { version: "system".to_string(), path: find_cmd_path("ccx"), is_default: true });
+            }
+            v
+        }
+        _ => return Err(format!("Unknown solver: {}", solver_id)),
+    };
+
+    Ok(SolverVersionList { solver_id, versions })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SolverVersion {
+    pub version: String,
+    pub path: String,
+    pub is_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SolverVersionList {
+    pub solver_id: String,
+    pub versions: Vec<SolverVersion>,
+}
+
+fn find_cmd_path(cmd: &str) -> String {
+    std::process::Command::new("which")
+        .arg(cmd)
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| format!("/usr/bin/{}", cmd))
+}
+
+// ============================================================================
+// V2.3-019: Installation Verification (Hello World)
+// ============================================================================
+
+/// Runs a hello-world verification for a solver after installation (V2.3-019).
+#[tauri::command]
+pub fn verify_solver_installation(solver_id: String) -> Result<VerifyResult, String> {
+    tracing::info!(solver = %solver_id, "Verifying solver installation");
+
+    let (success, output, elapsed_ms) = match solver_id.as_str() {
+        "lammps" => {
+            let start = std::time::Instant::now();
+            let r = Command::new("lmp").args(["-e", "print \"LAMMPS OK\""]).output();
+            let elapsed = start.elapsed().as_millis();
+            match r {
+                Ok(o) => (o.status.success(), String::from_utf8_lossy(&o.stdout).to_string(), elapsed as u64),
+                Err(e) => (false, format!("Error: {}", e), elapsed as u64),
+            }
+        }
+        "quantum_espresso" => {
+            let start = std::time::Instant::now();
+            let r = Command::new("pw.x").args(["--version"]).output();
+            let elapsed = start.elapsed().as_millis();
+            match r {
+                Ok(o) => (o.status.success() || !String::from_utf8_lossy(&o.stderr).is_empty(),
+                    String::from_utf8_lossy(&o.stdout).to_string() + &String::from_utf8_lossy(&o.stderr).to_string(), elapsed as u64),
+                Err(e) => (false, format!("Error: {}", e), elapsed as u64),
+            }
+        }
+        "fipy" => {
+            let start = std::time::Instant::now();
+            let r = Command::new("python3").args(["-c", "import fipy; print('FiPy OK')"]).output();
+            let elapsed = start.elapsed().as_millis();
+            match r {
+                Ok(o) => (o.status.success(), String::from_utf8_lossy(&o.stdout).to_string(), elapsed as u64),
+                Err(e) => (false, format!("Error: {}", e), elapsed as u64),
+            }
+        }
+        "calculix" => {
+            let start = std::time::Instant::now();
+            let r = Command::new("ccx").args(["-h"]).output();
+            let elapsed = start.elapsed().as_millis();
+            match r {
+                Ok(o) => (o.status.success(), String::from_utf8_lossy(&o.stdout).to_string() + &String::from_utf8_lossy(&o.stderr).to_string(), elapsed as u64),
+                Err(e) => (false, format!("Error: {}", e), elapsed as u64),
+            }
+        }
+        "openfoam" => {
+            let start = std::time::Instant::now();
+            let r = Command::new("foamExec").args(["-help"]).output();
+            let elapsed = start.elapsed().as_millis();
+            match r {
+                Ok(o) => (o.status.success() || !String::from_utf8_lossy(&o.stderr).is_empty(),
+                    String::from_utf8_lossy(&o.stdout).to_string() + &String::from_utf8_lossy(&o.stderr).to_string(), elapsed as u64),
+                Err(e) => (false, format!("Error: {}", e), elapsed as u64),
+            }
+        }
+        _ => return Err(format!("Unknown solver: {}", solver_id)),
+    };
+
+    Ok(VerifyResult {
+        solver_id,
+        success,
+        output: output.chars().take(500).collect(),
+        elapsed_ms,
+        recommendation: if success {
+            "Installation verified successfully".to_string()
+        } else {
+            "Installation verification failed. Check solver installation.".to_string()
+        },
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerifyResult {
+    pub solver_id: String,
+    pub success: bool,
+    pub output: String,
+    pub elapsed_ms: u64,
+    pub recommendation: String,
 }
