@@ -7,6 +7,30 @@
 
 ---
 
+## [V1.9-dev] - 2026-04-03
+
+### 新增
+
+- **V1.9-001 四尺度串联集成测试**：新增 `multiscaleIntegration.ts` API + `MultiscaleIntegrationView.vue` 视图，DFT→MD→相场→FE 全流程自动串联，步骤状态监控，自动桥接
+- **V1.9-002 端到端标准算例**：3 个真实场景（高强钢析出相/镁合金蠕变/陶瓷增材制造），文献对比验证，误差分析
+- **V1.9-003 工作流模板库**：新增 `workflowTemplate.ts` API + `WorkflowTemplateView.vue` 视图，10+ 模板（凝固/蠕变/疲劳/相变/断裂），参数化配置
+- **V1.9-004 模板市场**：用户上传/下载/评分工作流模板，审核机制，版本管理，搜索筛选
+- **V1.9-005 参数扫描自动化**：新增 `highThroughput.ts` API + `HighThroughputView.vue` 视图，DOE 矩阵生成（全因子/LHS/Sobol/随机/CCD），批量任务提交
+- **V1.9-006 高通量筛选结果数据库**：自动入库，查询构建器，导出 CSV/Parquet/JSON，统计与灵敏度分析
+- **V1.9-007 AI 参数推荐**：新增 `aiRecommend.ts` API + `AiRecommendView.vue` 视图，基于历史数据推荐各尺度最优参数，置信度评估，反馈循环
+- **V1.9-008 四尺度集成 CI**：新增 `nightlyCI.ts` API + `NightlyCIView.vue` 视图，Nightly Build 自动跑完整算例，失败自动提 issue，Slack/邮件通知
+- **V1.9-009 多尺度仿真最佳实践文档**：5 个典型场景 step-by-step 教程规划（文档类，后续补充）
+- **V1.9-010 多尺度 UI 整合**：新增 `multiscaleWorkspace.ts` API + `MultiscaleWorkspaceView.vue` 视图，单一项目内管理 DFT/MD/相场/FE 四种任务，任务图可视化，共享数据
+
+### 变更
+
+- **路由**：新增 6 条路由（`/integration`、`/workflow-template`、`/high-throughput`、`/ai-recommend`、`/nightly-ci`、`/multiscale-workspace`）
+- **导航**：左侧导航栏新增 6 个模块入口（集成测试、模板、高通量、AI推荐、Nightly、工作区）
+- **国际化**：中英文语言包新增 V1.9 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.8-dev] - 2026-04-03
 
 ### 新增

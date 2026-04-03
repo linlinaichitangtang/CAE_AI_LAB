@@ -65,6 +65,12 @@ export default {
     regressionCI: 'Regression CI',
     auditLog: 'Audit Log',
     crossScaleViz: 'Cross-Scale Viz',
+    integration: 'Integration',
+    workflowTemplate: 'Workflow',
+    highThroughput: 'High-Throughput',
+    aiRecommend: 'AI Recommend',
+    nightlyCI: 'Nightly CI',
+    multiscaleWorkspace: 'Workspace',
   },
   simulation: {
     title: 'Simulation',

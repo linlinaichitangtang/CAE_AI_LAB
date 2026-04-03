@@ -314,6 +314,36 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/CrossScaleVizView.vue')
   },
   {
+    path: '/integration',
+    name: 'MultiscaleIntegration',
+    component: () => import('./views/MultiscaleIntegrationView.vue')
+  },
+  {
+    path: '/workflow-template',
+    name: 'WorkflowTemplate',
+    component: () => import('./views/WorkflowTemplateView.vue')
+  },
+  {
+    path: '/high-throughput',
+    name: 'HighThroughput',
+    component: () => import('./views/HighThroughputView.vue')
+  },
+  {
+    path: '/ai-recommend',
+    name: 'AiRecommend',
+    component: () => import('./views/AiRecommendView.vue')
+  },
+  {
+    path: '/nightly-ci',
+    name: 'NightlyCI',
+    component: () => import('./views/NightlyCIView.vue')
+  },
+  {
+    path: '/multiscale-workspace',
+    name: 'MultiscaleWorkspace',
+    component: () => import('./views/MultiscaleWorkspaceView.vue')
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')
@@ -368,7 +398,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge', '/dft-input', '/dft-task', '/dft-postprocess', '/dft-bridge', '/ontology', '/coordinate-mapping', '/coarse-graining', '/error-tracking', '/benchmark', '/regression-ci', '/audit-log', '/cross-scale-viz']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification', '/phase-field', '/phase-field-analysis', '/phase-field-gpu', '/phase-field-bridge', '/dft-input', '/dft-task', '/dft-postprocess', '/dft-bridge', '/ontology', '/coordinate-mapping', '/coarse-graining', '/error-tracking', '/benchmark', '/regression-ci', '/audit-log', '/cross-scale-viz', '/integration', '/workflow-template', '/high-throughput', '/ai-recommend', '/nightly-ci', '/multiscale-workspace']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

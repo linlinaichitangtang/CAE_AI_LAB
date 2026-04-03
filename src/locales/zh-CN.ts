@@ -65,6 +65,12 @@ export default {
     regressionCI: '回归测试',
     auditLog: '审计日志',
     crossScaleViz: '跨尺度可视化',
+    integration: '集成测试',
+    workflowTemplate: '工作流模板',
+    highThroughput: '高通量筛选',
+    aiRecommend: 'AI参数推荐',
+    nightlyCI: 'Nightly CI',
+    multiscaleWorkspace: '多尺度工作区',
   },
   simulation: {
     title: '仿真分析',

@@ -334,6 +334,69 @@ const CrossScaleIcon = {
   ])
 }
 
+const IntegrationIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '1', y: '6', width: '6', height: '6', rx: '1' }),
+    h('rect', { x: '9', y: '6', width: '6', height: '6', rx: '1' }),
+    h('rect', { x: '17', y: '6', width: '6', height: '6', rx: '1' }),
+    h('path', { d: 'M7 9h2M15 9h2' }),
+    h('rect', { x: '5', y: '16', width: '14', height: '4', rx: '1' }),
+    h('path', { d: 'M12 12v4' })
+  ])
+}
+
+const WorkflowIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' }),
+    h('polyline', { points: '14 2 14 8 20 8' }),
+    h('line', { x1: '8', y1: '13', x2: '16', y2: '13' }),
+    h('line', { x1: '8', y1: '17', x2: '16', y2: '17' }),
+    h('polyline', { points: '10 9 9 9 8 9' })
+  ])
+}
+
+const HighThroughputIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2' }),
+    h('line', { x1: '3', y1: '9', x2: '21', y2: '9' }),
+    h('line', { x1: '3', y1: '15', x2: '21', y2: '15' }),
+    h('line', { x1: '9', y1: '3', x2: '9', y2: '21' }),
+    h('line', { x1: '15', y1: '3', x2: '15', y2: '21' }),
+    h('circle', { cx: '6', cy: '6', r: '1', fill: 'currentColor' }),
+    h('circle', { cx: '12', cy: '12', r: '1', fill: 'currentColor' }),
+    h('circle', { cx: '18', cy: '18', r: '1', fill: 'currentColor' })
+  ])
+}
+
+const AiRecommendIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z' }),
+    h('path', { d: 'M8 14s1.5 2 4 2 4-2 4-2' }),
+    h('path', { d: 'M12 18v4' }),
+    h('path', { d: 'M8 22h8' }),
+    h('circle', { cx: '9', cy: '7', r: '0.5', fill: 'currentColor' }),
+    h('circle', { cx: '15', cy: '7', r: '0.5', fill: 'currentColor' })
+  ])
+}
+
+const NightlyIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' }),
+    h('path', { d: 'M14 9l-2 2 2 2' }),
+    h('path', { d: 'M18 9l-2 2 2 2' })
+  ])
+}
+
+const WorkspaceIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('rect', { x: '2', y: '3', width: '20', height: '14', rx: '2' }),
+    h('line', { x1: '8', y1: '21', x2: '16', y2: '21' }),
+    h('line', { x1: '12', y1: '17', x2: '12', y2: '21' }),
+    h('rect', { x: '5', y: '6', width: '5', height: '4', rx: '0.5' }),
+    h('rect', { x: '14', y: '6', width: '5', height: '4', rx: '0.5' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -381,6 +444,12 @@ const mainNavItems: Array<{
   { path: '/benchmark', icon: BenchmarkIcon, label: '算例库' },
   { path: '/audit-log', icon: AuditIcon, label: '审计' },
   { path: '/cross-scale-viz', icon: CrossScaleIcon, label: '跨尺度可视化' },
+  { path: '/integration', icon: IntegrationIcon, label: '集成测试' },
+  { path: '/workflow-template', icon: WorkflowIcon, label: '模板' },
+  { path: '/high-throughput', icon: HighThroughputIcon, label: '高通量' },
+  { path: '/ai-recommend', icon: AiRecommendIcon, label: 'AI推荐' },
+  { path: '/nightly-ci', icon: NightlyIcon, label: 'Nightly' },
+  { path: '/multiscale-workspace', icon: WorkspaceIcon, label: '工作区' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 
