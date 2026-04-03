@@ -7,6 +7,59 @@
 
 ---
 
+## [V1.0.0] - 2026-04-03
+
+> **CAELab 首个公开发布版本**
+> Phase 3 多尺度仿真平台正式发布，第一性原理 → 分子动力学 → 相场法 → 有限元全尺度贯通。
+
+### 新增
+
+**Phase 3 多尺度仿真核心**
+
+- **V1.5 MD 模块**：分子动力学框架（LAMMPS 集成）、原子结构建模、轨迹可视化、RDF/MSD/扩散系数
+- **V1.6 相场模块**：CH/Allen-Cahn 方程求解器（FiPy）、组织初始化、热力耦合、GPU 加速
+- **V1.7 DFT 接口**：Quantum ESPRESSO 输入生成、任务管理、结果解析、势函数训练
+- **V1.8 数据管理框架**：单位本体库（50+ 物理量）、坐标映射引擎、误差传播追踪
+- **V1.9 工作流集成**：四尺度串联、高通量筛选、工作流模板市场、CI 自动化
+- **V2.0 工作流编排器**：拖拽式节点编辑器、DAG 调度、跨尺度参数映射
+
+**求解器集成（V2.3）**
+
+- **LAMMPS**：真实 NVT/NVE 分子动力学，温度误差 0.3%，能量守恒 0.4%
+- **Quantum ESPRESSO**：本地 `pw.x` 执行、能量/力/应力解析，Si 能量误差 0.00%
+- **FiPy**：真实 CH 方程（Grid3D + CellVariable + faceGrad.divergence），质量守恒 0.0%
+- **CalculiX**：`submit_calculix_job` / `parse_calculix_dat` / `parse_calculix_frd`，E-B 梁误差 3.50%
+- **OpenFOAM**：求解器检测框架（foamExec / icoFoam / simpleFoam）
+
+**VS 风格求解器安装框架**
+
+- **安装器 UI**：WelcomeScreen + ComponentSelector + DownloadProgress + VerifyInstall + PostInstallPanel
+- **后端命令**：`detect_solvers`、`check_solver_works`、`install_from_brew`、`uninstall_solver`
+- **依赖解析**：`resolve_solver_dependencies`（MPI / LAPACK 自动检测）
+- **多版本管理**：`list_solver_versions`（同一求解器多版本切换）
+- **安装验证**：`verify_solver_installation`（hello-world 验证）
+
+**多尺度桥接**
+
+- **高斯粗粒化**：`run_gaussian_coarse_graining`（KI-002 解决）
+- **单位换算**：`convert_units`（50+ 物理量，SI / a.u. / cgs）
+- **坐标映射**：`map_coordinates`（笛卡尔 ↔ 分数坐标 ↔ 网格索引）
+- **H-S 均匀化**：等效弹性模量传递，FE 误差 0.0000%
+
+**CI / 测试**
+
+- **GitHub Actions CI**：7 Jobs（含自动提 Issue）
+- **四尺度测试报告 PDF**：Round1 单尺度冒烟 / Round2 尺度桥接 / Round3 端到端
+- **V2.3 测试报告 PDF**：T1~T7 全部通过
+
+### 变更
+
+- **版本号**：统一为 `1.0.0`（package.json / tauri.conf.json / Cargo.toml）
+- **Rust 编译**：15 warnings（非阻塞，均为既有代码）
+- **构建验证**：`cargo build --release` 0 errors，`npm run build` 0 errors
+
+---
+
 ## [V0.10.0] - 2026-04-02
 
 ### 新增
