@@ -45,6 +45,10 @@ export default {
     multiscale: 'Multiscale',
     dataAsset: 'Data Asset',
     certification: 'Certification',
+    md: 'MD',
+    atomBuilder: 'Atom Builder',
+    trajectory: 'Trajectory',
+    mdPostProcess: 'MD Post',
   },
   simulation: {
     title: 'Simulation',

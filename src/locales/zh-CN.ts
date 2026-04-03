@@ -45,6 +45,10 @@ export default {
     multiscale: '多尺度桥接',
     dataAsset: '数据资产',
     certification: '认证报告',
+    md: '分子动力学',
+    atomBuilder: '原子建模',
+    trajectory: '轨迹可视化',
+    mdPostProcess: 'MD后处理',
   },
   simulation: {
     title: '仿真分析',

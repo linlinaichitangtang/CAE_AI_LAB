@@ -229,6 +229,26 @@ const CertIcon = {
   ])
 }
 
+const MdIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('circle', { cx: '7', cy: '7', r: '2' }),
+    h('circle', { cx: '17', cy: '7', r: '2' }),
+    h('circle', { cx: '12', cy: '17', r: '2' }),
+    h('line', { x1: '8.5', y1: '8.5', x2: '10.5', y2: '15.5' }),
+    h('line', { x1: '15.5', y1: '8.5', x2: '13.5', y2: '15.5' }),
+    h('line', { x1: '9', y1: '7', x2: '15', y2: '7' })
+  ])
+}
+
+const AtomIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4' }),
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4', transform: 'rotate(60 12 12)' }),
+    h('ellipse', { cx: '12', cy: '12', rx: '10', ry: '4', transform: 'rotate(-60 12 12)' }),
+    h('circle', { cx: '12', cy: '12', r: '1.5', fill: 'currentColor' })
+  ])
+}
+
 const SettingsIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('circle', { cx: '12', cy: '12', r: '3' }),
@@ -265,6 +285,8 @@ const mainNavItems: Array<{
   { path: '/multiscale', icon: MultiscaleIcon, label: '多尺度' },
   { path: '/data-asset', icon: DataIcon, label: '数据' },
   { path: '/certification', icon: CertIcon, label: '认证' },
+  { path: '/md', icon: MdIcon, label: 'MD' },
+  { path: '/atom-builder', icon: AtomIcon, label: '原子建模' },
   { path: '/topology', icon: TopologyIcon, label: '拓扑' }
 ]
 

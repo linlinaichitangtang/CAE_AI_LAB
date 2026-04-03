@@ -184,6 +184,26 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/MultiscaleView.vue')
   },
   {
+    path: '/md',
+    name: 'MolecularDynamics',
+    component: () => import('./views/MolecularDynamicsView.vue')
+  },
+  {
+    path: '/atom-builder',
+    name: 'AtomBuilder',
+    component: () => import('./views/AtomBuilderView.vue')
+  },
+  {
+    path: '/trajectory',
+    name: 'Trajectory',
+    component: () => import('./views/TrajectoryView.vue')
+  },
+  {
+    path: '/md-postprocess',
+    name: 'MdPostProcess',
+    component: () => import('./views/MdPostProcessView.vue')
+  },
+  {
     path: '/data-asset',
     name: 'DataAsset',
     component: () => import('./views/DataAssetView.vue')
@@ -268,7 +288,7 @@ router.beforeEach((to, _from, next) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   // 移动端不可访问的路由列表
-  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/data-asset', '/certification']
+  const mobileRestricted = ['/cfd', '/explicit', '/topology', '/comparison', '/ai', '/thermal-fluid', '/cohesive', '/xfem', '/advanced-mesh', '/mesh-refinement', '/acoustic', '/geometry-repair', '/composite', '/cellular', '/creep', '/advanced-material', '/cloud-hpc', '/hpc-cluster', '/rve', '/homogenization', '/multiscale', '/md', '/atom-builder', '/trajectory', '/md-postprocess', '/data-asset', '/certification']
 
   if (isMobile && mobileRestricted.includes(to.path)) {
     // 移动端访问受限路由时重定向到首页

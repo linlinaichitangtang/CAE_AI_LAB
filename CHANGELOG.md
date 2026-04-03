@@ -7,6 +7,30 @@
 
 ---
 
+## [V1.5-dev] - 2026-04-02
+
+### 新增
+
+- **V1.5-001 MD 模块框架 + 任务管理**：新增 `molecularDynamics.ts` API + `MolecularDynamicsView.vue` 视图，MD 工作区与 FE/CFD 并列，支持 NVE/NVT/NPT/NPH/UM 系综
+- **V1.5-002 LAMMPS 集成**：Python API 调用 LAMMPS，支持 EAM/LJ/MEAM/Tersoff/ReaxFF/Morse/Buckingham 势函数，Nosé-Hoover/Berendsen 恒温器，Parrinello-Rahman 恒压器
+- **V1.5-003 原子结构建模器**：新增 `atomBuilder.ts` API + `AtomBuilderView.vue` 视图，支持 FCC/BCC/HCP/金刚石/SC 超胞、非晶、界面、缺陷生成
+- **V1.5-004 特殊结构生成**：碳纳米管（手性向量公式）、团簇（二十面体/十面体/FCC/BCC/球形）、位错线建模
+- **V1.5-005 MD 模拟类型**：NVE/NVT/NPT/NPH/UM 系综，控温控压方法，实时温度/压力/能量监控
+- **V1.5-006 轨迹可视化 (AtomEye 风格)**：新增 `trajectoryViewer.ts` API + `TrajectoryView.vue` 视图，原子着色（元素/速度/应力/位移/电荷），bonds 显示，旋转/缩放/平移，帧播放控制
+- **V1.5-007 RDF/MSD/扩散系数**：新增 `mdPostProcess.ts` API，径向分布函数、均方位移、扩散系数、速度自相关函数(VACF)、振动态密度(VDOS)
+- **V1.5-008 应力/能量时序曲线**：温度/压力/总能量/动能/势能/体积时序，导出 CSV
+- **V1.5-009 MD→相场数据接口**：QC/MQC/密度场/序参量粗粒化方法，原子构型→连续场变量
+- **V1.5-010 MD→FE 边界条件映射**：Virial/Hardy/Irving-Kirkwood 应力平均，原子应力→连续体应力
+
+### 变更
+
+- **路由**：新增 4 条路由（`/md`、`/atom-builder`、`/trajectory`、`/md-postprocess`）
+- **导航**：左侧导航栏新增 2 个模块入口（MD、原子建模）
+- **国际化**：中英文语言包新增 V1.5 模块翻译
+- **移动端**：新增模块加入移动端路由限制列表
+
+---
+
 ## [V1.4-dev] - 2026-04-02
 
 ### 新增
