@@ -661,10 +661,12 @@ import {
 } from '@/api'
 import { formatProjectDate } from '@/api'
 import { useProjectStore } from '@/stores/project'
+import { useUndoStore } from '@/stores/undo'
 
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+const undoStore = useUndoStore()
 
 // ============ 右键菜单 ============
 const contextMenu = useContextMenu()
@@ -1312,6 +1314,28 @@ async function createNewNote() {
     
     await loadFiles()
     await loadCategories()
+
+    // Undo/Redo: register create operation
+    const createdFileId = newFile.id
+    const createdProjectId = currentProjectId.value
+    undoStore.execute({
+      id: `create-note-${Date.now()}`,
+      description: `创建笔记`,
+      execute: () => {},
+      undo: async () => {
+        try {
+          await deleteFile(createdFileId)
+          if (currentFileId.value === createdFileId) {
+            currentFileId.value = null
+            noteTitle.value = ''
+            noteContent.value = ''
+          }
+          await loadFiles()
+        } catch (e) {
+          console.error('Undo create note failed:', e)
+        }
+      }
+    })
   } catch (error) {
     console.error('Failed to create note:', error)
     alert('创建笔记失败: ' + (error as Error).message)
@@ -1348,11 +1372,40 @@ async function deleteNote() {
   if (confirm('确定要删除这篇笔记吗？')) {
     try {
       loading.value = true
+      const deletedFileId = currentFileId.value
+      const deletedTitle = noteTitle.value
+      const deletedContent = noteContent.value
+      const deletedProjectId = currentProjectId.value
+
       await deleteFile(currentFileId.value)
       currentFileId.value = null
       noteTitle.value = ''
       noteContent.value = ''
       await loadFiles()
+
+      // Undo/Redo: register delete operation
+      undoStore.execute({
+        id: `delete-note-${Date.now()}`,
+        description: `删除笔记`,
+        execute: () => {},
+        undo: async () => {
+          try {
+            const restoredFile = await createFile({
+              project_id: deletedProjectId,
+              file_type: 'note',
+              file_name: deletedTitle,
+              content: deletedContent,
+              file_path: ''
+            })
+            currentFileId.value = restoredFile.id
+            noteTitle.value = restoredFile.file_name
+            noteContent.value = restoredFile.content || ''
+            await loadFiles()
+          } catch (e) {
+            console.error('Undo delete note failed:', e)
+          }
+        }
+      })
     } catch (error) {
       console.error('Failed to delete note:', error)
       alert('删除失败: ' + (error as Error).message)

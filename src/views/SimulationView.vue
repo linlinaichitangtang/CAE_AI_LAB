@@ -1,113 +1,67 @@
 <template>
   <div class="h-full flex flex-col bg-gray-50">
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 bg-white border-b">
-      <div>
-        <h2 class="text-lg font-semibold text-gray-800">仿真分析</h2>
-        <p class="text-sm text-gray-500">网格生成、边界条件设置、求解、结果可视化</p>
+    <div class="flex items-center justify-between px-4 py-2 bg-white border-b">
+      <div class="flex items-center gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-gray-800">仿真分析</h2>
+          <p class="text-xs text-gray-400">网格·边界·求解·后处理</p>
+        </div>
+        <select v-model="analysisType" class="px-2 py-1 text-sm border border-blue-200 rounded-md bg-blue-50 text-blue-700">
+          <option value="structural">结构</option>
+          <option value="modal">模态</option>
+          <option value="frequency">频响</option>
+          <option value="buckling">屈曲</option>
+          <option value="thermal">热传导</option>
+          <option value="cfd">CFD</option>
+        </select>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
         <!-- 返回笔记 -->
         <button
           v-if="projectStore.currentNoteId"
           @click="goBackToNote"
-          class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 transition flex items-center gap-1"
+          class="toolbar-btn"
           title="返回笔记"
         >
-          <span>&larr;</span>
-          <span>返回笔记</span>
+          ←
         </button>
-        <!-- 分析类型切换 -->
-        <select v-model="analysisType" class="analysis-type-selector px-3 py-1.5 text-sm border border-blue-300 rounded">
-          <option value="structural">结构分析</option>
-          <option value="modal">模态分析</option>
-          <option value="frequency">频率响应分析</option>
-          <option value="buckling">屈曲分析</option>
-          <option value="thermal">热传导分析</option>
-          <option value="cfd">CFD流场分析</option>
-        </select>
-        <!-- 🤖 AI解释结果 -->
-        <button 
-          @click="showAIResultDialog"
-          :disabled="!projectStore.hasResult"
-          class="px-3 py-1.5 text-sm border border-purple-300 text-purple-600 rounded hover:bg-purple-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+
+        <!-- 视图操作下拉 -->
+        <div class="relative" ref="viewMenuRef">
+          <button @click="showViewMenu = !showViewMenu" class="toolbar-btn" title="视图操作">
+            🖼
+          </button>
+          <div v-if="showViewMenu" class="toolbar-dropdown">
+            <button @click="resetAll(); showViewMenu = false" class="dropdown-item">↺ 重置</button>
+            <button @click="exportScreenshot(); showViewMenu = false" class="dropdown-item">📷 导出图片</button>
+          </div>
+        </div>
+
+        <!-- 结果操作下拉 -->
+        <div class="relative" ref="resultMenuRef">
+          <button @click="showResultMenu = !showResultMenu" class="toolbar-btn" :class="{ 'opacity-40 pointer-events-none': !projectStore.hasResult }" title="结果操作">
+            📊
+          </button>
+          <div v-if="showResultMenu" class="toolbar-dropdown right-0">
+            <button @click="showAIResultDialog(); showResultMenu = false" class="dropdown-item" :disabled="!projectStore.hasResult">🤖 AI解释</button>
+            <button @click="showEmbedToNoteDialog(); showResultMenu = false" class="dropdown-item" :disabled="!projectStore.currentNoteId || !projectStore.hasResult">🔗 嵌入笔记</button>
+            <button @click="showGenerateReportDialog(); showResultMenu = false" class="dropdown-item" :disabled="!projectStore.hasResult">📄 生成报告</button>
+          </div>
+        </div>
+
+        <div class="w-px h-5 bg-gray-200 mx-1"></div>
+
+        <!-- 分析模块切换按钮组 -->
+        <button
+          v-for="tab in analysisTabs"
+          :key="tab.key"
+          @click="activeTab = tab.key as typeof activeTab.value"
+          :class="['tab-btn', activeTab === tab.key ? 'tab-btn-active' : '']"
+          :style="activeTab === tab.key ? { backgroundColor: tab.color, borderColor: tab.color } : {}"
+          :title="tab.label"
         >
-          <span>🤖</span>
-          <span>AI解释结果</span>
-        </button>
-        <!-- 🔗 嵌入到笔记 -->
-        <button 
-          @click="showEmbedToNoteDialog"
-          :disabled="!projectStore.currentNoteId || !projectStore.hasResult"
-          class="px-3 py-1.5 text-sm border border-orange-300 text-orange-600 rounded hover:bg-orange-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-        >
-          <span>🔗</span>
-          <span>嵌入到笔记</span>
-        </button>
-        <button 
-          @click="resetAll"
-          class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 transition"
-        >
-          重置
-        </button>
-        <button 
-          @click="exportScreenshot"
-          class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 transition"
-        >
-          导出图片
-        </button>
-        <!-- 📄 生成报告 -->
-        <button 
-          @click="showGenerateReportDialog"
-          :disabled="!projectStore.hasResult"
-          class="px-3 py-1.5 text-sm border border-green-300 text-green-600 rounded hover:bg-green-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-        >
-          <span>📄</span>
-          <span>生成报告</span>
-        </button>
-        <!-- 📊 参数化分析 -->
-        <button 
-          @click="activeTab = 'parametric'"
-          :class="['px-3 py-1.5 text-sm border rounded flex items-center gap-1 transition', 
-            activeTab === 'parametric' 
-              ? 'bg-indigo-600 text-white border-indigo-600' 
-              : 'border-indigo-300 text-indigo-600 hover:bg-indigo-50']"
-        >
-          <span>📊</span>
-          <span>参数化分析</span>
-        </button>
-        <!-- 🎯 优化设计 -->
-        <button 
-          @click="activeTab = 'optimization'"
-          :class="['px-3 py-1.5 text-sm border rounded flex items-center gap-1 transition', 
-            activeTab === 'optimization' 
-              ? 'bg-pink-600 text-white border-pink-600' 
-              : 'border-pink-300 text-pink-600 hover:bg-pink-50']"
-        >
-          <span>🎯</span>
-          <span>优化设计</span>
-        </button>
-        <!-- 🤖 自动化脚本 -->
-        <button 
-          @click="activeTab = 'automation'"
-          :class="['px-3 py-1.5 text-sm border rounded flex items-center gap-1 transition', 
-            activeTab === 'automation' 
-              ? 'bg-purple-600 text-white border-purple-600' 
-              : 'border-purple-300 text-purple-600 hover:bg-purple-50']"
-        >
-          <span>🤖</span>
-          <span>自动化脚本</span>
-        </button>
-        <!-- 🔗 接触分析 -->
-        <button 
-          @click="activeTab = 'contact'"
-          :class="['px-3 py-1.5 text-sm border rounded flex items-center gap-1 transition', 
-            activeTab === 'contact' 
-              ? 'bg-teal-600 text-white border-teal-600' 
-              : 'border-teal-300 text-teal-600 hover:bg-teal-50']"
-        >
-          <span>🔗</span>
-          <span>接触分析</span>
+          {{ tab.icon }}
         </button>
       </div>
     </div>
@@ -3106,6 +3060,7 @@ import DoePanel from '../components/parametric/DoePanel.vue'
 import { useProjectStore } from '@/stores/project'
 import { useParametricStore } from '@/stores/parametric'
 import { useAiStore } from '@/stores/ai'
+import { useUndoStore } from '@/stores/undo'
 import { useAutoSave } from '@/composables/useAutoSave'
 import * as caeApi from '@/api/cae'
 import * as cloudApi from '@/api/cloud-simulation'
@@ -3136,11 +3091,19 @@ import { extractFeatures, recommendPreset } from '../utils/smartPresets'
 
 const projectStore = useProjectStore()
 const aiStore = useAiStore()
+const undoStore = useUndoStore()
 const parametricStore = useParametricStore()
 
 // ========== 参数化 Store 初始化 ==========
+// Close dropdown menus on outside click
+function handleClickOutside(e: MouseEvent) {
+  if (viewMenuRef.value && !viewMenuRef.value.contains(e.target as Node)) showViewMenu.value = false
+  if (resultMenuRef.value && !resultMenuRef.value.contains(e.target as Node)) showResultMenu.value = false
+}
+
 onMounted(() => {
   parametricStore.hydrate()
+  document.addEventListener('click', handleClickOutside)
 })
 
 // ========== 自动保存 ==========
@@ -3268,6 +3231,20 @@ const analysisType = ref<'structural' | 'buckling' | 'thermal' | 'cfd' | 'modal'
 // ========== 主视图选项卡 ==========
 const activeTab = ref<'simulation' | 'parametric' | 'optimization' | 'automation' | 'contact'>('simulation')
 
+// ========== 工具栏下拉菜单 ==========
+const showViewMenu = ref(false)
+const showResultMenu = ref(false)
+const viewMenuRef = ref<HTMLElement | null>(null)
+const resultMenuRef = ref<HTMLElement | null>(null)
+
+const analysisTabs = [
+  { key: 'simulation', icon: '🔧', label: '仿真设置', color: '#4f46e5' },
+  { key: 'contact', icon: '🔗', label: '接触分析', color: '#0d9488' },
+  { key: 'parametric', icon: '📊', label: '参数化', color: '#4f46e5' },
+  { key: 'optimization', icon: '🎯', label: '优化设计', color: '#db2777' },
+  { key: 'automation', icon: '🤖', label: '自动化', color: '#7c3aed' },
+]
+
 // ========== 标准算例验证 ==========
 const selectedStandardCase = ref<string>('')
 const validationReport = ref<ValidationReportData | null>(null)
@@ -3354,12 +3331,31 @@ function addContactPair() {
     tieTolerance: 0.0
   }
   contactPairs.value.push(newPair)
+
+  // Undo/Redo: register add operation
+  const addedIdx = contactPairs.value.length - 1
+  undoStore.execute({
+    id: `add-contact-pair-${Date.now()}`,
+    description: `添加接触对`,
+    execute: () => {},
+    undo: () => { contactPairs.value.splice(addedIdx, 1) }
+  })
 }
 
 // Remove contact pair
 function removeContactPair(id: string) {
-  const idx = contactPairs.value.findIndex(p => p.id === id)
-  if (idx !== -1) contactPairs.value.splice(idx, 1)
+  const removedIdx = contactPairs.value.findIndex(p => p.id === id)
+  if (removedIdx === -1) return
+  const removedItem = { ...contactPairs.value[removedIdx] }
+  contactPairs.value.splice(removedIdx, 1)
+
+  // Undo/Redo: register remove operation
+  undoStore.execute({
+    id: `remove-contact-pair-${Date.now()}`,
+    description: `删除接触对`,
+    execute: () => {},
+    undo: () => { contactPairs.value.splice(removedIdx, 0, removedItem) }
+  })
 }
 
 // Update contact pair
@@ -4911,6 +4907,15 @@ function addFixedTemperature() {
     nodes: leftNodes,
     temperature: 300
   })
+
+  // Undo/Redo: register add operation
+  const addedIdx = thermalFixedTemps.value.length - 1
+  undoStore.execute({
+    id: `add-fixed-temperature-${Date.now()}`,
+    description: `添加固定温度边界`,
+    execute: () => {},
+    undo: () => { thermalFixedTemps.value.splice(addedIdx, 1) }
+  })
 }
 
 // Add heat source
@@ -4931,6 +4936,15 @@ function addHeatSource() {
       magnitude: 100, // 100W
       node_ids: [centerNode.id]
     })
+
+    // Undo/Redo: register add operation
+    const addedIdx = thermalHeatSources.value.length - 1
+    undoStore.execute({
+      id: `add-heat-source-${Date.now()}`,
+      description: `添加热源`,
+      execute: () => {},
+      undo: () => { thermalHeatSources.value.splice(addedIdx, 1) }
+    })
   }
 }
 
@@ -4942,6 +4956,15 @@ function addThermalConvection() {
     surface_name: 'default',
     film_coefficient: 10, // W/m²·K
     ambient_temperature: 293 // 20°C
+  })
+
+  // Undo/Redo: register add operation
+  const addedIdx = thermalConvections.value.length - 1
+  undoStore.execute({
+    id: `add-thermal-convection-${Date.now()}`,
+    description: `添加热对流边界`,
+    execute: () => {},
+    undo: () => { thermalConvections.value.splice(addedIdx, 1) }
   })
 }
 
@@ -6341,3 +6364,35 @@ watch(displayMode, () => {
   }
 })
 </script>
+
+<style scoped>
+.toolbar-btn {
+  @apply px-2 py-1.5 text-sm border border-gray-200 rounded-md hover:bg-gray-100 transition flex items-center gap-1;
+  min-width: 32px;
+  justify-content: center;
+}
+.toolbar-btn:hover {
+  @apply border-gray-300 bg-gray-50;
+}
+.toolbar-dropdown {
+  @apply absolute top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[140px];
+  right: 0;
+}
+.toolbar-dropdown.right-0 {
+  right: 0;
+}
+.dropdown-item {
+  @apply w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition flex items-center gap-2;
+}
+.dropdown-item:disabled {
+  @apply opacity-40 pointer-events-none;
+}
+.tab-btn {
+  @apply px-2 py-1.5 text-sm border border-gray-200 rounded-md transition flex items-center gap-1;
+  min-width: 32px;
+  justify-content: center;
+}
+.tab-btn-active {
+  @apply text-white border-transparent shadow-sm;
+}
+</style>

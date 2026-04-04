@@ -841,12 +841,14 @@ import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useProjectStore } from '@/stores/project'
 import { useAiStore } from '@/stores/ai'
+import { useUndoStore } from '@/stores/undo'
 import type { GeometryItem } from '../types'
 
 const aiStore = useAiStore()
 
 const router = useRouter()
 const projectStore = useProjectStore()
+const undoStore = useUndoStore()
 
 function goBackToNote() {
   if (projectStore.currentNoteId) {
@@ -1405,6 +1407,20 @@ function addGeometryToScene(type: string) {
   // Select the new geometry
   selectedGeometryIdx.value = geometryItems.value.length - 1
   selectedGeometryType.value = ''
+
+  // Undo/Redo: register add operation
+  const addedIdx = geometryItems.value.length - 1
+  const addedGroup = group
+  undoStore.execute({
+    id: `add-geometry-${Date.now()}`,
+    description: `添加${name}`,
+    execute: () => {}, // already executed above
+    undo: () => {
+      if (addedGroup && scene) scene.remove(addedGroup)
+      geometryItems.value.splice(addedIdx, 1)
+      selectedGeometryIdx.value = null
+    }
+  })
 }
 
 function onGeometryTypeChange() {
@@ -1677,10 +1693,17 @@ function deleteCurrentGeometry() {
     ? [...multiSelectedIndices.value] 
     : [selectedGeometryIdx.value!]
   
-  // Sort in descending order to avoid index shifting issues
-  indicesToDelete.sort((a, b) => b - a)
+  // Sort in ascending order to save items before deletion
+  const sortedAsc = [...indicesToDelete].sort((a, b) => a - b)
+  const deletedItems = sortedAsc.map(idx => ({
+    item: { ...geometryItems.value[idx], group: geometryItems.value[idx].group },
+    index: idx
+  }))
   
-  for (const idx of indicesToDelete) {
+  // Sort in descending order to avoid index shifting
+  const sortedDesc = [...indicesToDelete].sort((a, b) => b - a)
+  
+  for (const idx of sortedDesc) {
     const geom = geometryItems.value[idx]
     if (geom.group && scene) {
       scene.remove(geom.group)
@@ -1690,6 +1713,19 @@ function deleteCurrentGeometry() {
   
   multiSelectedIndices.value = []
   selectedGeometryIdx.value = null
+  
+  // Undo/Redo: register delete operation
+  undoStore.execute({
+    id: `delete-geometry-${Date.now()}`,
+    description: `删除${deletedItems.length}个几何体`,
+    execute: () => {}, // already executed above
+    undo: () => {
+      for (const { item, index } of deletedItems) {
+        geometryItems.value.splice(index, 0, item)
+        if (item.group && scene) scene.add(item.group)
+      }
+    }
+  })
 }
 
 function clearBooleanSelection() {
@@ -1716,6 +1752,13 @@ async function performBooleanOp(op: 'union' | 'subtract' | 'intersect') {
     const result = await performCSG(geometries, op)
     
     if (result) {
+      // Save original geometries for undo before removal
+      const originalIndices = [...multiSelectedIndices.value].sort((a, b) => a - b)
+      const savedOriginals = originalIndices.map(idx => ({
+        item: { ...geometryItems.value[idx], group: geometryItems.value[idx].group },
+        index: idx
+      }))
+
       // Remove original geometries
       const indicesToRemove = [...multiSelectedIndices.value].sort((a, b) => b - a)
       for (const idx of indicesToRemove) {
@@ -1742,6 +1785,26 @@ async function performBooleanOp(op: 'union' | 'subtract' | 'intersect') {
       // Select the result
       multiSelectedIndices.value = []
       selectedGeometryIdx.value = newIdx
+
+      // Undo/Redo: register boolean operation
+      const resultGroup = result.group
+      const resultIdx = newIdx
+      undoStore.execute({
+        id: `boolean-op-${Date.now()}`,
+        description: `布尔${op === 'union' ? '并集' : op === 'subtract' ? '差集' : '交集'}运算`,
+        execute: () => {}, // already executed above
+        undo: () => {
+          // Remove the result geometry
+          if (resultGroup && scene) scene.remove(resultGroup)
+          geometryItems.value.splice(resultIdx, 1)
+          // Restore original geometries
+          for (const { item, index } of savedOriginals) {
+            geometryItems.value.splice(index, 0, item)
+            if (item.group && scene) scene.add(item.group)
+          }
+          selectedGeometryIdx.value = null
+        }
+      })
       
       console.log('Boolean operation completed successfully')
     }
