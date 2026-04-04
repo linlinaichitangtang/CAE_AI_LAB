@@ -848,6 +848,7 @@ const HEX_GP: [[f64; 3]; 8] = [
 const HEX_GP_WEIGHT: f64 = 1.0;
 
 /// HEX8 形函数在参考坐标 (xi, eta, zeta) 下的值
+#[allow(dead_code)]
 fn hex8_shape_functions(xi: f64, eta: f64, zeta: f64) -> [f64; 8] {
     let n = [
         (1.0 - xi) * (1.0 - eta) * (1.0 - zeta) / 8.0,

@@ -121,6 +121,7 @@ fn format_lattice_line(vec: &[f64; 3]) -> String {
 }
 
 /// Formats a position line for POSCAR output.
+#[allow(dead_code)]
 fn format_position_line(atom: &BasisAtom) -> String {
     format!("{:<4} {:20.16} {:20.16} {:20.16}",
         atom.element,

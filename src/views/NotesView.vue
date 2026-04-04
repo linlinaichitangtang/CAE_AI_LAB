@@ -1365,6 +1365,44 @@ async function saveNote() {
   }
 }
 
+// 笔记内容变化时添加到撤销栈
+let lastNoteContent = ''
+let lastNoteTitle = ''
+
+// 监听笔记内容变化
+watch(noteContent, (newContent, oldContent) => {
+  if (oldContent && newContent !== oldContent) {
+    undoStore.execute({
+      id: `edit-note-content-${Date.now()}`,
+      description: '修改笔记内容',
+      execute: () => {
+        noteContent.value = newContent
+      },
+      undo: () => {
+        noteContent.value = oldContent
+      }
+    })
+    lastNoteContent = newContent
+  }
+})
+
+// 监听笔记标题变化
+watch(noteTitle, (newTitle, oldTitle) => {
+  if (oldTitle && newTitle !== oldTitle) {
+    undoStore.execute({
+      id: `edit-note-title-${Date.now()}`,
+      description: '修改笔记标题',
+      execute: () => {
+        noteTitle.value = newTitle
+      },
+      undo: () => {
+        noteTitle.value = oldTitle
+      }
+    })
+    lastNoteTitle = newTitle
+  }
+})
+
 // 删除笔记
 async function deleteNote() {
   if (!currentFileId.value) return

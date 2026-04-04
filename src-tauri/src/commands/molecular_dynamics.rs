@@ -2,7 +2,7 @@
 //! V1.5: LAMMPS-based molecular dynamics simulation interface
 
 use serde::{Deserialize, Serialize};
-use std::io::BufReader;
+
 use std::process::Command;
 use tauri::command;
 
@@ -92,18 +92,7 @@ pub struct LammpsAvailability {
 // 辅助函数
 // ============================================================================
 
-/// 生成模拟的 Lennard-Jones 势能
-fn compute_lj_potential(distance: f64, epsilon: f64, sigma: f64) -> f64 {
-    let r6 = (sigma / distance).powi(6);
-    4.0 * epsilon * (r6 * r6 - r6)
-}
 
-/// 生成模拟的 Lennard-Jones 力
-fn compute_lj_force(distance: f64, epsilon: f64, sigma: f64) -> f64 {
-    let r = distance.max(sigma * 0.5);
-    let r6 = (sigma / r).powi(6);
-    24.0 * epsilon * (2.0 * r6 * r6 - r6) / r
-}
 
 /// 根据势函数类型获取参数
 fn get_potential_params(potential: &str) -> (f64, f64) {
@@ -642,7 +631,7 @@ pub fn generate_lammps_input(config: MdConfig) -> Result<String, String> {
     input.push_str("\n");
 
     // 创建原子（使用 create_atoms single 命令，按传入的原子位置）
-    for (idx, atom) in config.atoms.iter().enumerate() {
+    for (_idx, atom) in config.atoms.iter().enumerate() {
         // 查找该元素对应的类型编号（1-based）
         let elem_type = elements
             .iter()

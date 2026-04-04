@@ -157,6 +157,14 @@
               <span class="text-sm">⊙</span>
             </button>
             <button 
+              @click="separateGeometry" 
+              :disabled="selectedGeometryIdx === null"
+              class="icon-btn w-8 h-8 text-xs"
+              title="分离 (将选中几何体的非连通部分拆分为独立部件)"
+            >
+              <span class="text-sm">⊞</span>
+            </button>
+            <button 
               v-if="multiSelectedIndices.length > 0"
               @click="clearBooleanSelection"
               class="icon-btn w-8 h-8 text-xs text-red-500"
@@ -1511,27 +1519,53 @@ function updateBoxGeometry() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (geom.type !== 'box' || !scene) return
   
-  // Remove old group
-  scene.remove(geom.group!)
+  // Save old state for undo
+  const oldGroup = geom.group
+  const oldParams = { ...geom.params }
+  const oldDimensions = geom.dimensions
   
-  // Create new geometry with updated params
-  const newGroup = createBox(boxParams.value)
-  scene.add(newGroup)
-  
-  // Update stored item
-  geom.group = newGroup
-  geom.dimensions = `${boxParams.value.width}×${boxParams.value.height}×${boxParams.value.depth}`
-  geom.params = { ...boxParams.value }
+  undoStore.execute({
+    id: `update-box-${Date.now()}`,
+    description: `修改${geom.name}参数`,
+    execute: () => {
+      // Remove old group
+      scene!.remove(geom.group!)
+      
+      // Create new geometry with updated params
+      const newGroup = createBox(boxParams.value)
+      scene!.add(newGroup)
+      
+      // Update stored item
+      geom.group = newGroup
+      geom.dimensions = `${boxParams.value.width}×${boxParams.value.height}×${boxParams.value.depth}`
+      geom.params = { ...boxParams.value }
 
-  // V1.2-001: 重新计算包围盒
-  const box3 = new THREE.Box3().setFromObject(newGroup)
-  newGroup.userData.bounds = {
-    min: box3.min.clone(),
-    max: box3.max.clone(),
-  }
-  
-  // Select it
-  selectGeometry(selectedGeometryIdx.value)
+      // V1.2-001: 重新计算包围盒
+      const box3 = new THREE.Box3().setFromObject(newGroup)
+      newGroup.userData.bounds = {
+        min: box3.min.clone(),
+        max: box3.max.clone(),
+      }
+      
+      // Select it
+      selectGeometry(selectedGeometryIdx.value!)
+    },
+    undo: () => {
+      // Remove new group
+      scene!.remove(geom.group!)
+      
+      // Restore old state
+      geom.group = oldGroup
+      geom.params = oldParams
+      geom.dimensions = oldDimensions
+      
+      // Add old group back to scene
+      scene!.add(oldGroup!)
+      
+      // Select it
+      selectGeometry(selectedGeometryIdx.value!)
+    }
+  })
 }
 
 function updateBoxPosition() {
@@ -1540,10 +1574,28 @@ function updateBoxPosition() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.position.set(boxParams.value.posX, boxParams.value.posY, boxParams.value.posZ)
-  geom.params!.posX = boxParams.value.posX
-  geom.params!.posY = boxParams.value.posY
-  geom.params!.posZ = boxParams.value.posZ
+  // Save old position for undo
+  const oldPos = geom.group.position.clone()
+  const oldPosX = geom.params!.posX
+  const oldPosY = geom.params!.posY
+  const oldPosZ = geom.params!.posZ
+  
+  undoStore.execute({
+    id: `move-box-${Date.now()}`,
+    description: `移动${geom.name}`,
+    execute: () => {
+      geom.group!.position.set(boxParams.value.posX, boxParams.value.posY, boxParams.value.posZ)
+      geom.params!.posX = boxParams.value.posX
+      geom.params!.posY = boxParams.value.posY
+      geom.params!.posZ = boxParams.value.posZ
+    },
+    undo: () => {
+      geom.group!.position.copy(oldPos)
+      geom.params!.posX = oldPosX
+      geom.params!.posY = oldPosY
+      geom.params!.posZ = oldPosZ
+    }
+  })
 }
 
 function updateBoxRotation() {
@@ -1552,14 +1604,32 @@ function updateBoxRotation() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.rotation.set(
-    THREE.MathUtils.degToRad(boxParams.value.rotX),
-    THREE.MathUtils.degToRad(boxParams.value.rotY),
-    THREE.MathUtils.degToRad(boxParams.value.rotZ)
-  )
-  geom.params!.rotX = boxParams.value.rotX
-  geom.params!.rotY = boxParams.value.rotY
-  geom.params!.rotZ = boxParams.value.rotZ
+  // Save old rotation for undo
+  const oldRot = geom.group.rotation.clone()
+  const oldRotX = geom.params!.rotX
+  const oldRotY = geom.params!.rotY
+  const oldRotZ = geom.params!.rotZ
+  
+  undoStore.execute({
+    id: `rotate-box-${Date.now()}`,
+    description: `旋转${geom.name}`,
+    execute: () => {
+      geom.group!.rotation.set(
+        THREE.MathUtils.degToRad(boxParams.value.rotX),
+        THREE.MathUtils.degToRad(boxParams.value.rotY),
+        THREE.MathUtils.degToRad(boxParams.value.rotZ)
+      )
+      geom.params!.rotX = boxParams.value.rotX
+      geom.params!.rotY = boxParams.value.rotY
+      geom.params!.rotZ = boxParams.value.rotZ
+    },
+    undo: () => {
+      geom.group!.rotation.copy(oldRot)
+      geom.params!.rotX = oldRotX
+      geom.params!.rotY = oldRotY
+      geom.params!.rotZ = oldRotZ
+    }
+  })
 }
 
 // Sphere update functions
@@ -1569,16 +1639,38 @@ function updateSphereGeometry() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (geom.type !== 'sphere' || !scene) return
   
-  scene.remove(geom.group!)
+  // Save old state for undo
+  const oldGroup = geom.group
+  const oldParams = { ...geom.params }
+  const oldDimensions = geom.dimensions
   
-  const newGroup = createSphere(sphereParams.value)
-  scene.add(newGroup)
-  
-  geom.group = newGroup
-  geom.dimensions = `半径${sphereParams.value.radius}`
-  geom.params = { ...sphereParams.value }
-  
-  selectGeometry(selectedGeometryIdx.value)
+  undoStore.execute({
+    id: `update-sphere-${Date.now()}`,
+    description: `修改${geom.name}参数`,
+    execute: () => {
+      scene!.remove(geom.group!)
+      
+      const newGroup = createSphere(sphereParams.value)
+      scene!.add(newGroup)
+      
+      geom.group = newGroup
+      geom.dimensions = `半径${sphereParams.value.radius}`
+      geom.params = { ...sphereParams.value }
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    },
+    undo: () => {
+      scene!.remove(geom.group!)
+      
+      geom.group = oldGroup
+      geom.params = oldParams
+      geom.dimensions = oldDimensions
+      
+      scene!.add(oldGroup!)
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    }
+  })
 }
 
 function updateSpherePosition() {
@@ -1587,10 +1679,28 @@ function updateSpherePosition() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.position.set(sphereParams.value.posX, sphereParams.value.posY, sphereParams.value.posZ)
-  geom.params!.posX = sphereParams.value.posX
-  geom.params!.posY = sphereParams.value.posY
-  geom.params!.posZ = sphereParams.value.posZ
+  // Save old position for undo
+  const oldPos = geom.group.position.clone()
+  const oldPosX = geom.params!.posX
+  const oldPosY = geom.params!.posY
+  const oldPosZ = geom.params!.posZ
+  
+  undoStore.execute({
+    id: `move-sphere-${Date.now()}`,
+    description: `移动${geom.name}`,
+    execute: () => {
+      geom.group!.position.set(sphereParams.value.posX, sphereParams.value.posY, sphereParams.value.posZ)
+      geom.params!.posX = sphereParams.value.posX
+      geom.params!.posY = sphereParams.value.posY
+      geom.params!.posZ = sphereParams.value.posZ
+    },
+    undo: () => {
+      geom.group!.position.copy(oldPos)
+      geom.params!.posX = oldPosX
+      geom.params!.posY = oldPosY
+      geom.params!.posZ = oldPosZ
+    }
+  })
 }
 
 // Cylinder update functions
@@ -1600,16 +1710,38 @@ function updateCylinderGeometry() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (geom.type !== 'cylinder' || !scene) return
   
-  scene.remove(geom.group!)
+  // Save old state for undo
+  const oldGroup = geom.group
+  const oldParams = { ...geom.params }
+  const oldDimensions = geom.dimensions
   
-  const newGroup = createCylinder(cylinderParams.value)
-  scene.add(newGroup)
-  
-  geom.group = newGroup
-  geom.dimensions = `R${cylinderParams.value.radiusTop}-${cylinderParams.value.radiusBottom}×高${cylinderParams.value.height}`
-  geom.params = { ...cylinderParams.value }
-  
-  selectGeometry(selectedGeometryIdx.value)
+  undoStore.execute({
+    id: `update-cylinder-${Date.now()}`,
+    description: `修改${geom.name}参数`,
+    execute: () => {
+      scene!.remove(geom.group!)
+      
+      const newGroup = createCylinder(cylinderParams.value)
+      scene!.add(newGroup)
+      
+      geom.group = newGroup
+      geom.dimensions = `R${cylinderParams.value.radiusTop}-${cylinderParams.value.radiusBottom}×高${cylinderParams.value.height}`
+      geom.params = { ...cylinderParams.value }
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    },
+    undo: () => {
+      scene!.remove(geom.group!)
+      
+      geom.group = oldGroup
+      geom.params = oldParams
+      geom.dimensions = oldDimensions
+      
+      scene!.add(oldGroup!)
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    }
+  })
 }
 
 function updateCylinderPosition() {
@@ -1618,10 +1750,28 @@ function updateCylinderPosition() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.position.set(cylinderParams.value.posX, cylinderParams.value.posY, cylinderParams.value.posZ)
-  geom.params!.posX = cylinderParams.value.posX
-  geom.params!.posY = cylinderParams.value.posY
-  geom.params!.posZ = cylinderParams.value.posZ
+  // Save old position for undo
+  const oldPos = geom.group.position.clone()
+  const oldPosX = geom.params!.posX
+  const oldPosY = geom.params!.posY
+  const oldPosZ = geom.params!.posZ
+  
+  undoStore.execute({
+    id: `move-cylinder-${Date.now()}`,
+    description: `移动${geom.name}`,
+    execute: () => {
+      geom.group!.position.set(cylinderParams.value.posX, cylinderParams.value.posY, cylinderParams.value.posZ)
+      geom.params!.posX = cylinderParams.value.posX
+      geom.params!.posY = cylinderParams.value.posY
+      geom.params!.posZ = cylinderParams.value.posZ
+    },
+    undo: () => {
+      geom.group!.position.copy(oldPos)
+      geom.params!.posX = oldPosX
+      geom.params!.posY = oldPosY
+      geom.params!.posZ = oldPosZ
+    }
+  })
 }
 
 // Cone update functions
@@ -1631,16 +1781,38 @@ function updateConeGeometry() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (geom.type !== 'cone' || !scene) return
   
-  scene.remove(geom.group!)
+  // Save old state for undo
+  const oldGroup = geom.group
+  const oldParams = { ...geom.params }
+  const oldDimensions = geom.dimensions
   
-  const newGroup = createCone(coneParams.value)
-  scene.add(newGroup)
-  
-  geom.group = newGroup
-  geom.dimensions = `R${coneParams.value.radius}×高${coneParams.value.height}`
-  geom.params = { ...coneParams.value }
-  
-  selectGeometry(selectedGeometryIdx.value)
+  undoStore.execute({
+    id: `update-cone-${Date.now()}`,
+    description: `修改${geom.name}参数`,
+    execute: () => {
+      scene!.remove(geom.group!)
+      
+      const newGroup = createCone(coneParams.value)
+      scene!.add(newGroup)
+      
+      geom.group = newGroup
+      geom.dimensions = `R${coneParams.value.radius}×高${coneParams.value.height}`
+      geom.params = { ...coneParams.value }
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    },
+    undo: () => {
+      scene!.remove(geom.group!)
+      
+      geom.group = oldGroup
+      geom.params = oldParams
+      geom.dimensions = oldDimensions
+      
+      scene!.add(oldGroup!)
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    }
+  })
 }
 
 function updateConePosition() {
@@ -1649,10 +1821,28 @@ function updateConePosition() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.position.set(coneParams.value.posX, coneParams.value.posY, coneParams.value.posZ)
-  geom.params!.posX = coneParams.value.posX
-  geom.params!.posY = coneParams.value.posY
-  geom.params!.posZ = coneParams.value.posZ
+  // Save old position for undo
+  const oldPos = geom.group.position.clone()
+  const oldPosX = geom.params!.posX
+  const oldPosY = geom.params!.posY
+  const oldPosZ = geom.params!.posZ
+  
+  undoStore.execute({
+    id: `move-cone-${Date.now()}`,
+    description: `移动${geom.name}`,
+    execute: () => {
+      geom.group!.position.set(coneParams.value.posX, coneParams.value.posY, coneParams.value.posZ)
+      geom.params!.posX = coneParams.value.posX
+      geom.params!.posY = coneParams.value.posY
+      geom.params!.posZ = coneParams.value.posZ
+    },
+    undo: () => {
+      geom.group!.position.copy(oldPos)
+      geom.params!.posX = oldPosX
+      geom.params!.posY = oldPosY
+      geom.params!.posZ = oldPosZ
+    }
+  })
 }
 
 // Torus update functions
@@ -1662,16 +1852,38 @@ function updateTorusGeometry() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (geom.type !== 'torus' || !scene) return
   
-  scene.remove(geom.group!)
+  // Save old state for undo
+  const oldGroup = geom.group
+  const oldParams = { ...geom.params }
+  const oldDimensions = geom.dimensions
   
-  const newGroup = createTorus(torusParams.value)
-  scene.add(newGroup)
-  
-  geom.group = newGroup
-  geom.dimensions = `R${torusParams.value.radius}×管${torusParams.value.tube}`
-  geom.params = { ...torusParams.value }
-  
-  selectGeometry(selectedGeometryIdx.value)
+  undoStore.execute({
+    id: `update-torus-${Date.now()}`,
+    description: `修改${geom.name}参数`,
+    execute: () => {
+      scene!.remove(geom.group!)
+      
+      const newGroup = createTorus(torusParams.value)
+      scene!.add(newGroup)
+      
+      geom.group = newGroup
+      geom.dimensions = `R${torusParams.value.radius}×管${torusParams.value.tube}`
+      geom.params = { ...torusParams.value }
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    },
+    undo: () => {
+      scene!.remove(geom.group!)
+      
+      geom.group = oldGroup
+      geom.params = oldParams
+      geom.dimensions = oldDimensions
+      
+      scene!.add(oldGroup!)
+      
+      selectGeometry(selectedGeometryIdx.value!)
+    }
+  })
 }
 
 function updateTorusPosition() {
@@ -1680,10 +1892,28 @@ function updateTorusPosition() {
   const geom = geometryItems.value[selectedGeometryIdx.value]
   if (!geom.group) return
   
-  geom.group.position.set(torusParams.value.posX, torusParams.value.posY, torusParams.value.posZ)
-  geom.params!.posX = torusParams.value.posX
-  geom.params!.posY = torusParams.value.posY
-  geom.params!.posZ = torusParams.value.posZ
+  // Save old position for undo
+  const oldPos = geom.group.position.clone()
+  const oldPosX = geom.params!.posX
+  const oldPosY = geom.params!.posY
+  const oldPosZ = geom.params!.posZ
+  
+  undoStore.execute({
+    id: `move-torus-${Date.now()}`,
+    description: `移动${geom.name}`,
+    execute: () => {
+      geom.group!.position.set(torusParams.value.posX, torusParams.value.posY, torusParams.value.posZ)
+      geom.params!.posX = torusParams.value.posX
+      geom.params!.posY = torusParams.value.posY
+      geom.params!.posZ = torusParams.value.posZ
+    },
+    undo: () => {
+      geom.group!.position.copy(oldPos)
+      geom.params!.posX = oldPosX
+      geom.params!.posY = oldPosY
+      geom.params!.posZ = oldPosZ
+    }
+  })
 }
 
 function deleteCurrentGeometry() {
@@ -1730,6 +1960,258 @@ function deleteCurrentGeometry() {
 
 function clearBooleanSelection() {
   multiSelectedIndices.value = []
+}
+
+// Separate a merged/boolean geometry into disconnected parts
+async function separateGeometry() {
+  if (selectedGeometryIdx.value === null) return
+  
+  const geomItem = geometryItems.value[selectedGeometryIdx.value]
+  if (!geomItem?.group || !scene) return
+  
+  generating.value = true
+  
+  try {
+    const { performCSG } = await import('@/utils/csg')
+    
+    // Try to separate by checking if the geometry has disconnected groups
+    // For merged geometries, we check the group's children
+    const group = geomItem.group
+    const children = group.children.filter((c: any) => c instanceof THREE.Mesh)
+    
+    if (children.length <= 1) {
+      // Single mesh - try vertex-based separation using CSG
+      // Create a copy and subtract nothing to potentially split
+      console.log('Attempting to separate single mesh geometry...')
+      
+      // For single mesh, we can't easily separate without explicit CSG support
+      // Check if the mesh has multiple material groups (multi-material = potentially separable)
+      const mesh = children[0] as THREE.Mesh
+      const geometry = mesh.geometry
+      
+      if (!geometry.index) {
+        // Non-indexed geometry - check for disconnected vertices
+        console.log('Non-indexed geometry, cannot separate')
+        alert('该几何体无法分离（非索引几何体）')
+        generating.value = false
+        return
+      }
+      
+      // Use connected component analysis on the mesh edges
+      const posAttr = geometry.getAttribute('position')
+      const indexAttr = geometry.index!
+      const vertexCount = posAttr.count
+      
+      // Build adjacency list from triangle edges
+      const adj = new Map<number, Set<number>>()
+      for (let i = 0; i < indexAttr.count; i += 3) {
+        const a = indexAttr.getX(i)
+        const b = indexAttr.getX(i + 1)
+        const c = indexAttr.getX(i + 2)
+        for (const [v1, v2] of [[a, b], [b, c], [c, a]]) {
+          if (!adj.has(v1)) adj.set(v1, new Set())
+          if (!adj.has(v2)) adj.set(v2, new Set())
+          adj.get(v1)!.add(v2)
+          adj.get(v2)!.add(v1)
+        }
+      }
+      
+      // BFS to find connected components
+      const visited = new Set<number>()
+      const components: number[][] = []
+      
+      for (let v = 0; v < vertexCount; v++) {
+        if (visited.has(v)) continue
+        const component: number[] = []
+        const queue = [v]
+        visited.add(v)
+        while (queue.length > 0) {
+          const curr = queue.shift()!
+          component.push(curr)
+          for (const neighbor of (adj.get(curr) || [])) {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor)
+              queue.push(neighbor)
+            }
+          }
+        }
+        components.push(component)
+      }
+      
+      if (components.length <= 1) {
+        alert('该几何体是连通的，无法分离')
+        generating.value = false
+        return
+      }
+      
+      // Create separate meshes for each component
+      const originalIdx = selectedGeometryIdx.value
+      const removedItem = { ...geomItem, group: geomItem.group }
+      
+      // Remove original from scene and array
+      scene.remove(group)
+      geometryItems.value.splice(originalIdx, 1)
+      
+      // Create new geometry items for each component
+      const newItems: { item: any, index: number }[] = []
+      for (let ci = 0; ci < components.length; ci++) {
+        const compVertices = new Set(components[ci])
+        
+        // Build new index buffer for this component
+        const newIndices: number[] = []
+        const vertexMap = new Map<number, number>()
+        let newVertexIdx = 0
+        const newPositions: number[] = []
+        const newNormals: number[] = []
+        
+        // Get original arrays
+        const positions = Array.from(posAttr.array)
+        const normals = geometry.getAttribute('normal')
+        const normalArr = normals ? Array.from(normals.array) : null
+        
+        for (let i = 0; i < indexAttr.count; i += 3) {
+          const a = indexAttr.getX(i)
+          const b = indexAttr.getX(i + 1)
+          const c = indexAttr.getX(i + 2)
+          
+          // Only include triangles where ALL vertices belong to this component
+          if (compVertices.has(a) && compVertices.has(b) && compVertices.has(c)) {
+            for (const v of [a, b, c]) {
+              if (!vertexMap.has(v)) {
+                vertexMap.set(v, newVertexIdx)
+                newVertexIdx++
+                newPositions.push(positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2])
+                if (normalArr) {
+                  newNormals.push(normalArr[v * 3], normalArr[v * 3 + 1], normalArr[v * 3 + 2])
+                }
+              }
+              newIndices.push(vertexMap.get(v)!)
+            }
+          }
+        }
+        
+        if (newIndices.length === 0) continue
+        
+        // Create new BufferGeometry
+        const newGeometry = new THREE.BufferGeometry()
+        newGeometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3))
+        if (newNormals.length > 0) {
+          newGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(newNormals, 3))
+        }
+        newGeometry.setIndex(newIndices)
+        newGeometry.computeBoundingSphere()
+        
+        // Create mesh with same material
+        const material = (children[0] as THREE.Mesh).material
+        const newMesh = new THREE.Mesh(newGeometry, material)
+        
+        // Create group
+        const newGroup = new THREE.Group()
+        newGroup.add(newMesh)
+        
+        // Compute bounding box
+        const box3 = new THREE.Box3().setFromObject(newGroup)
+        newGroup.userData.bounds = { min: box3.min.clone(), max: box3.max.clone() }
+        
+        if (scene) scene.add(newGroup)
+        
+        const insertIdx = originalIdx + ci
+        const newItem = {
+          type: 'box' as const,
+          name: `${geomItem.name} - 部件${ci + 1}`,
+          icon: '◈' as const,
+          dimensions: `${(box3.max.x - box3.min.x).toFixed(2)} × ${(box3.max.y - box3.min.y).toFixed(2)} × ${(box3.max.z - box3.min.z).toFixed(2)}`,
+          group: newGroup,
+          params: {}
+        }
+        geometryItems.value.splice(insertIdx, 0, newItem)
+        newItems.push({ item: newItem, index: insertIdx })
+      }
+      
+      selectedGeometryIdx.value = null
+      multiSelectedIndices.value = []
+      
+      // Undo/Redo
+      undoStore.execute({
+        id: `separate-${Date.now()}`,
+        description: `分离${geomItem.name}为${newItems.length}个部件`,
+        execute: () => {},
+        undo: () => {
+          // Remove all separated items
+          for (let i = newItems.length - 1; i >= 0; i--) {
+            const { item, index } = newItems[i]
+            if (item.group && scene) scene.remove(item.group)
+            geometryItems.value.splice(index, 1)
+          }
+          // Restore original
+          geometryItems.value.splice(originalIdx, 0, removedItem)
+          if (removedItem.group && scene) scene.add(removedItem.group)
+          selectedGeometryIdx.value = originalIdx
+        }
+      })
+      
+      console.log(`Separated into ${newItems.length} components`)
+      
+    } else {
+      // Multiple children in group - separate each into its own geometry item
+      const originalIdx = selectedGeometryIdx.value
+      const removedItem = { ...geomItem, group: geomItem.group }
+      
+      scene.remove(group)
+      geometryItems.value.splice(originalIdx, 1)
+      
+      const newItems: { item: any, index: number }[] = []
+      children.forEach((child: any, ci: number) => {
+        if (!(child instanceof THREE.Mesh)) return
+        
+        const newGroup = new THREE.Group()
+        newGroup.add(child.clone())
+        
+        const box3 = new THREE.Box3().setFromObject(newGroup)
+        newGroup.userData.bounds = { min: box3.min.clone(), max: box3.max.clone() }
+        
+        if (scene) scene.add(newGroup)
+        
+        const insertIdx = originalIdx + ci
+        const newItem = {
+          type: 'box' as const,
+          name: `${geomItem.name} - 部件${ci + 1}`,
+          icon: '◈' as const,
+          dimensions: `${(box3.max.x - box3.min.x).toFixed(2)} × ${(box3.max.y - box3.min.y).toFixed(2)} × ${(box3.max.z - box3.min.z).toFixed(2)}`,
+          group: newGroup,
+          params: {}
+        }
+        geometryItems.value.splice(insertIdx, 0, newItem)
+        newItems.push({ item: newItem, index: insertIdx })
+      })
+      
+      selectedGeometryIdx.value = null
+      multiSelectedIndices.value = []
+      
+      undoStore.execute({
+        id: `separate-${Date.now()}`,
+        description: `分离${geomItem.name}为${newItems.length}个部件`,
+        execute: () => {},
+        undo: () => {
+          for (let i = newItems.length - 1; i >= 0; i--) {
+            const { item, index } = newItems[i]
+            if (item.group && scene) scene.remove(item.group)
+            geometryItems.value.splice(index, 1)
+          }
+          geometryItems.value.splice(originalIdx, 0, removedItem)
+          if (removedItem.group && scene) scene.add(removedItem.group)
+          selectedGeometryIdx.value = originalIdx
+        }
+      })
+      
+      console.log(`Separated group into ${newItems.length} children`)
+    }
+  } catch (error) {
+    console.error('Separate failed:', error)
+    alert(`分离失败: ${error}`)
+  } finally {
+    generating.value = false
+  }
 }
 
 // Boolean operations using three-bvh-csg

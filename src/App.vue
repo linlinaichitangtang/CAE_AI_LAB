@@ -19,6 +19,30 @@
         @toggle-right-panel="toggleRightPanel"
       />
 
+      <!-- 试用 Banner -->
+      <div
+        v-if="trialStore.isInTrial && trialStore.daysRemaining > 0"
+        class="trial-banner"
+      >
+        <span class="trial-icon">⚡</span>
+        <span class="trial-text">
+          CAELab Pro 试用剩余 <strong>{{ trialStore.daysRemaining }} 天</strong>
+        </span>
+        <button class="trial-btn" @click="router.push('/membership')">升级</button>
+        <button class="trial-close" @click="trialStore.markBannerDismissed()">✕</button>
+      </div>
+      <div
+        v-else-if="trialStore.showExpiredBanner"
+        class="trial-banner trial-expired"
+      >
+        <span class="trial-icon">⏰</span>
+        <span class="trial-text">
+          您的 CAELab Pro 试用已结束，高级功能已暂停使用
+        </span>
+        <button class="trial-btn" @click="router.push('/membership')">立即升级</button>
+        <button class="trial-close" @click="trialStore.dismissExpiredBanner()">✕</button>
+      </div>
+
       <!-- 移动端/平板端简化顶栏 -->
       <div v-else class="mobile-topbar safe-area-top">
         <span class="font-semibold text-sm">{{ currentRouteName }}</span>
@@ -87,6 +111,7 @@ import SimulationView from './views/SimulationView.vue'
 import { usePlatform } from './composables/usePlatform'
 import { useOrientation } from './composables/useOrientation'
 import { useAuthStore } from './stores/authStore'
+import { useTrialStore } from './stores/trial'
 import { useHotkeys } from './composables/useHotkeys'
 
 // Platform detection for responsive layout
@@ -97,6 +122,9 @@ const { isPortrait, isLandscape } = useOrientation()
 
 // Auth store
 const authStore = useAuthStore()
+
+// Trial store
+const trialStore = useTrialStore()
 
 // V1.1-011: Hotkeys
 const { registerHotkey, setActiveContext } = useHotkeys()
@@ -293,5 +321,71 @@ onMounted(() => {
   .mobile-topbar {
     height: 48px;
   }
+}
+
+/* 试用 Banner */
+.trial-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.trial-banner.trial-expired {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.trial-icon {
+  font-size: 14px;
+}
+
+.trial-text {
+  flex: 1;
+  text-align: center;
+}
+
+.trial-text strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+.trial-btn {
+  padding: 4px 14px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.trial-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.trial-close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.trial-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 </style>

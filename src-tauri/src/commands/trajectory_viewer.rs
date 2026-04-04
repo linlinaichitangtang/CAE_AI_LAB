@@ -26,13 +26,17 @@ impl Default for TrajectoryCache {
 }
 
 /// Cached trajectory data
-struct TrajectoryData {
-    num_frames: u32,
-    num_atoms: u32,
-    box_size: [f64; 3],
-    time_step_fs: f64,
-    atom_types: Vec<String>,
-    frames: Vec<TrajectoryFrame>,
+pub struct TrajectoryData {
+    pub num_frames: u32,
+    #[allow(dead_code)]
+    pub num_atoms: u32,
+    #[allow(dead_code)]
+    pub box_size: [f64; 3],
+    #[allow(dead_code)]
+    pub time_step_fs: f64,
+    #[allow(dead_code)]
+    pub atom_types: Vec<String>,
+    pub frames: Vec<TrajectoryFrame>,
 }
 
 // ============================================================================

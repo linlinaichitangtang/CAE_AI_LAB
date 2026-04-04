@@ -71,6 +71,7 @@ pub struct QueueStatus {
 
 /// Internal representation of a tracked job.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct JobEntry {
     job_id: String,
     job_name: String,
@@ -90,6 +91,7 @@ struct JobEntry {
 
 /// Queue configuration state.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct QueueConfig {
     queue_system: String,
     default_cores: u32,
@@ -98,6 +100,7 @@ struct QueueConfig {
 }
 
 /// Global state for job tracking.
+#[allow(dead_code)]
 pub struct DftTaskState {
     jobs: Mutex<Vec<JobEntry>>,
     queue_config: Mutex<QueueConfig>,
@@ -131,6 +134,7 @@ impl DftTaskState {
 // ============================================================================
 
 /// Generates a unique job ID.
+#[allow(dead_code)]
 fn generate_job_id(counter: &mut u64) -> String {
     *counter += 1;
     format!("dft-{:08x}", *counter)
@@ -185,6 +189,7 @@ fn validate_job_config(config: &DftJobConfig) -> Result<(), String> {
 }
 
 /// Converts a JobEntry to a DftTask for the API.
+#[allow(dead_code)]
 fn job_entry_to_task(entry: &JobEntry) -> DftTask {
     DftTask {
         job_id: entry.job_id.clone(),

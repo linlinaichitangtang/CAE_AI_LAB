@@ -106,6 +106,19 @@
             GitHub 登录
           </button>
         </div>
+
+        <!-- 免费试用入口 -->
+        <div class="trial-entry">
+          <div class="trial-divider"><span>或</span></div>
+          <button
+            class="btn btn-trial btn-block"
+            @click="handleTrial"
+          >
+            <span class="trial-icon">⚡</span>
+            免费试用 14 天
+            <span class="trial-sub">全功能开放，无需注册</span>
+          </button>
+        </div>
       </div>
 
       <!-- Register Form -->
@@ -296,10 +309,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrialStore } from '@/stores/trial'
 import * as authApi from '@/api/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const trialStore = useTrialStore()
 
 const activeTab = ref<'login' | 'register'>('login')
 const showLoginPassword = ref(false)
@@ -426,6 +441,70 @@ function handleGithubLogin() {
   const redirectUri = encodeURIComponent(window.location.origin + '/auth/github/callback')
   const scope = encodeURIComponent('read:user user:email')
   window.location.href = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`
+}
+
+/**
+ * 免费试用：创建本地临时账号 + 启动14天试用
+ * 1. 创建 guest 账号（仅本地存储，无需邮箱验证）
+ * 2. 启动14天全功能试用
+ * 3. 跳转求解器安装引导页
+ */
+async function handleTrial() {
+  authStore.isLoading = true
+  authStore.error = null
+  try {
+    // 创建本地 guest 账号（UUID 形式，无需真实邮箱）
+    const guestId = 'guest_' + Math.random().toString(36).substring(2, 15)
+    const guestEmail = `guest_${guestId}@trial.caelab.local`
+    const guestNickname = '试用用户'
+
+    // 设置试用状态
+    trialStore.startTrial()
+
+    // 写入本地认证数据（模拟登录状态）
+    localStorage.setItem('caelab-access-token', `trial_${guestId}`)
+    localStorage.setItem('caelab-refresh-token', `trial_refresh_${guestId}`)
+    localStorage.setItem('caelab-user', JSON.stringify({
+      id: guestId,
+      email: guestEmail,
+      nickname: guestNickname,
+      avatar_url: null,
+      company: null,
+      position: null,
+      created_at: new Date().toISOString(),
+    }))
+    const trialEnd = trialStore.trialEndMs ?? null
+    localStorage.setItem('caelab-membership', JSON.stringify({
+      tier: 'pro',
+      expires_at: trialEnd ? new Date(trialEnd).toISOString() : null,
+      is_active: true,
+    }))
+
+    // 初始化 store 状态
+    authStore.accessToken = `trial_${guestId}`
+    authStore.refreshToken = `trial_refresh_${guestId}`
+    authStore.user = {
+      id: guestId,
+      email: guestEmail,
+      nickname: guestNickname,
+      avatar_url: null,
+      company: null,
+      position: null,
+      created_at: new Date().toISOString(),
+    }
+    authStore.membership = {
+      tier: 'pro',
+      expires_at: trialEnd ? new Date(trialEnd).toISOString() : null,
+      is_active: true,
+    }
+
+    // 跳转到求解器安装引导页
+    router.push('/solver-installer')
+  } catch (e: any) {
+    authStore.error = '试用启动失败，请重试'
+  } finally {
+    authStore.isLoading = false
+  }
 }
 
 async function handleForgotSendCode() {
@@ -879,6 +958,59 @@ onMounted(() => {
 .modal-enter-from .modal-card,
 .modal-leave-to .modal-card {
   transform: scale(0.95) translateY(10px);
+}
+
+/* Trial Button */
+.trial-entry {
+  margin-top: 12px;
+}
+
+.trial-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--text-muted, #9ca3af);
+  font-size: 12px;
+}
+.trial-divider::before,
+.trial-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color, #e5e7eb);
+}
+
+.btn-trial {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md, 10px);
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+}
+.btn-trial:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.45);
+}
+.btn-trial:active {
+  transform: translateY(0);
+}
+.trial-icon {
+  font-size: 18px;
+}
+.trial-sub {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
 }
 
 /* Responsive */

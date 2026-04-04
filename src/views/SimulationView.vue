@@ -50,11 +50,23 @@
           </div>
         </div>
 
+        <!-- 高级分析下拉 -->
+        <div class="relative" ref="advancedMenuRef">
+          <button @click="showAdvancedMenu = !showAdvancedMenu" class="toolbar-btn" title="高级分析">
+            ⚙️
+          </button>
+          <div v-if="showAdvancedMenu" class="toolbar-dropdown right-0">
+            <button @click="activeTab = 'parametric'; showAdvancedMenu = false" class="dropdown-item">📊 参数化</button>
+            <button @click="activeTab = 'optimization'; showAdvancedMenu = false" class="dropdown-item">🎯 优化设计</button>
+            <button @click="activeTab = 'automation'; showAdvancedMenu = false" class="dropdown-item">🤖 自动化</button>
+          </div>
+        </div>
+
         <div class="w-px h-5 bg-gray-200 mx-1"></div>
 
-        <!-- 分析模块切换按钮组 -->
+        <!-- 常用分析模块按钮 -->
         <button
-          v-for="tab in analysisTabs"
+          v-for="tab in commonAnalysisTabs"
           :key="tab.key"
           @click="activeTab = tab.key as typeof activeTab.value"
           :class="['tab-btn', activeTab === tab.key ? 'tab-btn-active' : '']"
@@ -63,6 +75,23 @@
         >
           {{ tab.icon }}
         </button>
+
+        <!-- 响应式更多菜单 -->
+        <div class="relative hidden md:block" ref="moreMenuRef">
+          <button @click="showMoreMenu = !showMoreMenu" class="toolbar-btn" title="更多">
+            ⋯
+          </button>
+          <div v-if="showMoreMenu" class="toolbar-dropdown right-0">
+            <button
+              v-for="tab in advancedAnalysisTabs"
+              :key="tab.key"
+              @click="activeTab = tab.key as typeof activeTab.value; showMoreMenu = false"
+              :class="['dropdown-item', activeTab === tab.key ? 'bg-blue-50' : '']"
+            >
+              {{ tab.icon }} {{ tab.label }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3099,6 +3128,8 @@ const parametricStore = useParametricStore()
 function handleClickOutside(e: MouseEvent) {
   if (viewMenuRef.value && !viewMenuRef.value.contains(e.target as Node)) showViewMenu.value = false
   if (resultMenuRef.value && !resultMenuRef.value.contains(e.target as Node)) showResultMenu.value = false
+  if (advancedMenuRef.value && !advancedMenuRef.value.contains(e.target as Node)) showAdvancedMenu.value = false
+  if (moreMenuRef.value && !moreMenuRef.value.contains(e.target as Node)) showMoreMenu.value = false
 }
 
 onMounted(() => {
@@ -3234,8 +3265,12 @@ const activeTab = ref<'simulation' | 'parametric' | 'optimization' | 'automation
 // ========== 工具栏下拉菜单 ==========
 const showViewMenu = ref(false)
 const showResultMenu = ref(false)
+const showAdvancedMenu = ref(false)
+const showMoreMenu = ref(false)
 const viewMenuRef = ref<HTMLElement | null>(null)
 const resultMenuRef = ref<HTMLElement | null>(null)
+const advancedMenuRef = ref<HTMLElement | null>(null)
+const moreMenuRef = ref<HTMLElement | null>(null)
 
 const analysisTabs = [
   { key: 'simulation', icon: '🔧', label: '仿真设置', color: '#4f46e5' },
@@ -3244,6 +3279,19 @@ const analysisTabs = [
   { key: 'optimization', icon: '🎯', label: '优化设计', color: '#db2777' },
   { key: 'automation', icon: '🤖', label: '自动化', color: '#7c3aed' },
 ]
+
+// 常用分析模块（显示在工具栏上）
+const commonAnalysisTabs = computed(() => [
+  { key: 'simulation', icon: '🔧', label: '仿真设置', color: '#4f46e5' },
+  { key: 'contact', icon: '🔗', label: '接触分析', color: '#0d9488' },
+])
+
+// 高级分析模块（显示在下拉菜单中）
+const advancedAnalysisTabs = computed(() => [
+  { key: 'parametric', icon: '📊', label: '参数化', color: '#4f46e5' },
+  { key: 'optimization', icon: '🎯', label: '优化设计', color: '#db2777' },
+  { key: 'automation', icon: '🤖', label: '自动化', color: '#7c3aed' },
+])
 
 // ========== 标准算例验证 ==========
 const selectedStandardCase = ref<string>('')

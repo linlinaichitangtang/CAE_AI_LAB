@@ -110,6 +110,7 @@ pub struct PfPostProcessTemplate {
 // ============================================================================
 
 /// Simple pseudo-random number generator
+#[allow(dead_code)]
 fn xorshift64(state: &mut u64) -> f64 {
     *state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
     let val = (*state >> 11) as f64 / u32::MAX as f64;
