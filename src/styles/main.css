@@ -352,6 +352,41 @@ body {
   animation: pulse 2s infinite;
 }
 
+/* ============================================ 
+   统一过渡动画类
+   ============================================ */
+
+.transition-panel {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.transition-expand {
+  transition: max-height var(--duration-normal) var(--ease-out);
+}
+
+/* 标签切换动画 - 滑动下划线指示器 */
+.tab-btn {
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: var(--primary);
+  transition: width var(--duration-normal) var(--ease-out);
+  border-radius: 2px;
+}
+
+.tab-btn-active::after {
+  width: 80%;
+}
+
 /* ============================================
    Code Block Styles - 浅色代码块
    ============================================ */

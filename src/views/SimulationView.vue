@@ -14,6 +14,9 @@
           <option value="buckling">屈曲</option>
           <option value="thermal">热传导</option>
           <option value="cfd">CFD</option>
+          <option value="transient">瞬态</option>
+          <option value="fatigue">疲劳</option>
+          <option value="thermal_coupling">热-结构耦合</option>
         </select>
       </div>
       <div class="flex items-center gap-1">
@@ -100,7 +103,7 @@
       <!-- 仿真视图内容 -->
       <template v-if="activeTab === 'simulation'">
       <!-- Left Panel: Mesh Generation & BC Setup -->
-      <div class="w-80 bg-white border-r overflow-y-auto p-4 space-y-6">
+      <div class="w-72 bg-white border-r overflow-y-auto p-4 space-y-6">
         <!-- Standard Case Selection -->
         <div v-if="analysisType === 'structural'" class="space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -277,27 +280,78 @@
             <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">2</span>
             材料参数
           </h3>
-          <!-- Material Type Selector -->
-          <div>
-            <label class="text-xs text-gray-600 mb-1 block">材料类型</label>
-            <select v-model="materialType" class="w-full px-2 py-1 border rounded text-sm">
-              <option value="elastic">线弹性</option>
-              <option value="plastic">弹塑性</option>
-              <option value="viscoelastic">粘弹性</option>
-              <option value="hyperelastic">超弹性</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs text-gray-600 mb-1 block">弹性模量 (MPa)</label>
-            <input type="number" v-model.number="materialE" class="w-full px-2 py-1 border rounded text-sm" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-600 mb-1 block">泊松比</label>
-            <input type="number" v-model.number="materialNu" step="0.01" min="0" max="0.5" class="w-full px-2 py-1 border rounded text-sm" />
-          </div>
-          <div>
-            <label class="text-xs text-gray-600 mb-1 block">密度 (ton/mm³)</label>
-            <input type="number" v-model.number="materialDensity" step="1e-9" class="w-full px-2 py-1 border rounded text-sm" />
+          
+          <!-- 材料库选择 -->
+          <div class="bg-white border rounded-lg p-3 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-medium text-gray-700">材料库</span>
+              <div class="flex gap-2">
+                <select v-model="selectedMaterial" class="text-xs border rounded px-2 py-1">
+                  <option value="">-- 选择材料 --</option>
+                  <option value="aluminum">铝合金 6061</option>
+                  <option value="steel">结构钢</option>
+                  <option value="copper">铜</option>
+                  <option value="titanium">钛合金</option>
+                </select>
+                <button class="text-xs border border-blue-300 text-blue-600 rounded px-2 py-1 hover:bg-blue-50">
+                  从项目材料库选择
+                </button>
+              </div>
+            </div>
+            
+            <div class="border-t pt-3">
+              <div class="text-sm font-medium text-gray-700 mb-2">铝合金 6061</div>
+              
+              <div class="space-y-3">
+                <!-- 弹性模量 -->
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600 w-24">弹性模量:</label>
+                  <input type="number" v-model.number="materialE" class="flex-1 px-2 py-1 border rounded text-sm" />
+                  <select v-model="materialEUnit" class="text-xs border rounded px-2 py-1 w-20">
+                    <option value="GPa">GPa</option>
+                    <option value="MPa">MPa</option>
+                    <option value="Pa">Pa</option>
+                  </select>
+                </div>
+                
+                <!-- 泊松比 -->
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600 w-24">泊松比:</label>
+                  <input type="number" v-model.number="materialNu" step="0.01" min="0" max="0.5" class="flex-1 px-2 py-1 border rounded text-sm" />
+                </div>
+                
+                <!-- 密度 -->
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600 w-24">密度:</label>
+                  <input type="number" v-model.number="materialDensity" step="0.01" class="flex-1 px-2 py-1 border rounded text-sm" />
+                  <select v-model="materialDensityUnit" class="text-xs border rounded px-2 py-1 w-20">
+                    <option value="g/cm³">g/cm³</option>
+                    <option value="kg/m³">kg/m³</option>
+                    <option value="ton/mm³">ton/mm³</option>
+                  </select>
+                </div>
+                
+                <!-- 屈服强度 -->
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-gray-600 w-24">屈服强度:</label>
+                  <input type="number" v-model.number="materialYieldStrength" class="flex-1 px-2 py-1 border rounded text-sm" />
+                  <select v-model="materialYieldUnit" class="text-xs border rounded px-2 py-1 w-20">
+                    <option value="MPa">MPa</option>
+                    <option value="GPa">GPa</option>
+                    <option value="Pa">Pa</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex gap-2">
+              <button class="text-xs border border-gray-300 text-gray-700 rounded px-2 py-1 hover:bg-gray-50 flex-1">
+                + 高级属性
+              </button>
+              <button class="text-xs border border-gray-300 text-gray-700 rounded px-2 py-1 hover:bg-gray-50 flex-1">
+                + 自定义属性
+              </button>
+            </div>
           </div>
 
           <!-- Plastic Parameters -->
@@ -722,38 +776,81 @@
             
             <div class="divider border-t"></div>
 
-            <!-- Fixed BC List -->
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <label class="text-xs text-gray-600">固定约束 ({{ projectStore.boundaryConditions.fixedBcs.length }})</label>
+            <!-- 位移约束 -->
+            <details class="bg-white border rounded-lg overflow-hidden">
+              <summary class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 cursor-pointer hover:bg-gray-100">
+                ▼ 位移约束 ({{ projectStore.boundaryConditions.fixedBcs.length }})
+              </summary>
+              <div class="p-3 space-y-2">
+                <div class="flex gap-2 mb-3">
+                  <button class="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 flex-1">
+                    固定支撑
+                  </button>
+                  <button class="text-xs px-3 py-1.5 border border-blue-300 text-blue-600 rounded hover:bg-blue-50 flex-1">
+                    对称边界
+                  </button>
+                  <button class="text-xs px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex-1">
+                    自定义
+                  </button>
+                </div>
+                
+                <div v-for="(bc, idx) in projectStore.boundaryConditions.fixedBcs" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
+                  <span>{{ bc.name }} ({{ bc.nodes.length }} 节点)</span>
+                  <button @click="projectStore.removeFixedBc(idx)" class="text-red-500 hover:text-red-700">删除</button>
+                </div>
+                
+                <div v-if="projectStore.boundaryConditions.fixedBcs.length === 0" class="text-xs text-gray-500 italic">
+                  暂无位移约束
+                </div>
               </div>
-              <div v-for="(bc, idx) in projectStore.boundaryConditions.fixedBcs" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded mb-1">
-                <span>{{ bc.name }} ({{ bc.nodes.length }} 节点)</span>
-                <button @click="projectStore.removeFixedBc(idx)" class="text-red-500 hover:text-red-700">删除</button>
-              </div>
-            </div>
+            </details>
 
-            <!-- Point Load List -->
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <label class="text-xs text-gray-600">点荷载 ({{ projectStore.boundaryConditions.pointLoads.length }})</label>
+            <!-- 荷载 -->
+            <details class="bg-white border rounded-lg overflow-hidden">
+              <summary class="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 cursor-pointer hover:bg-gray-100">
+                ▼ 荷载 ({{ projectStore.boundaryConditions.pointLoads.length + projectStore.boundaryConditions.uniformLoads.length }})
+              </summary>
+              <div class="p-3 space-y-2">
+                <div class="flex gap-2 mb-3 flex-wrap">
+                  <button class="text-xs px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700">
+                    分布力
+                  </button>
+                  <button class="text-xs px-3 py-1.5 border border-green-300 text-green-600 rounded hover:bg-green-50">
+                    压力
+                  </button>
+                  <button class="text-xs px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">
+                    加速度
+                  </button>
+                  <button class="text-xs px-3 py-1.5 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">
+                    离心载荷
+                  </button>
+                </div>
+                
+                <!-- 点荷载 -->
+                <div class="mt-3">
+                  <div class="text-xs font-medium text-gray-600 mb-2">点荷载 ({{ projectStore.boundaryConditions.pointLoads.length }})</div>
+                  <div v-for="(load, idx) in projectStore.boundaryConditions.pointLoads" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded mb-1">
+                    <span>{{ load.name }} = {{ load.magnitude }}</span>
+                    <button @click="projectStore.removePointLoad(idx)" class="text-red-500 hover:text-red-700">删除</button>
+                  </div>
+                  <div v-if="projectStore.boundaryConditions.pointLoads.length === 0" class="text-xs text-gray-500 italic">
+                    暂无点荷载
+                  </div>
+                </div>
+                
+                <!-- 均布荷载 -->
+                <div class="mt-3">
+                  <div class="text-xs font-medium text-gray-600 mb-2">均布荷载 ({{ projectStore.boundaryConditions.uniformLoads.length }})</div>
+                  <div v-for="(load, idx) in projectStore.boundaryConditions.uniformLoads" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded mb-1">
+                    <span>{{ load.name }} = {{ load.magnitude }}</span>
+                    <button @click="projectStore.removeUniformLoad(idx)" class="text-red-500 hover:text-red-700">删除</button>
+                  </div>
+                  <div v-if="projectStore.boundaryConditions.uniformLoads.length === 0" class="text-xs text-gray-500 italic">
+                    暂无均布荷载
+                  </div>
+                </div>
               </div>
-              <div v-for="(load, idx) in projectStore.boundaryConditions.pointLoads" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded mb-1">
-                <span>{{ load.name }} = {{ load.magnitude }}</span>
-                <button @click="projectStore.removePointLoad(idx)" class="text-red-500 hover:text-red-700">删除</button>
-              </div>
-            </div>
-
-            <!-- Uniform Load List -->
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <label class="text-xs text-gray-600">均布荷载 ({{ projectStore.boundaryConditions.uniformLoads.length }})</label>
-              </div>
-              <div v-for="(load, idx) in projectStore.boundaryConditions.uniformLoads" :key="idx" class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded mb-1">
-                <span>{{ load.name }} = {{ load.magnitude }}</span>
-                <button @click="projectStore.removeUniformLoad(idx)" class="text-red-500 hover:text-red-700">删除</button>
-              </div>
-            </div>
+            </details>
           </div>
         </div>
 
@@ -1082,8 +1179,11 @@
             </div>
           </div>
 
-          <div v-if="projectStore.hasResult" class="text-xs text-green-600 bg-green-50 rounded p-2">
-            ✓ 求解完成，结果已加载
+          <div v-if="projectStore.hasResult" class="text-xs text-green-600 bg-green-50 rounded p-2 flex items-center justify-between">
+            <span>✓ 求解完成，结果已加载</span>
+            <button @click="toggleFullscreen" class="tab-btn" title="全屏查看">
+              ⛶ 全屏
+            </button>
           </div>
 
           <!-- 对比按钮 -->
@@ -1110,6 +1210,16 @@
 
       <!-- 3D Viewer -->
       <div class="flex-1 relative bg-gray-100">
+        <!-- 求解进行中骨架屏 -->
+        <div v-if="runningSolver || submittingToCloud" class="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div class="text-center space-y-4">
+            <div class="w-16 h-16 skeleton rounded-full mx-auto"></div>
+            <div class="w-48 h-4 skeleton mx-auto"></div>
+            <div class="w-32 h-4 skeleton mx-auto"></div>
+            <p class="text-sm text-gray-500 mt-2">求解进行中，请稍候...</p>
+          </div>
+        </div>
+        
         <ResultViewer
           ref="viewerRef"
           :result="currentResult"
@@ -1306,6 +1416,103 @@
                 />
                 <span class="text-sm">显示流线</span>
               </label>
+            </div>
+          </div>
+
+          <!-- Display Mode - Transient -->
+          <div v-if="analysisType === 'transient'">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">瞬态分析设置</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">时间步长 (s)</label>
+                <input type="number" v-model.number="transientTimeStep" step="0.001" class="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">总时间 (s)</label>
+                <input type="number" v-model.number="transientTotalTime" step="0.1" class="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">Newmark-beta 参数</label>
+                <input type="number" v-model.number="transientNewmarkBeta" step="0.01" min="0" max="0.5" class="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">加载曲线类型</label>
+                <select v-model="transientLoadCurveType" class="w-full px-2 py-1 border rounded text-sm">
+                  <option value="step">阶跃</option>
+                  <option value="ramp">斜坡</option>
+                  <option value="sinusoidal">正弦</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display Mode - Fatigue -->
+          <div v-if="analysisType === 'fatigue'">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">疲劳分析设置</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">疲劳类型</label>
+                <div class="flex gap-2">
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" v-model="fatigueType" value="high_cycle" class="text-blue-600" />
+                    <span class="text-sm">高周</span>
+                  </label>
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" v-model="fatigueType" value="low_cycle" class="text-blue-600" />
+                    <span class="text-sm">低周</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">S-N曲线类型</label>
+                <select v-model="fatigueSNCurveType" class="w-full px-2 py-1 border rounded text-sm">
+                  <option value="basquin">Basquin</option>
+                  <option value="morrow">Morrow</option>
+                  <option value="swt">SWT</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">应力比 (R)</label>
+                <input type="number" v-model.number="fatigueStressRatio" step="0.1" class="w-full px-2 py-1 border rounded text-sm" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">寿命计算方法</label>
+                <select v-model="fatigueLifeMethod" class="w-full px-2 py-1 border rounded text-sm">
+                  <option value="miner">Miner线性累积损伤</option>
+                  <option value="rainflow">雨流计数</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Display Mode - Thermal Coupling -->
+          <div v-if="analysisType === 'thermal_coupling'">
+            <h3 class="text-sm font-medium text-gray-700 mb-2">热-结构耦合设置</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">耦合类型</label>
+                <div class="flex gap-2">
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" v-model="thermalCouplingType" value="sequential" class="text-orange-600" />
+                    <span class="text-sm">顺序耦合</span>
+                  </label>
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" v-model="thermalCouplingType" value="full" class="text-orange-600" />
+                    <span class="text-sm">完全耦合</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">温度场→结构场映射方法</label>
+                <select v-model="thermalMappingMethod" class="w-full px-2 py-1 border rounded text-sm">
+                  <option value="nodal">节点映射</option>
+                  <option value="element">单元映射</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">热膨胀系数 (1/K)</label>
+                <input type="number" v-model.number="thermalExpansionCoeff" step="1e-6" class="w-full px-2 py-1 border rounded text-sm" />
+              </div>
             </div>
           </div>
 
@@ -1835,7 +2042,7 @@
       </div>
 
       <!-- 云端任务面板 -->
-      <div class="w-80 bg-white border-l overflow-y-auto">
+      <div class="w-72 bg-white border-l overflow-y-auto">
         <div class="p-4">
           <CloudTaskPanel 
             ref="cloudTaskPanelRef"
@@ -1850,7 +2057,7 @@
 
       <!-- 参数化分析视图 -->
       <template v-if="activeTab === 'parametric'">
-        <div class="w-80 bg-white border-r overflow-y-auto p-4 space-y-6">
+        <div class="w-72 bg-white border-r overflow-y-auto p-4 space-y-6">
           <!-- V1.1-001: 实时参数滑块 -->
           <div class="space-y-4">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -2484,7 +2691,7 @@
       <!-- 自动化脚本视图 -->
       <template v-if="activeTab === 'automation'">
         <!-- 自动化脚本左侧面板 -->
-        <div class="w-80 bg-white border-r overflow-y-auto p-4">
+        <div class="w-72 bg-white border-r overflow-y-auto p-4">
           <AutomationPanel />
         </div>
         
@@ -2501,7 +2708,7 @@
       <!-- 🎯 优化设计视图 -->
       <template v-if="activeTab === 'optimization'">
         <!-- 优化设计左侧面板 -->
-        <div class="w-80 bg-white border-r overflow-y-auto p-4 space-y-6">
+        <div class="w-72 bg-white border-r overflow-y-auto p-4 space-y-6">
           <!-- 1. 优化类型选择 -->
           <div class="space-y-3">
             <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -2787,7 +2994,7 @@
             </div>
             
             <!-- 优化历史曲线 -->
-            <div class="w-80 bg-white border-l p-4 overflow-y-auto">
+            <div class="w-72 bg-white border-l p-4 overflow-y-auto">
               <h3 class="text-sm font-medium text-gray-700 mb-4">📈 优化历史</h3>
               
               <!-- 历史曲线 -->
@@ -2966,10 +3173,15 @@
           <div class="p-4 flex-1 overflow-y-auto">
             <!-- 频率响应曲线图 -->
             <div class="bg-indigo-50 rounded-lg p-4 mb-4">
-              <h4 class="text-sm font-semibold text-indigo-700 mb-3 flex items-center gap-2">
-                <span>📈</span>
-                <span>频响曲线 (Frequency Response Curve)</span>
-              </h4>
+              <div class="flex justify-between items-center mb-3">
+                <h4 class="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                  <span>📈</span>
+                  <span>频响曲线 (Frequency Response Curve)</span>
+                </h4>
+                <button @click="toggleChartLink" class="text-xs px-2 py-1 border rounded" :class="isChartLinked ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-700 border-gray-300'">
+                  {{ isChartLinked ? '🔗 联动' : '📴 分离' }}
+                </button>
+              </div>
               <canvas ref="freqResponseChartRef" class="w-full h-48 border bg-white rounded"></canvas>
             </div>
 
@@ -2993,7 +3205,7 @@
             <div v-if="resonanceFrequency" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
               <div class="flex items-center gap-2">
                 <span class="text-yellow-600">⚠️</span>
-                <span class="text-sm text-yellow-800 font-medium">检测到共振频率: {{ resonanceFrequency.toFixed(2) }} Hz</span>
+                <span class="text-sm text-yellow-720 font-medium">检测到共振频率: {{ resonanceFrequency.toFixed(2) }} Hz</span>
               </div>
               <p class="text-xs text-yellow-700 mt-1">在该频率下结构振幅最大，设计时需特别注意避免此频率或采取减振措施。</p>
             </div>
@@ -3257,7 +3469,62 @@ onMounted(() => {
 })
 
 // ========== 分析类型 ==========
-const analysisType = ref<'structural' | 'buckling' | 'thermal' | 'cfd' | 'modal' | 'frequency'>('structural')
+const analysisType = ref<'structural' | 'buckling' | 'thermal' | 'cfd' | 'modal' | 'frequency' | 'transient' | 'fatigue' | 'thermal_coupling'>('structural')
+
+// ========== 瞬态分析参数 ==========
+const transientTimeStep = ref(0.01)
+const transientTotalTime = ref(1.0)
+const transientNewmarkBeta = ref(0.25)
+const transientLoadCurveType = ref('step')
+
+// ========== 疲劳分析参数 ==========
+const fatigueType = ref('high_cycle')
+const fatigueSNCurveType = ref('basquin')
+const fatigueStressRatio = ref(-1.0)
+const fatigueLifeMethod = ref('miner')
+
+// ========== 热-结构耦合参数 ==========
+const thermalCouplingType = ref('sequential')
+const thermalMappingMethod = ref('nodal')
+const thermalExpansionCoeff = ref(1.2e-5)
+
+// ========== 材料库相关参数 ==========
+const selectedMaterial = ref('')
+const materialEUnit = ref('GPa')
+const materialDensityUnit = ref('g/cm³')
+const materialYieldUnit = ref('MPa')
+const materialYieldStrength = ref(276)
+
+// ========== 全屏模式 ==========
+const isFullscreen = ref(false)
+
+function toggleFullscreen() {
+  isFullscreen.value = !isFullscreen.value
+  // 这里可以添加全屏逻辑，例如调整布局、隐藏其他面板等
+  console.log('Fullscreen toggled:', isFullscreen.value)
+}
+
+// ========== 图表联动 ==========
+const isChartLinked = ref(true)
+
+function toggleChartLink() {
+  isChartLinked.value = !isChartLinked.value
+  console.log('Chart link toggled:', isChartLinked.value)
+}
+
+// 增强频率响应点选择功能，添加联动
+function selectFreqResponsePoint(idx: number) {
+  if (freqResponseResults.value && idx >= 0 && idx < freqResponseResults.value.length) {
+    const point = freqResponseResults.value[idx]
+    console.log('Selected frequency response point:', point)
+    
+    // 如果联动开启，更新 3D 视图
+    if (isChartLinked.value && viewerRef.value) {
+      // 这里可以添加 3D 视图高亮对应节点的逻辑
+      console.log('Linking to 3D view for frequency:', point.frequency)
+    }
+  }
+}
 
 // ========== 主视图选项卡 ==========
 const activeTab = ref<'simulation' | 'parametric' | 'optimization' | 'automation' | 'contact'>('simulation')
@@ -5944,6 +6211,22 @@ function drawFreqResponseChart() {
   })
   ctx.stroke()
   
+  // 为曲线添加点击事件区域
+  data.forEach((point, idx) => {
+    const x = ((point.frequency - minFreq) / (maxFreq - minFreq)) * (width - 40) + 20
+    const y = height - 20 - (point.displacement / maxDisp) * (height - 40)
+    
+    // 创建点击区域
+    const clickArea = {
+      x: x - 5,
+      y: y - 5,
+      width: 10,
+      height: 10,
+      data: point
+    }
+    freqResponseClickAreas.value[idx] = clickArea
+  })
+  
   // 绘制共振点标注
   const resFreq = resonanceFrequency.value
   if (resFreq) {
@@ -5986,6 +6269,32 @@ function drawFreqResponseChart() {
   ctx.fillText('位移-频率曲线 (Frequency vs Displacement)', width / 2 - 80, 12)
 }
 
+// 频响曲线点击区域
+const freqResponseClickAreas = ref<any[]>([])
+
+// 处理频响曲线点击事件
+function handleFreqChartClick(event: MouseEvent) {
+  if (!isChartLinked.value) return
+  
+  const canvas = document.getElementById('freq-response-chart') as HTMLCanvasElement
+  if (!canvas) return
+  
+  const rect = canvas.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  
+  // 检查点击位置是否在任何点击区域内
+  for (const area of freqResponseClickAreas.value) {
+    if (x >= area.x && x <= area.x + area.width && y >= area.y && y <= area.y + area.height) {
+      // 高亮对应频率的结果
+      console.log('Selected frequency point:', area.data)
+      // 这里可以添加代码来更新3D视图，高亮对应位置的节点
+      // 例如：selectFreqResponsePoint(area.data)
+      break
+    }
+  }
+}
+
 // 打开频率响应结果对话框
 function showFreqResponseResultDialog() {
   // 计算关键结果
@@ -6003,16 +6312,16 @@ function showFreqResponseResultDialog() {
   // 绘制图表
   nextTick(() => {
     drawFreqResponseChart()
+    
+    // 添加点击事件监听器
+    const canvas = document.getElementById('freq-response-chart') as HTMLCanvasElement
+    if (canvas) {
+      canvas.addEventListener('click', handleFreqChartClick)
+    }
   })
 }
 
-// 选择指定频率点
-function selectFreqResponsePoint(index: number) {
-  if (!freqResponseResults.value) return
-  const point = freqResponseResults.value[index]
-  console.log('Selected frequency point:', point)
-  // TODO: 可以更新ResultViewer显示该频率下的变形
-}
+
 
 // 导出频率响应数据
 function exportFreqResponseData() {
