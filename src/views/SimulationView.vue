@@ -103,7 +103,7 @@
       <!-- 仿真视图内容 -->
       <template v-if="activeTab === 'simulation'">
       <!-- Left Panel: Mesh Generation & BC Setup -->
-      <div class="w-72 bg-white border-r overflow-y-auto p-4 space-y-6">
+      <div :class="['w-72 bg-white border-r overflow-y-auto p-4 space-y-6', isFullscreen ? 'hidden' : '']">
         <!-- Standard Case Selection -->
         <div v-if="analysisType === 'structural'" class="space-y-3">
           <h3 class="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1261,7 +1261,7 @@
       </div>
 
       <!-- Control Panel -->
-      <div class="w-72 bg-white border-l overflow-y-auto">
+      <div :class="['w-72 bg-white border-l overflow-y-auto', isFullscreen ? 'hidden' : '']">
         <div class="p-4 space-y-6">
           <!-- Display Mode - Structural -->
           <div v-if="analysisType === 'structural'">
@@ -3499,10 +3499,47 @@ const materialYieldStrength = ref(276)
 const isFullscreen = ref(false)
 
 function toggleFullscreen() {
-  isFullscreen.value = !isFullscreen.value
-  // 这里可以添加全屏逻辑，例如调整布局、隐藏其他面板等
+  const viewerContainer = document.querySelector('.flex-1.relative.bg-gray-100')
+  
+  if (!viewerContainer) return
+  
+  if (!document.fullscreenElement) {
+    // 进入全屏
+    if (viewerContainer.requestFullscreen) {
+      viewerContainer.requestFullscreen()
+    } else if ((viewerContainer as any).webkitRequestFullscreen) {
+      (viewerContainer as any).webkitRequestFullscreen()
+    } else if ((viewerContainer as any).msRequestFullscreen) {
+      (viewerContainer as any).msRequestFullscreen()
+    }
+    isFullscreen.value = true
+  } else {
+    // 退出全屏
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen()
+    }
+    isFullscreen.value = false
+  }
+  
   console.log('Fullscreen toggled:', isFullscreen.value)
 }
+
+// 监听全屏状态变化
+document.addEventListener('fullscreenchange', () => {
+  isFullscreen.value = !!document.fullscreenElement
+  console.log('Fullscreen state changed:', isFullscreen.value)
+})
+
+// 监听ESC键退出全屏
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.fullscreenElement) {
+    isFullscreen.value = false
+  }
+})
 
 // ========== 图表联动 ==========
 const isChartLinked = ref(true)
@@ -3519,9 +3556,18 @@ function selectFreqResponsePoint(idx: number) {
     console.log('Selected frequency response point:', point)
     
     // 如果联动开启，更新 3D 视图
-    if (isChartLinked.value && viewerRef.value) {
-      // 这里可以添加 3D 视图高亮对应节点的逻辑
-      console.log('Linking to 3D view for frequency:', point.frequency)
+    if (isChartLinked.value && viewerRef.value && modalResults.value) {
+      // 找到最接近当前频率的模态振型
+      const closestMode = modalResults.value.modes.reduce((closest, mode) => {
+        const currentDiff = Math.abs(mode.frequency_hz - point.frequency)
+        const closestDiff = Math.abs(closest.frequency_hz - point.frequency)
+        return currentDiff < closestDiff ? mode : closest
+      })
+      
+      console.log('Linking to 3D view for frequency:', point.frequency, 'closest mode:', closestMode.mode_number)
+      
+      // 选择对应的模态
+      selectModalMode(closestMode.mode_number)
     }
   }
 }
