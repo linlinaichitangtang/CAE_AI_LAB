@@ -1,0 +1,75 @@
+{
+  "id": "BM-05",
+  "name": "脊柱椎间盘突出",
+  "nameEn": "Spine Disc Herniation",
+  "description": "L4-L5脊柱功能单元（FSU）椎间盘突出分析。纤维环（Annulus Fibrosus）建模为层合复合材料，髓核（Nucleus Pulposus）建模为流体腔。椎间盘尺寸：前高h_a=0.012m，后高h_p=0.008m，横截面积A=1.8e-3m²。纤维环材料：E=50MPa（径向），ν=0.45，ρ=1100kg/m³。髓核近似为不可压缩流体，体积模量K=1.7MPa。压缩载荷F=500N（上半身重量）。理论椎间盘内压p_id≈1.5×F/A=1.5×500/1.8e-3=416667Pa≈0.42MPa。验证椎间盘内压分布及纤维环应力状态。",
+  "category": "biomechanics",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["spine", "intervertebral disc", "annulus fibrosus", "nucleus pulposus", "herniation"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.04,
+    "radius": 0.024,
+    "height": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 20,
+    "z_div": 12,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Annulus Fibrosus (Composite)",
+    "elastic_modulus": 50000000,
+    "poisson_ratio": 0.45,
+    "density": 1100,
+    "yield_stress": 5000000,
+    "ultimate_stress": 8000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_endplate",
+    "load_type": "distributed",
+    "load_face": "top_endplate",
+    "load_magnitude": 500,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 8e-4,
+    "max_stress": 416667,
+    "formula": "p_id ≈ 1.5 × F/A, σ_annulus = p_id × R/h",
+    "reference": "White & Panjabi, Clinical Biomechanics of the Spine"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "椎间盘内压",
+        "value": 416667,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "轴向压缩位移",
+        "value": 8e-4,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "纤维环最大应力",
+        "value": 1200000,
+        "unit": "Pa",
+        "tolerance": 20
+      }
+    ]
+  }
+}

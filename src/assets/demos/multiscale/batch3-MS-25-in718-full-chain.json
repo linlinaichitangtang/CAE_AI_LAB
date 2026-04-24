@@ -1,0 +1,349 @@
+{
+  "id": "MS-25",
+  "name": "Inconel 718全链路",
+  "nameEn": "Inconel 718 Full-Chain Multiscale Simulation",
+  "description": "Inconel 718镍基高温合金的全链路多尺度模拟，涵盖从电子结构到构件蠕变寿命的完整分析链路。DFT计算层错能γ_ISF≈20mJ/m²和γ/γ''界面能；MD模拟位错与γ'(Ni₃(Al,Ti))和γ''(Ni₃Nb)析出相的交互作用，建立Orowan绕过和位错剪切机制；相场模型模拟双峰析出相(γ'+γ'')的沉淀动力学和粗化行为；FE模型基于Larson-Miller参数预测高温蠕变寿命。该案例为航空发动机涡轮盘材料设计提供完整的多尺度仿真框架。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["Inconel 718", "superalloy", "gamma double prime", "stacking fault energy", "Larson-Miller", "creep life", "precipitation hardening", "full chain"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Inconel 718 (Ni-19Cr-18Fe-5Nb-3Mo-1Ti-0.5Al, wt%)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT层错能与界面能计算",
+      "description": "计算Inconel 718基体的层错能γ_ISF、γ/γ'和γ/γ''界面能，为MD位错-析出相交互提供参数",
+      "input": {
+        "crystal_structure": "FCC (γ matrix)",
+        "lattice_constant": 3.59,
+        "lattice_constant_unit": "Angstrom",
+        "composition": "Ni-19Cr-18Fe-5Nb-3Mo-1Ti-0.5Al",
+        "calculation_types": ["ISF_energy", "gamma_gamma_prime_interface", "gamma_gamma_double_prime_interface"],
+        "supercell": {
+          "layers": 20,
+          "vacuum": 15,
+          "vacuum_unit": "Angstrom"
+        },
+        "gamma_prime_structure": "L12_Ni3(Al,Ti)",
+        "gamma_double_prime_structure": "D0a_Ni3Nb"
+      },
+      "output": {
+        "intrinsic_stacking_fault_energy": 0.020,
+        "isfe_unit": "J/m^2",
+        "unstable_stacking_fault_energy": 0.145,
+        "usfe_unit": "J/m^2",
+        "gamma_gamma_prime_interface_energy": 0.025,
+        "interface_energy_unit": "J/m^2",
+        "gamma_gamma_double_prime_interface_energy": 0.032,
+        "interface_energy_unit": "J/m^2",
+        "antiphase_boundary_energy_gamma_prime": 0.185,
+        "apb_unit": "J/m^2",
+        "complex_stacking_fault_energy": 0.280,
+        "csfe_unit": "J/m^2",
+        "lattice_misfit_gamma_prime": 0.008,
+        "lattice_misfit_gamma_double_prime": 0.029
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotentials": ["PAW_PBE_Ni", "PAW_PBE_Cr", "PAW_PBE_Fe", "PAW_PBE_Nb", "PAW_PBE_Mo", "PAW_PBE_Ti", "PAW_PBE_Al"],
+        "energy_cutoff": 450,
+        "energy_cutoff_unit": "eV",
+        "k_points": [12, 12, 1],
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 3,
+        "nsw": 100,
+        "special_kpoints": "Gamma-centered"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT stacking fault energies and interface energies to MD EAM potential fitting and dislocation-precipitate interaction parameters",
+        "data_transferred": [
+          "intrinsic_stacking_fault_energy",
+          "unstable_stacking_fault_energy",
+          "gamma_gamma_prime_interface_energy",
+          "gamma_gamma_double_prime_interface_energy",
+          "antiphase_boundary_energy_gamma_prime",
+          "complex_stacking_fault_energy"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD位错-析出相交互模拟",
+      "description": "模拟Inconel 718中位错与γ'和γ''析出相的交互作用，提取临界剪切应力(CRSS)和位错机制",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 3.59,
+        "lattice_constant_unit": "Angstrom",
+        "simulation_box": {
+          "Lx": 40,
+          "Ly": 40,
+          "Lz": 60,
+          "unit": "nm",
+          "atom_count": 4800000
+        },
+        "precipitates": {
+          "gamma_prime": {
+            "structure": "L12",
+            "radius": 15,
+            "radius_unit": "nm",
+            "volume_fraction": 0.05
+          },
+          "gamma_double_prime": {
+            "structure": "D0a",
+            "radius": 10,
+            "radius_unit": "nm",
+            "volume_fraction": 0.12,
+            "aspect_ratio": 3.5
+          }
+        },
+        "dislocation_type": "1/2<110>_edge",
+        "sfe_source": "DFT MS-25 Step 1",
+        "temperature": 923,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "dislocation_precipitate_interaction": "interaction.vtk",
+        "critical_resolved_shear_stress": 485,
+        "crss_unit": "MPa",
+        "orowan_stress_gamma_prime": 320,
+        "orowan_unit": "MPa",
+        "shearing_stress_gamma_double_prime": 380,
+        "shearing_unit": "MPa",
+        "dislocation_bypass_mechanism": "mixed_Orowan_and_shearing",
+        "apb_ribbons": "apb_ribbons.vtk",
+        "stacking_fault_ribbons": "sf_ribbons.vtk",
+        "dislocation_velocity": 5.2,
+        "velocity_unit": "m/s",
+        "pair_sweep_frequency": 1.2e10,
+        "sweep_unit": "1/s"
+      },
+      "parameters": {
+        "potential": "EAM (modified for Ni-Cr-Fe-Nb-Mo-Ti-Al)",
+        "potential_file": "IN718_EAM_modified.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 0,
+        "target_pressure_unit": "bar",
+        "cutoff_radius": 6.0,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_x", "periodic_y", "fixed_z"],
+        "pad_atoms": 5,
+        "pad_atoms_unit": "layers",
+        "total_steps": 2000000,
+        "dump_interval": 5000,
+        "applied_shear_strain_rate": 1e7,
+        "strain_rate_unit": "1/s"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD CRSS and dislocation-precipitate interaction mechanisms to phase field precipitation kinetics and strengthening model",
+        "data_transferred": [
+          "critical_resolved_shear_stress",
+          "orowan_stress_gamma_prime",
+          "shearing_stress_gamma_double_prime",
+          "dislocation_bypass_mechanism",
+          "apb_ribbons"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场析出动力学模拟",
+      "description": "基于相场模型模拟Inconel 718中γ'和γ''双峰析出相的沉淀动力学、粗化行为和体积分数演化",
+      "input": {
+        "domain_size": {
+          "Lx": 200,
+          "Ly": 200,
+          "Lz": 200,
+          "unit": "nm"
+        },
+        "grid_spacing": 1.5,
+        "grid_spacing_unit": "nm",
+        "grid_points": "134x134x134",
+        "initial_composition": "Ni-19Cr-18Fe-5Nb-3Mo-1Ti-0.5Al",
+        "heat_treatment": {
+          "solution": "980C/1h/WQ",
+          "aging1": "720C/8h",
+          "aging2": "620C/8h"
+        },
+        "interface_energy_source": "DFT MS-25 Step 1",
+        "crss_source": "MD MS-25 Step 2",
+        "temperature_profile": "two_step_aging"
+      },
+      "output": {
+        "precipitate_evolution": "precipitate_evolution.vtk",
+        "gamma_prime_radius": 18.5,
+        "radius_unit": "nm",
+        "gamma_double_prime_radius": 12.2,
+        "radius_unit": "nm",
+        "gamma_prime_volume_fraction": 0.06,
+        "gamma_double_prime_volume_fraction": 0.14,
+        "precipitate_size_distribution": "size_dist.dat",
+        "coarsening_rate": 5.2e-31,
+        "coarsening_rate_unit": "m^3/s",
+        "strengthening_evolution": "strengthening_vs_time.dat",
+        "peak_hardness_time": 28,
+        "peak_hardness_time_unit": "hours"
+      },
+      "parameters": {
+        "model": "multi_phase_field_Cahn_Hilliard_Allen_Cahn",
+        "order_parameters": ["eta_gamma_prime", "eta_gamma_double_prime", "c_Nb", "c_Ti_Al"],
+        "interface_width": 3.0,
+        "interface_width_unit": "nm",
+        "mobility_Nb": 8.5e-16,
+        "mobility_Nb_unit": "m^2/s",
+        "mobility_Ti_Al": 1.2e-15,
+        "mobility_Ti_Al_unit": "m^2/s",
+        "elastic_misfit_gamma_prime": 0.008,
+        "elastic_misfit_gamma_double_prime": 0.029,
+        "elastic_constants": {
+          "C11": 240,
+          "C12": 150,
+          "C44": 120,
+          "unit": "GPa"
+        },
+        "time_step": 5.0,
+        "time_step_unit": "s",
+        "total_time": 57600,
+        "total_time_unit": "s",
+        "temperature_dependent_mobility": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field precipitate microstructure and strengthening evolution to FE creep constitutive model",
+        "data_transferred": [
+          "gamma_prime_radius",
+          "gamma_double_prime_radius",
+          "gamma_prime_volume_fraction",
+          "gamma_double_prime_volume_fraction",
+          "strengthening_evolution",
+          "coarsening_rate"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE蠕变寿命预测",
+      "description": "基于Larson-Miller参数和Norton蠕变律，结合相场预测的微观组织演化，预测Inconel 718高温蠕变寿命",
+      "input": {
+        "domain_size": {
+          "type": "CT_specimen",
+          "width_W": 50,
+          "width_unit": "mm",
+          "thickness_B": 10,
+          "thickness_unit": "mm"
+        },
+        "mesh": "100000_elements",
+        "element_type": "C3D8R",
+        "microstructure_source": "PF MS-25 Step 3",
+        "creep_conditions": {
+          "temperature": 923,
+          "temperature_unit": "K",
+          "stress_range": [200, 600],
+          "stress_unit": "MPa"
+        },
+        "larson_miller_constant_C": 20,
+        "norton_stress_exponent_n": 6.5,
+        "activation_energy_Q_creep": 2.85,
+        "Q_creep_unit": "eV"
+      },
+      "output": {
+        "creep_curve": "creep_curve.dat",
+        "time_to_rupture": "t_rupture.dat",
+        "minimum_creep_rate": 2.8e-9,
+        "creep_rate_unit": "1/s",
+        "rupture_time_at_650C_400MPa": 185,
+        "rupture_time_unit": "hours",
+        "larson_miller_parameter": 32.5,
+        "lmp_unit": "dimensionless",
+        "stress_vs_rupture_time": "stress_vs_tr.dat",
+        "creep_strain_distribution": "creep_strain.vtk",
+        "damage_field": "damage.vtk",
+        "life_prediction_accuracy": 92,
+        "accuracy_unit": "percent"
+      },
+      "parameters": {
+        "solver_type": "static_implicit_with_creep",
+        "material_model": "Norton_power_law_creep_with_damage",
+        "youngs_modulus": 200,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.30,
+        "norton_A": 1.5e-28,
+        "norton_n": 6.5,
+        "Q_creep": 2.85,
+        "Q_creep_unit": "eV",
+        "damage_model": "Kachanov-Rabotnov",
+        "damage_exponent": 3.2,
+        "larson_miller_C": 20,
+        "time_integration": "explicit_Euler",
+        "time_step": 3600,
+        "time_step_unit": "s",
+        "max_time": 1e6,
+        "max_time_unit": "s",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 500
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE creep life prediction validation against Larson-Miller master curve and experimental rupture data",
+        "data_transferred": [
+          "time_to_rupture",
+          "minimum_creep_rate",
+          "larson_miller_parameter",
+          "life_prediction_accuracy",
+          "damage_field"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2018.03.007",
+    "authors": "Sundararajan S, Kumar A, Hu Z, Browning ND, Mills MJ",
+    "year": 2018,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Intrinsic stacking fault energy",
+        "value": 0.020,
+        "unit": "J/m^2",
+        "tolerance": 15
+      },
+      {
+        "name": "Critical resolved shear stress",
+        "value": 485,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "Gamma double prime volume fraction",
+        "value": 0.14,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "Rupture time at 650C 400MPa",
+        "value": 185,
+        "unit": "hours",
+        "tolerance": 20
+      },
+      {
+        "name": "Larson-Miller parameter",
+        "value": 32.5,
+        "unit": "dimensionless",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

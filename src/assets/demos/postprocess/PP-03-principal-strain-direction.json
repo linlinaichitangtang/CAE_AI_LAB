@@ -1,0 +1,52 @@
+{
+  "id": "PP-03",
+  "name": "主应变方向",
+  "nameEn": "Principal Strain Direction Visualization",
+  "description": "展示单向拉伸平板的主应变方向与张量分解。平板尺寸200mm x 100mm x 5mm，材料为铝合金(E=70GPa, v=0.33)，沿X方向施加均布拉应力σ₁=100MPa，σ₂=0，σ₃=0。通过此案例学习应变张量分解原理，理解主应变方向箭头的物理含义，掌握莫尔圆与主方向的对应关系。主应变ε₁=1.429e-3，ε₂=-4.714e-4，ε₃=-4.714e-4，最大剪应变出现在45°方向。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["主应变", "张量分解", "莫尔圆", "方向箭头", "应变分析"],
+  "visualization": {
+    "type": "tensor",
+    "field": "principal",
+    "color_map": "rainbow",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 2310,
+    "elements": 2000,
+    "results_file": "results/postprocess/uniaxial_tension_plate.dat"
+  },
+  "display_settings": {
+    "title": "单向拉伸平板 - 主应变方向与张量分解",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": -0.0005,
+      "max": 0.0015,
+      "label": "主应变",
+      "n_levels": 15
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 0.3 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大主应变ε₁", "value": 1.429e-3, "unit": "", "tolerance": 2 },
+      { "name": "第二主应变ε₂", "value": -4.714e-4, "unit": "", "tolerance": 2 },
+      { "name": "第三主应变ε₃", "value": -4.714e-4, "unit": "", "tolerance": 2 },
+      { "name": "最大剪应变γ_max", "value": 1.9e-3, "unit": "", "tolerance": 5 },
+      { "name": "主方向角", "value": 0, "unit": "°", "tolerance": 2 }
+    ]
+  }
+}

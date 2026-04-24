@@ -1,0 +1,52 @@
+{
+  "id": "PP-02",
+  "name": "单自由度频响曲线",
+  "nameEn": "SDOF Frequency Response Function",
+  "description": "展示单自由度(SDOF)系统的频响函数(FRF)曲线。系统参数：质量m=1kg，刚度k=1000N/m，阻尼c=5N·s/m。固有频率f_n=5.03Hz，阻尼比ζ=0.025。通过此案例学习频响函数的基本概念，包括共振峰识别、-3dB带宽计算、品质因子Q=1/(2ζ)=20等关键参数的读取。频响曲线在共振频率处出现明显峰值，幅值放大约20倍。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["频响函数", "FRF", "共振", "阻尼比", "单自由度"],
+  "visualization": {
+    "type": "frf",
+    "field": "frequency_response",
+    "color_map": "jet",
+    "view_mode": "2d_section",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 2,
+    "elements": 1,
+    "results_file": "results/postprocess/sdof_frf.dat"
+  },
+  "display_settings": {
+    "title": "单自由度系统频响函数 (m=1kg, k=1000N/m, c=5N·s/m)",
+    "axis_labels": ["频率 (Hz)", "幅值 (m/N)", "相位 (°)"],
+    "color_bar": {
+      "min": 0,
+      "max": 0.02,
+      "label": "幅值 (m/N)",
+      "n_levels": 10
+    },
+    "camera": {
+      "position": { "x": 0, "y": 0, "z": 1 },
+      "target": { "x": 0, "y": 0, "z": 0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "固有频率", "value": 5.03, "unit": "Hz", "tolerance": 1 },
+      { "name": "阻尼比", "value": 0.025, "unit": "", "tolerance": 5 },
+      { "name": "共振峰值", "value": 0.02, "unit": "m/N", "tolerance": 5 },
+      { "name": "品质因子Q", "value": 20, "unit": "", "tolerance": 5 },
+      { "name": "-3dB带宽", "value": 0.503, "unit": "Hz", "tolerance": 5 }
+    ]
+  }
+}

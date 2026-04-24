@@ -1,0 +1,78 @@
+{
+  "id": "RL-05",
+  "name": "焊接接头疲劳可靠度",
+  "nameEn": "Welded Joint Fatigue Reliability Analysis",
+  "description": "基于BS 7608标准的焊接接头疲劳可靠度分析。采用热点应力法评估焊趾处的疲劳性能，疲劳寿命服从对数正态分布。焊接细节类别为FAT 80（特征疲劳强度80MPa at 2×10^6次循环）。考虑几何参数（板厚、焊缝尺寸）、载荷幅值和材料性能的不确定性。通过热点应力集中系数（SCF）将名义应力转换为热点应力，结合S-N曲线和Miner线性累积损伤准则预测疲劳寿命。采用蒙特卡洛模拟评估在目标寿命下的失效概率，同时给出具有指定可靠度的安全寿命估计。",
+  "category": "reliability",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["焊接接头", "疲劳", "BS 7608", "热点应力", "对数正态分布", "S-N曲线"],
+  "random_variables": [
+    {
+      "name": "nominal_stress_range",
+      "distribution": "normal",
+      "mean": 100000000,
+      "stddev": 15000000,
+      "cov": 0.15
+    },
+    {
+      "name": "stress_concentration_factor",
+      "distribution": "lognormal",
+      "mean": 1.8,
+      "stddev": 0.18,
+      "cov": 0.1
+    },
+    {
+      "name": "fatigue_strength_log_slope",
+      "distribution": "normal",
+      "mean": 3.0,
+      "stddev": 0.15,
+      "cov": 0.05
+    },
+    {
+      "name": "plate_thickness",
+      "distribution": "normal",
+      "mean": 0.02,
+      "stddev": 0.001,
+      "cov": 0.05
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "N_fatigue(hot_spot_stress, FAT_class, thickness) - N_target",
+    "description": "焊接接头疲劳寿命与目标寿命之差。基于BS 7608 S-N曲线，考虑厚度修正系数"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 200000,
+    "target_reliability_index": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "failure_probability_at_2e6_cycles",
+        "value": 0.00135,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "reliability_index",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "log_stddev_fatigue_life",
+        "value": 0.25,
+        "unit": "log10(cycles)",
+        "tolerance": 15
+      },
+      {
+        "name": "safe_life_at_97.7pct",
+        "value": 1000000,
+        "unit": "cycles",
+        "tolerance": 20
+      }
+    ]
+  }
+}

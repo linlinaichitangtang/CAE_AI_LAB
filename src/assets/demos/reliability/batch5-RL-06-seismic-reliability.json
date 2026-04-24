@@ -1,0 +1,91 @@
+{
+  "id": "RL-06",
+  "name": "结构抗震可靠度分析",
+  "nameEn": "Seismic Structural Reliability Analysis",
+  "description": "基于Pushover分析和能力谱方法的建筑结构抗震可靠度分析。采用增量动力分析（IDA）方法，以峰值地面加速度（PGA）为强度参数，逐步增加地震动强度直至结构达到极限状态。考虑地震动不确定性（选用20条天然地震波）、结构材料不确定性（混凝土强度、钢筋屈服强度）和模型不确定性。通过IDA曲线建立地震动强度与结构最大层间位移角的关系，确定不同性能水准（立即使用IO、生命安全LS、防止倒塌CP）对应的极限状态。计算在PGA=0.3g下的条件失效概率，评估结构满足抗震性能目标的可靠度。",
+  "category": "reliability",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["抗震", "Pushover", "IDA", "能力谱", "层间位移角", "地震动"],
+  "random_variables": [
+    {
+      "name": "PGA",
+      "distribution": "lognormal",
+      "mean": 0.3,
+      "stddev": 0.12,
+      "cov": 0.4
+    },
+    {
+      "name": "concrete_compressive_strength",
+      "distribution": "normal",
+      "mean": 30000000,
+      "stddev": 4500000,
+      "cov": 0.15
+    },
+    {
+      "name": "steel_yield_strength",
+      "distribution": "lognormal",
+      "mean": 400000000,
+      "stddev": 40000000,
+      "cov": 0.1
+    },
+    {
+      "name": "spectral_shape_uncertainty",
+      "distribution": "normal",
+      "mean": 1.0,
+      "stddev": 0.15,
+      "cov": 0.15
+    },
+    {
+      "name": "model_uncertainty",
+      "distribution": "normal",
+      "mean": 1.0,
+      "stddev": 0.2,
+      "cov": 0.2
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "theta_capacity(PGA, material_props) - theta_demand(PGA, ground_motion)",
+    "description": "结构层间位移角能力与需求之差。能力通过Pushover/IDA确定，需求通过非线性时程分析确定"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 10000,
+    "target_reliability_index": 2.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "failure_probability_at_PGA_0.3g",
+        "value": 0.0062,
+        "unit": "",
+        "tolerance": 25
+      },
+      {
+        "name": "reliability_index",
+        "value": 2.5,
+        "unit": "",
+        "tolerance": 15
+      },
+      {
+        "name": "median_collapse_PGA",
+        "value": 0.55,
+        "unit": "g",
+        "tolerance": 15
+      },
+      {
+        "name": "collapse_margin_ratio",
+        "value": 1.83,
+        "unit": "ratio",
+        "tolerance": 20
+      },
+      {
+        "name": "IDA_dispersion",
+        "value": 0.4,
+        "unit": "",
+        "tolerance": 20
+      }
+    ]
+  }
+}

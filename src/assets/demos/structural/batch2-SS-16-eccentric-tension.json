@@ -1,0 +1,89 @@
+{
+  "id": "SS-16",
+  "name": "偏心拉伸分析",
+  "nameEn": "Eccentric Tension Analysis",
+  "description": "矩形截面杆件在偏心拉力作用下的组合应力分析。截面尺寸0.1m×0.05m，轴向拉力P=100kN，偏心距e=0.02m。截面积A=0.005m²，惯性矩I=bh³/12=1.042e-6 m⁴。最大应力σ_max=P/A+Pe·c/I=20+19.2=39.2MPa（偏心侧），最小应力σ_min=P/A-Pe·c/I=20-19.2=0.8MPa（另一侧）。该算例演示截面核心概念和轴向力与弯矩的组合效应。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": [
+    "偏心拉伸",
+    "组合应力",
+    "截面核心",
+    "弯曲+轴向"
+  ],
+  "geometry": {
+    "type": "beam",
+    "length": 0.5,
+    "width": 0.1,
+    "height": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 100000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.000156,
+    "max_stress": 39200000.0,
+    "formula": "σ=P/A ± Pe·c/I, A=0.005m², I=bh³/12=1.042e-6 m⁴, c=h/2=0.025m",
+    "reference": "Gere & Timoshenko, Mechanics of Materials, Ch. 9"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大拉应力(偏心侧)",
+        "value": 39200000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "最小应力(远侧)",
+        "value": 800000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "轴向伸长量",
+        "value": 0.000125,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "附加弯曲挠度",
+        "value": 3.1e-05,
+        "unit": "m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

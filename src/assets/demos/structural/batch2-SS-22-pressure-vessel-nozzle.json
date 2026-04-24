@@ -1,0 +1,96 @@
+{
+  "id": "SS-22",
+  "name": "压力容器接管分析",
+  "nameEn": "Pressure Vessel Nozzle Analysis",
+  "description": "内压圆柱形压力容器接管区的应力集中分析。容器半径R=0.5m，壁厚t=0.02m，接管半径r_n=0.1m，内压p=10MPa。接管与壳体连接处存在显著的应力集中，应力集中系数SCF≈2.5。薄膜应力σ_m=pR/(2t)=125MPa，环向应力σ_θ=pR/t=250MPa。接管区需设置补强板以满足等面积补强准则。该算例验证压力容器接管区有限元应力分析精度。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "压力容器",
+    "接管",
+    "应力集中",
+    "补强设计",
+    "SCF"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 1.0,
+    "radius": 0.5,
+    "thickness": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 16,
+    "z_div": 16,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Q345R Steel",
+    "elastic_modulus": 206000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 345000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 10000000.0,
+    "load_direction": "radial",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 3.63e-04,
+    "max_stress": 625000000.0,
+    "formula": "σ_θ=pR/t=250MPa(筒体), σ_m=pR/(2t)=125MPa(轴向), SCF≈2.5 at nozzle-shell junction, σ_max=SCF×σ_θ=625MPa",
+    "reference": "ASME BPVC Section VIII Div. 2; Megyesy, Pressure Vessel Handbook"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "筒体环向薄膜应力",
+        "value": 250000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "筒体轴向薄膜应力",
+        "value": 125000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "接管区最大应力",
+        "value": 625000000.0,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "应力集中系数SCF",
+        "value": 2.5,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "接管区最大径向位移",
+        "value": 3.63e-04,
+        "unit": "m",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

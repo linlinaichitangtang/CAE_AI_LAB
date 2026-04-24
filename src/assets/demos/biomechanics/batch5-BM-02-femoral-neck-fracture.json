@@ -1,0 +1,74 @@
+{
+  "id": "BM-02",
+  "name": "股骨颈骨折",
+  "nameEn": "Femoral Neck Fracture",
+  "description": "股骨颈悬臂梁模型应力分析。股骨颈简化为圆柱形悬臂梁，长度L=0.05m，半径R=0.015m。皮质骨材料参数：E=17GPa，ν=0.3，ρ=1900kg/m³，σ_y=135MPa，σ_u=150MPa。体重载荷F=700N作用于远端，模拟单腿站立时股骨颈受力。截面惯性矩I=πR⁴/4=3.98e-8m⁴，截面模量Z=πR³/4=2.65e-6m³。理论最大应力σ=FL/Z=700×0.05/2.65e-6=13.2MPa。理论最大挠度δ=FL³/(3EI)=700×0.05³/(3×17e9×3.98e-8)=4.32e-6m。验证应力分布及骨折风险区域。",
+  "category": "biomechanics",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["femur", "cortical bone", "cantilever", "fracture mechanics", "stress distribution"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.05,
+    "radius": 0.015,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 16,
+    "z_div": 16,
+    "element_type": "C3D10"
+  },
+  "material": {
+    "name": "Cortical Bone",
+    "elastic_modulus": 17000000000,
+    "poisson_ratio": 0.3,
+    "density": 1900,
+    "yield_stress": 135000000,
+    "ultimate_stress": 150000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "proximal_end",
+    "load_type": "point",
+    "load_face": "distal_end",
+    "load_magnitude": 700,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 4.32e-6,
+    "max_stress": 13200000,
+    "formula": "σ = FL/Z, δ = FL³/(3EI)",
+    "reference": "Nordin & Frankel, Basic Biomechanics of the Musculoskeletal System"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大挠度",
+        "value": 4.32e-6,
+        "unit": "m",
+        "tolerance": 10
+      },
+      {
+        "name": "最大应力",
+        "value": 13200000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "安全系数",
+        "value": 10.2,
+        "unit": "",
+        "tolerance": 15
+      }
+    ]
+  }
+}

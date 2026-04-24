@@ -1,0 +1,53 @@
+{
+  "id": "PP-11",
+  "name": "应力奇异评估",
+  "nameEn": "Stress Singularity Assessment - Criterion Comparison",
+  "description": "对比Von Mises、Tresca和最大主应力三种屈服准则在应力集中区域的差异。使用带中心圆孔的平板(200mm x 100mm x 5mm)受单向拉伸(σ=100MPa)，孔径20mm，理论应力集中系数K_t=3.0。在孔边应力集中点，三种准则给出不同结果：Von Mises应力约260MPa，Tresca应力约300MPa，最大主应力约300MPa。通过此测试案例评估不同应力准则在奇异点附近的数值表现，为工程判定提供参考。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["Von Mises", "Tresca", "最大主应力", "应力奇异", "应力集中", "准则对比"],
+  "visualization": {
+    "type": "comparison",
+    "field": "stress",
+    "color_map": "hot",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 32400,
+    "elements": 28000,
+    "results_file": "results/postprocess/plate_hole_stress_criteria.dat"
+  },
+  "display_settings": {
+    "title": "应力准则对比 - Von Mises / Tresca / Max Principal",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 350,
+      "label": "应力 (MPa)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 0.15, "y": 0.0, "z": 0.15 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -10, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "Von Mises最大应力", "value": 260, "unit": "MPa", "tolerance": 5 },
+      { "name": "Tresca最大应力", "value": 300, "unit": "MPa", "tolerance": 5 },
+      { "name": "最大主应力", "value": 300, "unit": "MPa", "tolerance": 5 },
+      { "name": "理论应力集中系数K_t", "value": 3.0, "unit": "", "tolerance": 3 },
+      { "name": "Von Mises/Tresca比值", "value": 0.866, "unit": "", "tolerance": 3 },
+      { "name": "奇异区域网格尺寸", "value": 0.5, "unit": "mm", "tolerance": 10 }
+    ]
+  }
+}

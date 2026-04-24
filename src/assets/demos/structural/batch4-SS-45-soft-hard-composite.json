@@ -1,0 +1,86 @@
+{
+  "id": "SS-45",
+  "name": "软硬复合结构大变形分析",
+  "nameEn": "Soft-Hard Composite Large Deformation Analysis",
+  "description": "对凝胶基体（E=1MPa，ν=0.49，近似不可压缩）与刚性骨架（E=10GPa）组成的软硬复合结构进行大变形分析。基体采用Mooney-Rivlin超弹性本构模型，C10=0.1MPa，C01=0.025MPa。施加高达200%工程应变的大变形载荷，验证Neo-Hookean/Mooney-Rivlin超弹性响应及界面应力传递机制。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["超弹性", "大变形", "Mooney-Rivlin", "软硬复合", "不可压缩"],
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.02,
+    "radius": 0.0,
+    "thickness": 0.0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 24,
+    "z_div": 12,
+    "element_type": "C3D8H"
+  },
+  "material": {
+    "name": "Mooney-Rivlin Gel Matrix",
+    "elastic_modulus": 1e6,
+    "poisson_ratio": 0.49,
+    "density": 1100,
+    "yield_stress": 0,
+    "thermal_expansion": 2.0e-4,
+    "thermal_conductivity": 0.6,
+    "specific_heat": 2000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "uniform",
+    "load_face": "top_face",
+    "load_magnitude": 5000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.04,
+    "max_stress": 3e6,
+    "formula": "W = C10(I1-3) + C01(I2-3); σ_eng = 2(C10+C01)(λ-λ^-2); at λ=3 (200% strain): σ = 2×0.125e6×(3-1/9) = 0.722 MPa",
+    "reference": "Mooney M. (1940) J. Appl. Phys.; Rivlin R.S. (1948) Phil. Trans. R. Soc."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "工程应变 Engineering Strain",
+        "value": 200,
+        "unit": "%",
+        "tolerance": 5
+      },
+      {
+        "name": "名义应力 Nominal Stress at 200% strain",
+        "value": 0.722,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "最大变形位移 Max Displacement",
+        "value": 40,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "界面最大剪应力 Max Interface Shear Stress",
+        "value": 1.5,
+        "unit": "MPa",
+        "tolerance": 10
+      }
+    ]
+  }
+}

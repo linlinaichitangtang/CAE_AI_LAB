@@ -1,0 +1,81 @@
+{
+  "id": "BM-08",
+  "name": "松质骨微FE",
+  "nameEn": "Trabecular Bone Micro-FE",
+  "description": "基于microCT图像的松质骨微有限元分析。样本尺寸5mm×5mm×5mm（5e-9m³），体素分辨率50μm（5e-5m），网格规模100×100×100=1e6个单元。松质骨材料：E_s=10GPa（骨小梁固相弹性模量），ν=0.3，ρ_app=400kg/m³（表观密度），骨体积分数BV/TV=0.25。表观弹性模量E_app=E_s×(BV/TV)^2=10e9×0.25²=625MPa（目标验证值0.5GPa）。压缩载荷σ_app=2MPa（生理载荷范围）。验证表观弹性模量、表观屈服强度及应力分布与实验结果的一致性。",
+  "category": "biomechanics",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["trabecular bone", "microCT", "microFE", "apparent modulus", "voxel mesh"],
+  "geometry": {
+    "type": "block",
+    "length": 0.005,
+    "width": 0.005,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 100,
+    "y_div": 100,
+    "z_div": 100,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Trabecular Bone Tissue",
+    "elastic_modulus": 10000000000,
+    "poisson_ratio": 0.3,
+    "density": 400,
+    "yield_stress": 100000000,
+    "ultimate_stress": 150000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "pressure",
+    "load_face": "top_face",
+    "load_magnitude": 2000000,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 1.6e-5,
+    "max_stress": 200000000,
+    "formula": "E_app = E_s × (BV/TV)^2 (power-law relation)",
+    "reference": "van Rietbergen et al., J. Biomechanics, 1995; Ulrich et al., J. Biomech., 1999"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "表观弹性模量",
+        "value": 500000000,
+        "unit": "Pa",
+        "tolerance": 25
+      },
+      {
+        "name": "表观屈服强度",
+        "value": 5000000,
+        "unit": "Pa",
+        "tolerance": 25
+      },
+      {
+        "name": "最大局部应力",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "表观应变",
+        "value": 0.004,
+        "unit": "",
+        "tolerance": 20
+      }
+    ]
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "id": "SS-23",
+  "name": "螺栓连接组分析",
+  "nameEn": "Bolted Joint Group Analysis",
+  "description": "四螺栓连接组的受力分析与滑移临界校核。采用M12高强度螺栓（8.8级），有效截面积A_s=84.3mm²，预紧力F_pre=50kN/螺栓。外剪力V=80kN作用于连接板。每个螺栓承受剪力F_v=V/n=20kN，摩擦力F_f=μ·F_pre=0.3×50000=15kN/摩擦面。需验证滑移临界条件和螺栓承载力。该算例演示螺栓连接组的载荷分配和连接设计校核方法。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "螺栓连接",
+    "预紧力",
+    "滑移临界",
+    "载荷分配",
+    "摩擦连接"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.15,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 16,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel (Base Plate)",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 80000.0,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 4.8e-05,
+    "max_stress": 593000000.0,
+    "formula": "F_v=V/n=20kN/bolt, F_f=μ·F_pre=15kN/bolt, σ_bolt=F_pre/A_s=50000/84.3e-6=593MPa, 抗滑移: V_s≤μ·ΣF_pre",
+    "reference": "VDI 2230; Shigley, Mechanical Engineering Design, Ch. 8"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "单螺栓剪力",
+        "value": 20000.0,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "螺栓预紧应力",
+        "value": 593000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "单螺栓摩擦抗力",
+        "value": 15000.0,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "连接板间相对滑移量",
+        "value": 4.8e-05,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "螺栓孔壁承压应力",
+        "value": 200000000.0,
+        "unit": "Pa",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

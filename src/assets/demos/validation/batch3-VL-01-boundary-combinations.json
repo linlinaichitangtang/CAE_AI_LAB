@@ -1,0 +1,162 @@
+{
+  "id": "VL-01",
+  "name": "固支vs简支vs自由边界组合",
+  "nameEn": "Boundary Condition Combinations: Fixed vs Pinned vs Free",
+  "description": "对同一悬臂梁几何体施加六种不同边界条件组合，系统验证求解器对固定端、铰支端和自由端约束的处理能力。通过对比解析解与数值解的静力挠度和固有频率，检验边界条件实现的正确性。涵盖固支-固支、固支-铰支、固支-自由、铰支-铰支、铰支-自由和自由-自由六种经典组合。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["boundary_condition", "modal_analysis", "beam_theory", "analytical_validation"],
+  "validation_type": "boundary_condition",
+  "test_config": {
+    "baseline": {
+      "description": "固支-自由(悬臂梁)，基准静力与模态分析",
+      "bc_type": "fixed-free",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 20
+    },
+    "variants": [
+      {
+        "description": "固支-固支梁，两端完全固定",
+        "bc_type": "fixed-fixed",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      },
+      {
+        "description": "固支-铰支梁，一端固定一端铰支",
+        "bc_type": "fixed-pinned",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      },
+      {
+        "description": "铰支-铰支简支梁，两端铰支",
+        "bc_type": "pinned-pinned",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      },
+      {
+        "description": "铰支-自由梁，一端铰支一端自由",
+        "bc_type": "pinned-free",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      },
+      {
+        "description": "自由-自由梁，两端均自由(刚体模态)",
+        "bc_type": "free-free",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      }
+    ],
+    "comparison_metrics": ["max_displacement", "max_stress", "natural_frequency", "convergence_rate"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; Fixed-Free: δ=FL³/(3EI)=0.2mm, σ=FLc/I=6MPa; Fixed-Fixed: δ=FL³/(192EI)=3.125μm; Fixed-Pinned: δ=7FL³/(768EI)=11.46μm; Pinned-Pinned: δ=FL³/(48EI)=12.5μm; Pinned-Free: δ=FL³/(3EI)=0.2mm (mechanism); Free-Free: rigid body modes",
+    "reference": "Timoshenko, S.P. Mechanics of Materials, 2nd Ed.; Blevins, R.D. Formulas for Natural Frequency and Mode Shape"
+  },
+  "acceptance": {
+    "displacement_error_limit": 2.0,
+    "stress_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Fixed-Free max displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Fixed-Free max stress",
+        "value": 6000000,
+        "unit": "Pa",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Fixed-Free 1st natural frequency",
+        "value": 51.83,
+        "unit": "Hz",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Fixed-Fixed max displacement",
+        "value": 3.125e-6,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Fixed-Fixed 1st natural frequency",
+        "value": 227.3,
+        "unit": "Hz",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Fixed-Pinned max displacement",
+        "value": 1.146e-5,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Fixed-Pinned 1st natural frequency",
+        "value": 161.8,
+        "unit": "Hz",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Pinned-Pinned max displacement",
+        "value": 1.25e-5,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Pinned-Pinned 1st natural frequency",
+        "value": 129.1,
+        "unit": "Hz",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Free-Free 1st natural frequency",
+        "value": 227.3,
+        "unit": "Hz",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "PP-04",
+  "name": "动画基础",
+  "nameEn": "Animation Basics - Beam Bending Modes",
+  "description": "展示简支梁前三阶弯曲模态的动画对比。梁长2m，截面0.05m x 0.1m，材料为钢(E=200GPa, ρ=7850kg/m³)。三个对比面板分别显示第一阶(f₁=32.8Hz)、第二阶(f₂=130.9Hz)和第三阶(f₃=294.5Hz)弯曲模态。通过此案例学习动画播放控制、帧率设置、模态叠加显示等基础动画功能。每阶模态100帧，30fps播放，可单步前进/后退。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["动画", "模态对比", "弯曲模态", "多面板", "播放控制"],
+  "visualization": {
+    "type": "comparison",
+    "field": "displacement",
+    "color_map": "cool",
+    "view_mode": "3d_wireframe",
+    "animation": {
+      "enabled": true,
+      "frames": 100,
+      "fps": 30,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 2480,
+    "elements": 1920,
+    "results_file": "results/postprocess/beam_bending_modes.dat"
+  },
+  "display_settings": {
+    "title": "简支梁前三阶弯曲模态对比",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": -1.0,
+      "max": 1.0,
+      "label": "归一化位移",
+      "n_levels": 12
+    },
+    "camera": {
+      "position": { "x": 1.0, "y": 1.5, "z": 0.8 },
+      "target": { "x": 1.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "第一阶频率f₁", "value": 32.8, "unit": "Hz", "tolerance": 2 },
+      { "name": "第二阶频率f₂", "value": 130.9, "unit": "Hz", "tolerance": 2 },
+      { "name": "第三阶频率f₃", "value": 294.5, "unit": "Hz", "tolerance": 2 },
+      { "name": "频率比f₂/f₁", "value": 4.0, "unit": "", "tolerance": 2 },
+      { "name": "动画帧数", "value": 100, "unit": "frames", "tolerance": 0 }
+    ]
+  }
+}

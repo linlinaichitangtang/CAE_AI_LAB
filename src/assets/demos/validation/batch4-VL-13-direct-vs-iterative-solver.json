@@ -1,0 +1,174 @@
+{
+  "id": "VL-13",
+  "name": "直接求解器vs迭代求解器对比",
+  "nameEn": "Direct vs Iterative Solver Performance Comparison",
+  "description": "验证直接求解器(Cholesky/LU分解)与迭代求解器(PCG/AMG预处理共轭梯度)在不同自由度规模下的求解效率和精度差异。采用四种模型规模：10000、50000、100000、500000自由度，均为标准悬臂梁结构。直接求解器在小规模问题上速度快且精度高，但内存消耗随DOF呈超线性增长(O(N^1.5)~O(N²))；迭代求解器内存消耗为O(N)，在大规模问题上优势明显。对比求解时间、内存占用和残差收敛历史，验证：(1)10000 DOF时直接法更快(<1s vs 2s)，(2)500000 DOF时迭代法更快(60s vs 300s)，(3)两者位移解误差<0.01%。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["solver_algorithm", "direct_solver", "iterative_solver", "pcg", "amg", "convergence", "performance"],
+  "validation_type": "solver_algorithm",
+  "test_config": {
+    "baseline": {
+      "description": "直接求解器(Cholesky分解)，10000 DOF基准模型",
+      "bc_type": "fixed-free_cantilever",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "直接求解器(Cholesky分解)，50000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 17
+      },
+      {
+        "description": "直接求解器(LU分解)，100000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 22
+      },
+      {
+        "description": "直接求解器(LU分解)，500000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 37
+      },
+      {
+        "description": "迭代求解器(PCG+AMG预处理)，10000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "迭代求解器(PCG+AMG预处理)，50000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 17
+      },
+      {
+        "description": "迭代求解器(PCG+AMG预处理)，100000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 22
+      },
+      {
+        "description": "迭代求解器(PCG+AMG预处理)，500000 DOF",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 37
+      }
+    ],
+    "comparison_metrics": ["solve_time", "memory_usage", "displacement_error_vs_direct", "iteration_count", "convergence_rate"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-10
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; δ_exact = FL³/(3EI) = 2.0e-4 m; σ_exact = Mc/I = 6.0e6 Pa; Direct solver (Cholesky): factorization O(N·bw²), solve O(N·bw); Memory ~ N·bw; LU: factorization O(N·bw²), 2× memory of Cholesky; PCG: O(N·nnz_per_row·n_iter), Memory ~ O(N·nnz_per_row); AMG setup: O(N), solve: O(N·log(N)); Expected solve times: Direct 10k: 0.5s, 50k: 8s, 100k: 35s, 500k: 450s; Iterative 10k: 1.5s, 50k: 8s, 100k: 18s, 500k: 60s; Memory (GB): Direct 10k: 0.1, 50k: 1.5, 100k: 6, 500k: 120; Iterative 10k: 0.05, 50k: 0.3, 100k: 0.6, 500k: 3.5",
+    "reference": "Saad, Y. Iterative Methods for Sparse Linear Systems; Davis, T.A. Direct Methods for Sparse Linear Systems"
+  },
+  "acceptance": {
+    "displacement_error_limit": 1.0,
+    "stress_error_limit": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Theoretical tip displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "Direct solver time 10k DOF",
+        "value": 0.5,
+        "unit": "s",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Iterative solver time 10k DOF",
+        "value": 1.5,
+        "unit": "s",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Direct solver time 500k DOF",
+        "value": 450,
+        "unit": "s",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Iterative solver time 500k DOF",
+        "value": 60,
+        "unit": "s",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Direct solver memory 500k DOF",
+        "value": 120,
+        "unit": "GB",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Iterative solver memory 500k DOF",
+        "value": 3.5,
+        "unit": "GB",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Displacement error direct vs iterative (all scales)",
+        "value": 0.01,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "PCG iteration count 100k DOF",
+        "value": 150,
+        "unit": "",
+        "tolerance": 30.0
+      },
+      {
+        "name": "Crossover DOF (direct slower than iterative)",
+        "value": 50000,
+        "unit": "",
+        "tolerance": 50.0
+      }
+    ]
+  }
+}

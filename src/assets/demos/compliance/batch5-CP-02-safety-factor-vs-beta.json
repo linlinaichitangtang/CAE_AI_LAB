@@ -1,0 +1,55 @@
+{
+  "id": "CP-02",
+  "name": "安全系数vs可靠度",
+  "nameEn": "Safety Factor vs Reliability Index",
+  "description": "对比传统安全系数法（γ=1.5）和概率可靠度方法（β=3.0）的设计理念差异。通过蒙特卡洛模拟展示安全系数与可靠度指标之间的关系：γ=1+β×δ_R，其中δ_R为抗力变异系数。分析不同变异系数下相同安全系数对应的实际可靠度水平，以及相同可靠度要求下不同变异系数对应的安全系数。帮助理解从确定性方法向概率方法的转变。",
+  "category": "compliance",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["safety-factor", "reliability-index", "probabilistic", "Monte-Carlo", "code-philosophy"],
+  "geometry": {
+    "type": "generic_component",
+    "description": "通用结构构件对比分析"
+  },
+  "material": {
+    "name": "Structural Steel",
+    "mean_strength": 250000000.0,
+    "strength_COV": 0.1,
+    "mean_load": 100000000.0,
+    "load_COV": 0.15
+  },
+  "loading": {
+    "deterministic_safety_factor": 1.5,
+    "target_reliability_index": 3.0,
+    "target_failure_probability": 0.00135,
+    "Monte_Carlo_samples": 1000000
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "安全系数γ=1.5对应β值",
+        "value": 3.0,
+        "unit": "-",
+        "tolerance": 15
+      },
+      {
+        "name": "β=3.0对应失效概率",
+        "value": 0.00135,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "δ_R=0.1时γ=1+β×δ_R",
+        "value": 1.3,
+        "unit": "-",
+        "tolerance": 5
+      },
+      {
+        "name": "δ_R=0.15时γ=1+β×δ_R",
+        "value": 1.45,
+        "unit": "-",
+        "tolerance": 5
+      }
+    ]
+  }
+}

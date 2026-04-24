@@ -1,0 +1,133 @@
+{
+  "id": "EN-05",
+  "name": "钢结构梁柱节点分析",
+  "nameEn": "Steel Beam-Column Connection Analysis",
+  "description": "分析钢结构梁柱焊接-螺栓混合连接节点在地震作用下的受力性能。梁截面H300×150×6.5×9(翼缘宽150mm，厚9mm，腹板高282mm，厚6.5mm)，柱截面H350×350×12×19。连接形式：翼缘全熔透坡口焊，腹板高强螺栓(10.9级M20，单排4个)连接。按GB50017-2017进行抗震设计验算，验证节点域剪切强度、焊缝强度和螺栓承载力。节点域剪力V_p=M_b/(h_b-t_fb)，节点域剪切承载力V_p,R=0.8×f_v×h_c×t_wc。塑性铰形成顺序和极限承载力分析。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["steel_connection", "beam_column", "seismic_design", "panel_zone", "weld", "bolt", "gb50017"],
+  "engineering_domain": "civil",
+  "design_code": "GB50017-2017 钢结构设计标准; JGJ99-2015 高层民用建筑钢结构技术规程",
+  "geometry": {
+    "type": "beam",
+    "length": 0.7,
+    "width": 0.35,
+    "height": 0.35,
+    "dimension": "3d",
+    "detail_params": {
+      "beam_section": "H300×150×6.5×9",
+      "column_section": "H350×350×12×19",
+      "beam_flange_width": 0.15,
+      "beam_flange_thickness": 0.009,
+      "beam_web_height": 0.282,
+      "beam_web_thickness": 0.0065,
+      "column_flange_width": 0.35,
+      "column_flange_thickness": 0.019,
+      "column_web_height": 0.312,
+      "column_web_thickness": 0.012,
+      "bolt_diameter": 0.02,
+      "bolt_grade": "10.9",
+      "bolt_count": 4,
+      "weld_type": "full_penetration_butt_weld"
+    }
+  },
+  "mesh": {
+    "x_div": 28,
+    "y_div": 14,
+    "z_div": 14,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q355B Structural Steel",
+    "elastic_modulus": 206000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 355000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490,
+    "connection_params": {
+      "bolt_grade": "10.9",
+      "bolt_yield_strength": 900000000,
+      "bolt_ultimate_strength": 1000000000,
+      "weld_electrode": "E50",
+      "f_v": 205000000
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "column_top_and_bottom",
+    "load_type": "point",
+    "load_face": "beam_tip",
+    "load_magnitude": 100000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 355000000,
+    "formula": "Beam section properties: A_b = 2×150×9 + 282×6.5 = 2700 + 1833 = 4533 mm²; I_b = (150×300³ - 143.5×282³)/12 = (4.05e9 - 2.566e9)/12 = 1.237e8 mm⁴; W_b = 2I_b/h = 2×1.237e8/300 = 8.247e5 mm³; Beam plastic moment: M_p = f_y × W_p = 355 × 1.25 × 8.247e5 = 365.9 kN·m; Panel zone shear: V_p = M_b/(h_b - t_fb) = 365.9e6/(300-9) = 1257 kN; Panel zone shear capacity: V_p,R = 0.8 × f_v × h_c × t_wc = 0.8 × 205 × 312 × 12 = 613.5 kN; Required stiffener if V_p > V_p,R; With stiffeners: V_p,R = 0.8 × f_v × h_c × t_wc + f_y × A_st = 613.5 + 355×2×100×12/1000 = 613.5 + 852 = 1465.5 kN > 1257 kN (OK); Bolt shear capacity (single bolt, double shear): V_b = 2 × 0.9 × f_u × A_e = 2 × 0.9 × 1000 × 245 = 441 kN; 4 bolts: V_total = 4 × 441 = 1764 kN > V_web = 1257 kN (OK)",
+    "reference": "GB50017-2017 钢结构设计标准; FEMA 351 Recommended Seismic Evaluation and Upgrade Criteria"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Beam plastic moment M_p",
+        "value": 365900,
+        "unit": "N·m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Panel zone shear demand V_p",
+        "value": 1257000,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Panel zone shear capacity (unstiffened)",
+        "value": 613500,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Panel zone shear capacity (stiffened)",
+        "value": 1465500,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Bolt group shear capacity",
+        "value": 1764000,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Panel zone shear utilization ratio",
+        "value": 0.858,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Beam tip displacement at M_p",
+        "value": 0.005,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "Maximum von Mises stress in panel zone",
+        "value": 355000000,
+        "unit": "Pa",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

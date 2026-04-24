@@ -1,0 +1,353 @@
+{
+  "id": "MS-17",
+  "name": "混凝土氯离子侵蚀模拟",
+  "nameEn": "Concrete Chloride Ingress Simulation",
+  "description": "混凝土中氯离子侵蚀全链路多尺度模拟：从DFT计算C-S-H纳米孔中氯离子扩散势垒出发，通过MD模拟毛细孔隙结构中的离子传输，利用相场方法预测氯离子在混凝土中的传输和钢筋锈蚀诱发过程，最终通过有限元方法模拟钢筋锈蚀膨胀(锈蚀产物体积膨胀比约3倍)导致的混凝土保护层开裂。该案例展示土木工程基础设施耐久性评估的跨尺度预测方法。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["concrete", "chloride ingress", "C-S-H", "rebar corrosion", "rust expansion", "cover cracking", "durability", "infrastructure"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Concrete (C-S-H + capillary pores)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "C-S-H纳米孔氯离子扩散势垒计算",
+      "description": "使用DFT计算氯离子在C-S-H凝胶纳米孔道中的扩散势垒和吸附能",
+      "input": {
+        "csh_model": {
+          "type": "Tobermorite_14A",
+          "formula": "Ca5Si6O16(OH)2*7H2O",
+          "pore_diameter": 1.5,
+          "pore_diameter_unit": "nm",
+          "supercell": "1x2x1"
+        },
+        "chloride_ion": {
+          "charge": -1,
+          "initial_position": "pore_center",
+          "diffusion_path": "along_pore_channel"
+        },
+        "water_content": {
+          "relative_humidity": 0.95,
+          "water_molecules_in_pore": 20
+        }
+      },
+      "output": {
+        "cl_diffusion_barrier": 0.42,
+        "diffusion_barrier_unit": "eV",
+        "cl_adsorption_energy": -0.68,
+        "adsorption_energy_unit": "eV",
+        "cl_binding_to_csh": "physical_adsorption",
+        "diffusion_coefficient_nano": 1.2e-12,
+        "diffusion_coefficient_unit": "m^2/s",
+        "pore_confinement_effect": "reduces_D_by_factor_10",
+        "na_cl_pairing_energy": -0.35,
+        "pairing_energy_unit": "eV",
+        "charge_density_distribution": "charge_density.dat",
+        "electron_density_difference": "delta_rho.dat"
+      },
+      "parameters": {
+        "k_points": [4, 4, 2],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Ca_Si_O_H_Cl_Na",
+        "xc_functional": "PBE-D3",
+        "vdw_correction": "DFT-D3",
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "neb_images": 7,
+        "neb_convergence": 0.05,
+        "neb_convergence_unit": "eV/Angstrom",
+        "dipole_correction": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT diffusion barrier to MD ion-water interaction potential calibration",
+        "data_transferred": [
+          "cl_diffusion_barrier",
+          "cl_adsorption_energy",
+          "diffusion_coefficient_nano",
+          "na_cl_pairing_energy",
+          "pore_confinement_effect"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "毛细孔隙结构氯离子传输模拟",
+      "description": "使用经典分子动力学模拟氯离子在混凝土毛细孔隙网络中的传输行为",
+      "input": {
+        "pore_structure": {
+          "type": "reconstructed_from_MIP",
+          "pore_size_distribution": "10-1000 nm",
+          "total_porosity": 0.15,
+          "csh_solid_fraction": 0.55,
+          "ch_fraction": 0.10,
+          "ettringite_fraction": 0.05
+        },
+        "simulation_box": {
+          "Lx": 30,
+          "Ly": 30,
+          "Lz": 50,
+          "unit": "nm"
+        },
+        "solution": {
+          "na_cl_concentration": 0.5,
+          "concentration_unit": "mol/L",
+          "ca_oh2_saturation": true,
+          "ph": 12.5,
+          "temperature": 298,
+          "temperature_unit": "K"
+        },
+        "ion_count": {
+          "Na": 300,
+          "Cl": 300,
+          "Ca": 50,
+          "OH": 100
+        }
+      },
+      "output": {
+        "cl_diffusion_trajectory": "cl_trajectories.vtk",
+        "effective_diffusion_coefficient": 3.5e-11,
+        "diffusion_coefficient_unit": "m^2/s",
+        "cl_concentration_profile": "cl_profile.dat",
+        "ionic_conductivity": 0.85,
+        "conductivity_unit": "S/m",
+        "cl_binding_isotherm": "freundlich_K=0.02_n=0.6",
+        "tortuosity": 3.2,
+        "formation_factor": 6.5,
+        "pore_connectivity": "percolating_network",
+        "water_saturation": 0.92
+      },
+      "parameters": {
+        "potential": "CLAYFF (C-S-H) + SPC/E (water) + Joung-Cheatham (ions)",
+        "potential_files": ["CLAYFF.ff", "SPCE.itp", "JC_ions.itp"],
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": 298,
+        "target_temperature_unit": "K",
+        "cutoff_radius": 12.0,
+        "cutoff_radius_unit": "Angstrom",
+        "electrostatic_method": "PME",
+        "pme_grid": "64x64x128",
+        "ewald_tolerance": 1e-5,
+        "total_steps": 20000000,
+        "equilibration_steps": 5000000,
+        "dump_interval": 5000,
+        "neighbor_skin": 1.2,
+        "neighbor_skin_unit": "Angstrom",
+        "periodic_boundary": [true, true, true]
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD effective diffusion coefficient and binding isotherm to Fickian transport PDE parameters",
+        "data_transferred": [
+          "effective_diffusion_coefficient",
+          "cl_binding_isotherm",
+          "tortuosity",
+          "formation_factor",
+          "pore_connectivity"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "氯离子传输与钢筋脱钝相场模拟",
+      "description": "基于MD传输参数，使用相场方法模拟氯离子在混凝土中的扩散和钢筋表面脱钝过程",
+      "input": {
+        "domain_size": {
+          "Lx": 50,
+          "Ly": 50,
+          "Lz": 75,
+          "unit": "mm"
+        },
+        "grid_points": "100x100x150",
+        "concrete_cover_thickness": 40,
+        "cover_thickness_unit": "mm",
+        "rebar_diameter": 16,
+        "rebar_diameter_unit": "mm",
+        "cl_surface_concentration": 0.5,
+        "cl_surface_concentration_unit": "mol/L",
+        "diffusion_coefficient_source": "MD MS-17 Step 2",
+        "initial_cl_content": 0.02,
+        "initial_cl_content_unit": "percent_by_mass",
+        "cl_threshold_for_depassivation": 0.4,
+        "cl_threshold_unit": "percent_by_mass_of_cement",
+        "temperature": 298,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "cl_transport_field": "cl_concentration.vtk",
+        "depassivation_front": "depassivation.vtk",
+        "time_to_depassivation": 8.5,
+        "depassivation_time_unit": "years",
+        "cl_profile_at_depassivation": "cl_profile_dep.dat",
+        "penetration_depth_at_10years": 25,
+        "penetration_depth_unit": "mm",
+        "apparent_diffusion_coefficient": 2.8e-11,
+        "apparent_D_unit": "m^2/s",
+        "corrosion_initiation_time": 8.5,
+        "initiation_time_unit": "years",
+        "chloride_binding_ratio": 0.35,
+        "binding_ratio_unit": "dimensionless"
+      },
+      "parameters": {
+        "model": "phase_field_chloride_transport",
+        "order_parameters": ["c_cl", "phi_passive", "phi_corroding"],
+        "interface_width": 1.0,
+        "interface_width_unit": "mm",
+        "gradient_energy_coefficient": 1e-8,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility_cl": 3.5e-11,
+        "mobility_cl_unit": "m^2/s",
+        "binding_isotherm": "freundlich",
+        "binding_K": 0.02,
+        "binding_n": 0.6,
+        "depassivation_criterion": "cl_threshold_exceeded",
+        "time_step": 86400,
+        "time_step_unit": "seconds",
+        "total_time": 15,
+        "total_time_unit": "years",
+        "convection_bc": "surface_cl_concentration_fixed"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field depassivation time and Cl profile to FE corrosion rate model",
+        "data_transferred": [
+          "corrosion_initiation_time",
+          "cl_profile",
+          "apparent_diffusion_coefficient",
+          "depassivated_rebar_length"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "钢筋锈蚀膨胀与保护层开裂有限元分析",
+      "description": "基于相场脱钝结果，建立钢筋锈蚀产物膨胀(体积比约3)导致混凝土保护层开裂的有限元模型",
+      "input": {
+        "geometry": {
+          "type": "concrete_cover_with_rebar",
+          "cover_thickness": 40,
+          "cover_thickness_unit": "mm",
+          "rebar_diameter": 16,
+          "rebar_diameter_unit": "mm",
+          "domain_size": "200x200x200",
+          "domain_size_unit": "mm"
+        },
+        "concrete_properties": {
+          "youngs_modulus": 30,
+          "youngs_modulus_unit": "GPa",
+          "compressive_strength": 40,
+          "compressive_strength_unit": "MPa",
+          "tensile_strength": 3.5,
+          "tensile_strength_unit": "MPa",
+          "fracture_energy": 120,
+          "fracture_energy_unit": "N/m",
+          "poisson_ratio": 0.2
+        },
+        "corrosion_model": {
+          "rust_volume_ratio": 3.0,
+          "corrosion_rate_source": "PF MS-17 Step 3",
+          "current_density": 1.0,
+          "current_density_unit": "uA/cm^2",
+          "rust_density": 3600,
+          "rust_density_unit": "kg/m^3",
+          "corrosion_penetration_depth": 50,
+          "penetration_depth_unit": "um"
+        }
+      },
+      "output": {
+        "crack_pattern": "crack_pattern.vtk",
+        "crack_initiation_time": 12,
+        "crack_initiation_time_unit": "years",
+        "crack_width_at_surface": 0.3,
+        "crack_width_unit": "mm",
+        "cover_cracking_time": 15,
+        "cover_cracking_time_unit": "years",
+        "radial_stress_at_interface": 8.5,
+        "radial_stress_unit": "MPa",
+        "crack_propagation_path": "radial_from_rebar_to_surface",
+        "concrete_damage_field": "damage.vtk",
+        "max_rust_expansion_pressure": 12.0,
+        "expansion_pressure_unit": "MPa",
+        "service_life_prediction": 15,
+        "service_life_unit": "years"
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "100x100x100",
+        "mesh_refinement": "rebar_interface_5_elements_radial",
+        "boundary_condition": "outer_surface_free_rebar_coupled_to_rust_expansion",
+        "solver_type": "static_implicit_with_damage",
+        "material_model": "concrete_damage_plasticity_CDP",
+        "damage_model": "isotropic_damage_with_crack_band",
+        "crack_band_width": 2,
+        "crack_band_width_unit": "mm",
+        "rust_expansion_model": "uniform_radial_displacement",
+        "geometric_nonlinearity": true,
+        "time_increment": 2592000,
+        "time_increment_unit": "seconds",
+        "total_time": 20,
+        "total_time_unit": "years",
+        "max_iterations": 1000,
+        "convergence_tolerance": 1e-6,
+        "viscous_regularization": 0.001
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE crack width and cover cracking time comparison with field inspection data",
+        "data_transferred": [
+          "cover_cracking_time",
+          "crack_width",
+          "crack_pattern",
+          "service_life_prediction"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.cemconres.2014.07.010",
+    "authors": "Bazant ZP, Yu Q, Li GH",
+    "year": 2014,
+    "journal": "Cement and Concrete Research"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Cl diffusion barrier in C-S-H",
+        "value": 0.42,
+        "unit": "eV",
+        "tolerance": 15
+      },
+      {
+        "name": "Effective diffusion coefficient",
+        "value": 3.5e-11,
+        "unit": "m^2/s",
+        "tolerance": 30
+      },
+      {
+        "name": "Corrosion initiation time",
+        "value": 8.5,
+        "unit": "years",
+        "tolerance": 25
+      },
+      {
+        "name": "Rust volume expansion ratio",
+        "value": 3.0,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "Cover cracking time",
+        "value": 15,
+        "unit": "years",
+        "tolerance": 25
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 25
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "id": "TC-11",
+  "name": "相变潜热Stefan问题验证",
+  "nameEn": "Phase Change Latent Heat - Stefan Problem Verification",
+  "description": "石蜡相变蓄热Stefan问题验证。试件尺寸0.05m×0.05m×0.1m，初始温度293K(20°C)，左端突然升温至373K(100°C)并保持。石蜡物性参数：熔点T_melt=333K(60°C)，潜热L=200kJ/kg=200000J/kg，固态导热系数k_s=0.25W/(m·K)，液态导热系数k_l=0.15W/(m·K)，密度ρ=900kg/m³，比热容c_p=2000J/(kg·K)。采用等效热容法(焓法)处理相变潜热。Stefan数Ste=c_p·ΔT/L=2000×(333-293)/200000=0.4。一维Stefan问题的Neumann解析解：相界面位置s(t)≈2λ·√(α_s·t)，其中λ由超越方程确定。对于Ste=0.4，λ≈0.62。热扩散系数α_s=k_s/(ρ·c_p)=0.25/(900×2000)=1.389×10⁻⁷m²/s。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["phase_change", "latent_heat", "Stefan_problem", "enthalpy_method", "paraffin"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Paraffin Wax (RT60)",
+    "elastic_modulus": 100000000,
+    "poisson_ratio": 0.35,
+    "density": 900,
+    "yield_stress": 500000,
+    "thermal_expansion": 80e-6,
+    "thermal_conductivity": 0.25,
+    "specific_heat": 2000
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 373,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 1,
+    "total_time": 5000
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 373,
+    "formula": "Ste = c_p·ΔT/L; s(t) = 2λ·√(α_s·t); λ from: Ste·exp(-λ²)/(λ·erfc(λ)·√π) = exp(-λ²)/(λ²·erfc(λ))",
+    "reference": "Alexiades, Solomon, Mathematical Modeling of Melting and Freezing Processes, Ch.2 - Stefan Problems"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Stefan_number",
+        "value": 0.4,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "thermal_diffusivity_solid",
+        "value": 1.389e-7,
+        "unit": "m²/s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Neumann_lambda",
+        "value": 0.62,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "phase_front_position_at_1000s",
+        "value": 0.0146,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "phase_front_position_at_3600s",
+        "value": 0.0278,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "latent_heat",
+        "value": 200000,
+        "unit": "J/kg",
+        "tolerance": 1.0
+      },
+      {
+        "name": "melting_temperature",
+        "value": 333,
+        "unit": "K",
+        "tolerance": 0.5
+      }
+    ]
+  }
+}

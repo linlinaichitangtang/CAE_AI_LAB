@@ -1,0 +1,61 @@
+{
+  "id": "RW-01",
+  "name": "钢轨垂向弯曲",
+  "nameEn": "Rail Vertical Bending Analysis",
+  "description": "模拟UIC60钢轨在车轮集中荷载作用下的垂向弯曲分析。轮载Q=125kN，钢轨视为弹性基础上梁（Winkler地基梁模型）。采用Zimmermann公式计算钢轨弯矩和弯曲应力σ=M/W。验证钢轨底部最大弯曲应力、轨下基础反力分布以及钢轨挠度曲线。考虑连续弹性支承模型和离散弹性点支承模型两种计算方案的对比。",
+  "category": "railway",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["rail-bending", "UIC60", "Zimmermann", "Winkler-foundation", "wheel-load"],
+  "geometry": {
+    "type": "rail_beam",
+    "rail_type": "UIC60",
+    "rail_mass_per_meter": 60.34,
+    "moment_of_inertia": 3.055e-5,
+    "section_modulus_bottom": 3.86e-4,
+    "sleeper_spacing": 0.6,
+    "analysis_length": 20.0
+  },
+  "material": {
+    "name": "UIC60 Rail Steel",
+    "elastic_modulus": 210000000000.0,
+    "yield_strength": 680000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "wheel_load": 125000.0,
+    "dynamic_factor": 1.5,
+    "design_wheel_load": 187500.0,
+    "rail_pad_stiffness": 80000000.0,
+    "ballast_stiffness": 100000000.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "钢轨最大弯矩",
+        "value": 35000.0,
+        "unit": "N·m",
+        "tolerance": 15
+      },
+      {
+        "name": "钢轨底部弯曲应力",
+        "value": 90.7,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "钢轨最大挠度",
+        "value": 1.2,
+        "unit": "mm",
+        "tolerance": 15
+      },
+      {
+        "name": "轨下压力",
+        "value": 75000.0,
+        "unit": "N",
+        "tolerance": 15
+      }
+    ]
+  }
+}

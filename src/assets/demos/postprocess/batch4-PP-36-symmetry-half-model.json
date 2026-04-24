@@ -1,0 +1,55 @@
+{
+  "id": "PP-36",
+  "name": "对称结构半模型展示",
+  "nameEn": "Symmetric Half-Model Display - Pressure Vessel with Nozzle",
+  "description": "演示利用对称边界条件进行半模型后处理分析的方法。以带接管压力容器为对象，结构关于XZ平面对称，仅建立1/2有限元模型进行分析。后处理功能包括：(1)半模型Von Mises应力云图显示，在对称面上以镜像平面(半透明蓝色)标注对称边界条件位置；(2)应力场对称性验证功能：提取对称面两侧对应节点的应力值，计算相对误差(要求<0.5%)，验证对称边界条件的正确施加；(3)全模型/半模型一键切换：通过镜像映射将半模型结果扩展为完整模型显示，便于整体结构评估。接管与筒体交汇处的应力集中系数SCF=2.35，为关注重点区域。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["对称边界", "半模型", "镜像显示", "压力容器", "应力集中", "对称性验证"],
+  "visualization": {
+    "type": "symmetry",
+    "field": "von_mises",
+    "color_map": "hot",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 62000,
+    "elements": 55000,
+    "results_file": "results/postprocess/pressure_vessel_symmetry_half.dat"
+  },
+  "display_settings": {
+    "title": "压力容器对称半模型 - 应力云图与对称性验证",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 350,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 14
+    },
+    "camera": {
+      "position": { "x": 2.5, "y": 1.5, "z": 2.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -15, "yaw": 60 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "半模型节点数", "value": 62000, "unit": "个", "tolerance": 5 },
+      { "name": "全模型等效节点数", "value": 120000, "unit": "个", "tolerance": 5 },
+      { "name": "接管处最大应力", "value": 325, "unit": "MPa", "tolerance": 5 },
+      { "name": "应力集中系数SCF", "value": 2.35, "unit": "", "tolerance": 5 },
+      { "name": "对称面应力相对误差", "value": 0.3, "unit": "%", "tolerance": 30 },
+      { "name": "镜像平面颜色透明度", "value": 0.35, "unit": "", "tolerance": 10 },
+      { "name": "筒体膜应力", "value": 138, "unit": "MPa", "tolerance": 5 },
+      { "name": "模型缩减比例", "value": 50, "unit": "%", "tolerance": 0 }
+    ]
+  }
+}

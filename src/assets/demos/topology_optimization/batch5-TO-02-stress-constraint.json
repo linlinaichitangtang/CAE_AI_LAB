@@ -1,0 +1,79 @@
+{
+  "id": "TO-02",
+  "name": "应力约束拓扑优化",
+  "nameEn": "Stress-Constrained Topology Optimization",
+  "description": "L型支架应力约束拓扑优化问题。在给定体积分数和全局应力约束条件下，通过SIMP方法结合应力惩罚函数进行拓扑优化。L型支架是应力集中现象的经典案例，转角处容易出现高应力区域。优化目标为最小化结构柔度，同时约束全局最大von Mises应力不超过200MPa。通过应力惩罚技术（如应力聚合方法或P-norm函数）将局部应力约束转化为全局约束，避免应力奇异问题。优化后结构应在转角处形成圆弧过渡，有效降低应力集中。",
+  "category": "topology_optimization",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["SIMP", "应力约束", "L型支架", "应力集中", "P-norm"],
+  "design_domain": {
+    "type": "beam",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.01,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 100,
+    "y_div": 100,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Aluminum Alloy 6061-T6",
+    "elastic_modulus": 69000000000,
+    "poisson_ratio": 0.33,
+    "density": 2700
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "stress_constraint",
+    "volume_fraction": 0.4,
+    "penalization": 3,
+    "filter_radius": 0.003,
+    "max_iterations": 150,
+    "convergence_tolerance": 0.01
+  },
+  "boundaryConditions": {
+    "fixed_face": "top_face",
+    "load_type": "point",
+    "load_face": "right_end_bottom",
+    "load_magnitude": 10000,
+    "load_direction": "-Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.4,
+      "unit": "ratio"
+    },
+    {
+      "type": "stress",
+      "value": 200000000,
+      "unit": "Pa"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_von_mises_stress",
+        "value": 195000000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "final_volume_fraction",
+        "value": 0.38,
+        "unit": "ratio",
+        "tolerance": 15
+      },
+      {
+        "name": "optimal_compliance",
+        "value": 0.85,
+        "unit": "N·m",
+        "tolerance": 15
+      }
+    ]
+  }
+}

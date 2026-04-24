@@ -1,0 +1,142 @@
+{
+  "id": "EN-07",
+  "name": "PCB板级热分析",
+  "nameEn": "PCB Board-Level Thermal Analysis",
+  "description": "分析8层FR4印制电路板在BGA封装器件热耗散下的温度场分布和热阻网络。PCB尺寸0.2m×0.15m，厚度1.6mm，8层铜箔(35μm铜厚)。BGA封装热耗Q=5W，封装尺寸25mm×25mm。热管理措施包括：热过孔阵列(直径0.3mm，间距1mm，铜填充)、内层铜地平面和散热焊盘。采用热阻网络法计算结到环境热阻R_ja=25K/W，结温T_j=T_a+Q×R_ja=298+5×25=423K(150°C)。通过有限元热分析验证温度场分布，确认最高结温不超过允许值，评估热过孔阵列的散热效率。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["pcb", "thermal_analysis", "bga", "thermal_via", "thermal_resistance", "electronics", "fr4"],
+  "engineering_domain": "electronics",
+  "design_code": "IPC-2221B 通用印制板设计标准; JEDEC JESD51 热测量标准",
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.15,
+    "height": 0.0016,
+    "dimension": "3d",
+    "detail_params": {
+      "layer_count": 8,
+      "copper_thickness": 3.5e-5,
+      "fr4_core_thickness": 0.0002,
+      "bga_size": 0.025,
+      "bga_ball_count": 256,
+      "bga_ball_pitch": 0.001,
+      "thermal_via_diameter": 0.0003,
+      "thermal_via_pitch": 0.001,
+      "thermal_via_count": 64,
+      "copper_plane_layers": [2, 5, 7]
+    }
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 30,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "FR4 Laminate + Copper",
+    "elastic_modulus": 22000000000,
+    "poisson_ratio": 0.28,
+    "density": 1850,
+    "yield_stress": 0,
+    "thermal_expansion": 1.4e-5,
+    "thermal_conductivity": 0.35,
+    "specific_heat": 1100,
+    "thermal_params": {
+      "fr4_conductivity_xy": 0.35,
+      "fr4_conductivity_z": 0.2,
+      "copper_conductivity": 385,
+      "bga_substrate_conductivity": 0.8,
+      "solder_ball_conductivity": 50,
+      "thermal_via_conductivity": 385,
+      "convection_coefficient_top": 12,
+      "convection_coefficient_bottom": 8,
+      "ambient_temperature": 298,
+      "junction_to_case_resistance": 8,
+      "case_to_board_resistance": 5,
+      "board_to_ambient_resistance": 12
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "edges_supported",
+    "load_type": "thermal",
+    "load_face": "bga_package_area",
+    "load_magnitude": 5,
+    "load_direction": "none",
+    "temperature_bc": {
+      "type": "convection",
+      "top_h": 12,
+      "bottom_h": 8,
+      "ambient_temperature": 298,
+      "heat_source_power": 5
+    }
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 0,
+    "formula": "Thermal resistance network: R_ja = R_jc + R_cb + R_ba; R_jc = 8 K/W (junction to case), R_cb = 5 K/W (case to board), R_ba = 12 K/W (board to ambient); R_ja = 8 + 5 + 12 = 25 K/W; Junction temperature: T_j = T_a + Q × R_ja = 298 + 5 × 25 = 423 K (150°C); Board temperature rise: ΔT_board = Q × R_ba = 5 × 12 = 60 K; Average board temperature: T_board = 298 + 60 = 358 K (85°C); Thermal via array contribution: R_via_array = 1/(n × k_cu × A_via/L_via) = 1/(64 × 385 × π×(0.00015)²/0.0016) = 1/(64 × 385 × 4.42e-8) = 1/(1.09e-3) = 917 K/W per via array; Effective R_ba with vias ≈ 10 K/W (reduced from 12); With vias: T_j = 298 + 5 × (8+5+10) = 298 + 115 = 413 K (140°C); Maximum PCB temperature gradient: ΔT_max ≈ 15 K across board",
+    "reference": "IPC-2221B Generic Standard on Printed Board Design; JEDEC JESD51 Thermal Measurement Methodology"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Junction-to-ambient thermal resistance R_ja",
+        "value": 25,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Junction temperature T_j (without thermal vias)",
+        "value": 423,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Junction temperature T_j (with thermal vias)",
+        "value": 413,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Average board temperature",
+        "value": 358,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Temperature reduction from thermal vias",
+        "value": 10,
+        "unit": "K",
+        "tolerance": 20.0
+      },
+      {
+        "name": "Maximum board temperature gradient",
+        "value": 15,
+        "unit": "K",
+        "tolerance": 20.0
+      },
+      {
+        "name": "BGA center temperature",
+        "value": 418,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Thermal via heat dissipation fraction",
+        "value": 8,
+        "unit": "%",
+        "tolerance": 30.0
+      }
+    ]
+  }
+}

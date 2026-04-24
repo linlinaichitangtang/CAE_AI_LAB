@@ -1,0 +1,113 @@
+{
+  "id": "FD-07",
+  "name": "TWIST谱变幅载荷疲劳分析",
+  "nameEn": "TWIST Spectrum Variable Amplitude Fatigue Analysis",
+  "description": "基于TWIST(TWist Standard)标准飞行载荷谱的变幅疲劳分析。TWIST谱是航空领域广泛使用的标准机动载荷谱，模拟运输机机翼下壁板的典型飞行载荷历程。本案例采用200次飞行构成一个载荷谱块，每次飞行包含多个不同过载等级(1g至7g)的载荷循环。通过雨流计数法提取载荷循环，采用Palmgren-Miner线性累积损伤法则计算每次飞行的损伤度D_flight，验证总损伤累积不超过1.0。材料为2024-T4铝合金，采用等寿命线(Gerber)进行平均应力修正。本案例适用于航空结构变幅疲劳分析、载荷谱处理和损伤容限评估的测试验证。",
+  "category": "fatigue",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["TWIST谱", "变幅载荷", "雨流计数", "Palmgren-Miner", "航空疲劳", "Gerber修正"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.5,
+    "width": 0.2,
+    "height": 0.003,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 50,
+    "y_div": 20,
+    "z_div": 3,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Aluminum 2024-T4 (Aerospace)",
+    "elastic_modulus": 73100000000,
+    "poisson_ratio": 0.33,
+    "density": 2780,
+    "yield_stress": 303000000,
+    "ultimate_stress": 469000000,
+    "fatigue_strength_coefficient": 580000000,
+    "fatigue_strength_exponent": -0.082,
+    "endurance_limit": 138000000
+  },
+  "loading": {
+    "type": "spectrum",
+    "mean_stress": 0,
+    "stress_amplitude": 0,
+    "stress_ratio": 0.05,
+    "frequency_hz": 3,
+    "temperature_K": 293,
+    "spectrum_blocks": [
+      { "block_id": 1, "name": "1g巡航", "cycles_per_flight": 50, "stress_amplitude": 35000000, "mean_stress": 70000000 },
+      { "block_id": 2, "name": "2g机动", "cycles_per_flight": 20, "stress_amplitude": 70000000, "mean_stress": 70000000 },
+      { "block_id": 3, "name": "3g机动", "cycles_per_flight": 8, "stress_amplitude": 105000000, "mean_stress": 70000000 },
+      { "block_id": 4, "name": "4g机动", "cycles_per_flight": 3, "stress_amplitude": 140000000, "mean_stress": 70000000 },
+      { "block_id": 5, "name": "5g机动", "cycles_per_flight": 1, "stress_amplitude": 175000000, "mean_stress": 70000000 },
+      { "block_id": 6, "name": "6g机动", "cycles_per_flight": 0.3, "stress_amplitude": 210000000, "mean_stress": 70000000 },
+      { "block_id": 7, "name": "7g机动", "cycles_per_flight": 0.05, "stress_amplitude": 245000000, "mean_stress": 70000000 },
+      { "block_id": 8, "name": "阵风载荷", "cycles_per_flight": 100, "stress_amplitude": 25000000, "mean_stress": 70000000 },
+      { "block_id": 9, "name": "地面-空-地循环", "cycles_per_flight": 1, "stress_amplitude": 90000000, "mean_stress": 45000000 }
+    ]
+  },
+  "fatigue_model": {
+    "type": "miner",
+    "parameters": {
+      "sigma_f_prime": 580000000,
+      "b": -0.082,
+      "mean_stress_correction": "gerber",
+      "damage_limit": 1.0,
+      "rainflow_method": "ASTM_E1049",
+      "safety_factor": 1.5
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 200,
+    "formula": "D = Σ(n_i / N_i); D_flight = Σ(n_i_per_flight / N_i); Life_flights = 1 / D_flight; Gerber: σ_a / σ_ar + (σ_m / σ_uts)^2 = 1",
+    "reference": "TWIST Standard. Description of a fighter aircraft loading standard for fatigue evaluation. NLR TR 69034U, 1969; ASTM E1049-85. Standard practices for cycle counting in fatigue analysis."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "每次飞行累积损伤D_flight",
+        "value": 0.0048,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "疲劳寿命(飞行次数)",
+        "value": 208,
+        "unit": "flights",
+        "tolerance": 20
+      },
+      {
+        "name": "最大损伤贡献载荷级",
+        "value": 0.0018,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "空-地循环损伤贡献",
+        "value": 0.0012,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "雨流计数后总循环数(200次飞行)",
+        "value": 36470,
+        "unit": "cycles",
+        "tolerance": 10
+      },
+      {
+        "name": "安全寿命(含安全系数1.5)",
+        "value": 139,
+        "unit": "flights",
+        "tolerance": 20
+      }
+    ]
+  }
+}

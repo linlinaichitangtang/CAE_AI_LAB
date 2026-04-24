@@ -1,0 +1,101 @@
+{
+  "id": "SS-07",
+  "name": "多楼层框架模态分析",
+  "nameEn": "Multi-Story Frame Modal Analysis",
+  "description": "三层钢框架结构的模态分析。每层高3m、宽4m，柱截面0.3m×0.3m，梁截面0.3m×0.5m，共4根柱。采用剪切建筑模型近似计算前三阶固有频率。该算例用于验证有限元程序中模态分析（特征值提取）的正确性，是建筑结构动力分析的基础案例。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": [
+    "模态分析",
+    "框架结构",
+    "固有频率",
+    "特征值"
+  ],
+  "geometry": {
+    "type": "beam",
+    "length": 4.0,
+    "width": 4.0,
+    "height": 9.0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 16,
+    "y_div": 16,
+    "z_div": 18,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "z_min",
+    "load_type": "none",
+    "load_face": "",
+    "load_magnitude": 0.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "modal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.0,
+    "max_stress": 0.0,
+    "formula": "剪切建筑模型：K·φ=ω²M·φ, k=12EI/h³×4柱, m=ρ×V_floor",
+    "reference": "Clough & Penzien, Dynamics of Structures, Ch. 13",
+    "natural_frequencies": [
+      9.56,
+      26.77,
+      38.69
+    ]
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0,
+    "frequency_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "第一阶固有频率",
+        "value": 9.56,
+        "unit": "Hz",
+        "tolerance": 10.0
+      },
+      {
+        "name": "第二阶固有频率",
+        "value": 26.77,
+        "unit": "Hz",
+        "tolerance": 10.0
+      },
+      {
+        "name": "第三阶固有频率",
+        "value": 38.69,
+        "unit": "Hz",
+        "tolerance": 10.0
+      },
+      {
+        "name": "每层等效质量",
+        "value": 13188.0,
+        "unit": "kg",
+        "tolerance": 1.0
+      },
+      {
+        "name": "每层等效刚度",
+        "value": 240000000.0,
+        "unit": "N/m",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "PP-22",
+  "name": "VR/AR后处理导出",
+  "nameEn": "VR/AR Post-Processing Export - USDZ Format for Mobile AR",
+  "description": "演示将有限元后处理结果导出为USDZ格式并在移动设备AR环境中查看的完整流程。以某机械零件应力分析结果为例，将Von Mises应力场和位移变形场导出为USDZ文件，支持在iOS/Android设备上通过AR查看器进行三维交互。验证指标包括：(1)3D交互功能(旋转、缩放、剖面切割)的流畅性；(2)导出文件大小<50MB；(3)AR环境中的渲染帧率>60fps；(4)色标映射和数据标注的准确性。通过此案例学习VR/AR后处理导出的技术要求和移动端性能优化策略，掌握沉浸式工程数据可视化方法。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["VR/AR", "USDZ导出", "移动端AR", "沉浸式可视化", "三维交互", "增强现实"],
+  "visualization": {
+    "type": "vr_ar",
+    "field": "von_mises",
+    "color_map": "viridis",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 120,
+      "fps": 30,
+      "format": "usdz"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 45000,
+    "elements": 38000,
+    "results_file": "results/postprocess/mechanical_part_ar_export.dat"
+  },
+  "display_settings": {
+    "title": "VR/AR后处理导出 - USDZ格式应力场可视化",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 320,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 0.2, "y": 0.15, "z": 0.2 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -30, "yaw": 45 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "USDZ导出文件大小", "value": 45, "unit": "MB", "tolerance": 10 },
+      { "name": "AR渲染帧率", "value": 60, "unit": "fps", "tolerance": 10 },
+      { "name": "模型加载延迟", "value": 3.0, "unit": "s", "tolerance": 20 },
+      { "name": "旋转交互延迟", "value": 16, "unit": "ms", "tolerance": 20 },
+      { "name": "剖面切割响应时间", "value": 50, "unit": "ms", "tolerance": 20 },
+      { "name": "色标映射精度", "value": 98, "unit": "%", "tolerance": 2 },
+      { "name": "网格简化率", "value": 40, "unit": "%", "tolerance": 10 },
+      { "name": "纹理分辨率", "value": 2048, "unit": "px", "tolerance": 0 },
+      { "name": "支持设备类型", "value": 2, "unit": "种(iOS/Android)", "tolerance": 0 }
+    ]
+  }
+}

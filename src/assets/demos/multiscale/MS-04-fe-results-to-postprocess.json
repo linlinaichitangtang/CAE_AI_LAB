@@ -1,0 +1,162 @@
+{
+  "id": "MS-04",
+  "name": "有限元结果到云图后处理",
+  "nameEn": "FE Results to Contour Post-processing",
+  "description": "以悬臂梁弯曲问题为例，展示有限元节点位移结果的后处理流程。从FE求解得到的节点位移场出发，通过应变-位移关系计算应变场，再通过本构关系计算应力场，最终得到应变能密度U=σ²/(2E)的三维云图分布。验证最大应变能密度出现在梁的固定端（根部），并分析沿梁长度方向的应变能密度衰减规律。该案例是有限元后处理和多尺度数据可视化的基础教学示例。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["cantilever beam", "displacement field", "strain energy density", "contour plot", "post-processing", "von Mises"],
+  "scales": ["fe"],
+  "material_system": "Steel Q235",
+  "pipeline_steps": [
+    {
+      "step": "fe",
+      "name": "悬臂梁有限元静力分析",
+      "description": "建立悬臂梁有限元模型，施加端部集中载荷，求解节点位移场",
+      "input": {
+        "beam_length": 200,
+        "beam_length_unit": "mm",
+        "beam_width": 20,
+        "beam_width_unit": "mm",
+        "beam_height": 10,
+        "beam_height_unit": "mm",
+        "elastic_modulus": 200,
+        "elastic_modulus_unit": "GPa",
+        "yield_strength": 235,
+        "yield_strength_unit": "MPa",
+        "density": 7850,
+        "density_unit": "kg/m^3",
+        "poisson_ratio": 0.3,
+        "tip_load": -1000,
+        "tip_load_unit": "N",
+        "load_direction": "-Y"
+      },
+      "output": {
+        "nodal_displacements": "displacement_field.vtk",
+        "max_tip_displacement": 4.0,
+        "max_tip_displacement_unit": "mm",
+        "reaction_force_at_root": 1000,
+        "reaction_force_unit": "N",
+        "reaction_moment_at_root": 200,
+        "reaction_moment_unit": "N*m",
+        "nodal_count": 13251,
+        "element_count": 10000
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "100x10x10",
+        "boundary_condition": "fixed_left_face",
+        "load_type": "concentrated_force_at_tip",
+        "solver_type": "static_general",
+        "integration_scheme": "reduced_integration",
+        "hourglass_control": "enhanced",
+        "max_iterations": 50,
+        "convergence_tolerance": 1e-6,
+        "increment_size_initial": 1.0,
+        "increment_size_min": 0.01,
+        "increment_size_max": 1.0
+      },
+      "bridge_to_next": {
+        "mapping_method": "Shape function differentiation for strain computation",
+        "data_transferred": [
+          "nodal_displacements",
+          "element_connectivity",
+          "shape_function_derivatives",
+          "material_properties"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "应变能密度云图后处理",
+      "description": "基于节点位移场，计算应变张量、应力张量和应变能密度U=σ²/(2E)，生成三维云图并验证最大值位置",
+      "input": {
+        "displacement_field_source": "displacement_field.vtk",
+        "elastic_modulus": 200,
+        "elastic_modulus_unit": "GPa",
+        "poisson_ratio": 0.3,
+        "formula": "U = sigma^2 / (2*E)",
+        "element_type": "C3D8R",
+        "mesh_density": "100x10x10"
+      },
+      "output": {
+        "strain_field": "strain_field.vtk",
+        "stress_field": "stress_field.vtk",
+        "strain_energy_density_contour": "strain_energy_density.vtk",
+        "max_strain_energy_density": 6.25e5,
+        "max_strain_energy_density_unit": "J/m^3",
+        "max_strain_energy_density_location": "beam_root_top_fiber",
+        "min_strain_energy_density": 0,
+        "min_strain_energy_density_location": "beam_tip_neutral_axis",
+        "total_strain_energy": 2.0,
+        "total_strain_energy_unit": "J",
+        "max_bending_stress": 300,
+        "max_bending_stress_unit": "MPa",
+        "max_bending_stress_location": "beam_root_top_fiber"
+      },
+      "parameters": {
+        "post_processing_method": "Gauss point extrapolation to nodes",
+        "averaging_method": "nodal_averaging",
+        "contour_levels": 20,
+        "color_map": "rainbow",
+        "strain_computation": "B_matrix_multiplication",
+        "stress_computation": "Hooke_law_plane_stress",
+        "energy_density_formula": "U = 0.5 * sigma_ij * epsilon_ij",
+        "output_format": "VTK_PARALLEL"
+      },
+      "bridge_to_next": {
+        "mapping_method": "analytical verification against Euler-Bernoulli beam theory",
+        "data_transferred": [
+          "strain_energy_density_field",
+          "max_strain_energy_density_value_and_location",
+          "stress_distribution",
+          "analytical_comparison_results"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1007/978-3-319-09090-1",
+    "authors": "Bathe KJ",
+    "year": 2014,
+    "journal": "Finite Element Procedures (2nd Edition)"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Max tip displacement",
+        "value": 4.0,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "Max bending stress at root",
+        "value": 300,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "Max strain energy density at root",
+        "value": 6.25e5,
+        "unit": "J/m^3",
+        "tolerance": 8
+      },
+      {
+        "name": "Total strain energy",
+        "value": 2.0,
+        "unit": "J",
+        "tolerance": 5
+      },
+      {
+        "name": "Reaction force at root",
+        "value": 1000,
+        "unit": "N",
+        "tolerance": 1
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 8
+  }
+}

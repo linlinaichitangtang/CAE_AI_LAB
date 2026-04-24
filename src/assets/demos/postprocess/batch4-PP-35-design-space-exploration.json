@@ -1,0 +1,56 @@
+{
+  "id": "PP-35",
+  "name": "设计空间探索Pareto前沿",
+  "nameEn": "Design Space Exploration - Pareto Front Convergence Animation",
+  "description": "演示多目标优化设计空间探索与Pareto前沿收敛过程的可视化。以薄壁结构为对象，优化目标为最小化质量M和最大化刚度K(以基频f₁表征)。采用NSGA-II算法生成200个设计点，设计变量为壁厚(1-8mm)和加强筋数量(2-12条)。动画展示从随机初始种群(第0代)到收敛Pareto前沿(第100代)的演化过程：早期设计点分散在整个设计空间中，随迭代推进逐渐向Pareto前沿聚集。前沿曲线以红色粗线标注，非支配解以绿色高亮显示。支持交互操作：悬停查看设计点详细参数，点击锁定特定设计方案，拖动滑块浏览迭代历史。最终Pareto前沿包含23个非支配解，质量范围1.2-4.8kg，基频范围45-180Hz。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["Pareto前沿", "多目标优化", "设计空间探索", "NSGA-II", "收敛动画", "非支配解"],
+  "visualization": {
+    "type": "design_space",
+    "field": "displacement",
+    "color_map": "viridis",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": true,
+      "frames": 100,
+      "fps": 10,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 18000,
+    "elements": 15000,
+    "results_file": "results/postprocess/design_space_pareto_exploration.dat"
+  },
+  "display_settings": {
+    "title": "多目标优化 - Pareto前沿收敛过程",
+    "axis_labels": ["质量 M (kg)", "基频 f₁ (Hz)", "迭代代数"],
+    "color_bar": {
+      "min": 0,
+      "max": 100,
+      "label": "进化代数",
+      "n_levels": 10
+    },
+    "camera": {
+      "position": { "x": 3.0, "y": 2.5, "z": 5.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -30, "yaw": 25 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "总设计点数", "value": 200, "unit": "个", "tolerance": 0 },
+      { "name": "Pareto非支配解数量", "value": 23, "unit": "个", "tolerance": 15 },
+      { "name": "质量范围下界", "value": 1.2, "unit": "kg", "tolerance": 10 },
+      { "name": "质量范围上界", "value": 4.8, "unit": "kg", "tolerance": 10 },
+      { "name": "基频范围下界", "value": 45, "unit": "Hz", "tolerance": 10 },
+      { "name": "基频范围上界", "value": 180, "unit": "Hz", "tolerance": 10 },
+      { "name": "收敛代数", "value": 72, "unit": "代", "tolerance": 15 },
+      { "name": "超体积指标(HV)", "value": 0.876, "unit": "", "tolerance": 5 },
+      { "name": "动画总帧数", "value": 100, "unit": "帧", "tolerance": 0 }
+    ]
+  }
+}

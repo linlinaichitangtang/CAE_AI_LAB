@@ -1,0 +1,65 @@
+{
+  "id": "OS-03",
+  "name": "海洋平台导管架",
+  "nameEn": "Jacket Platform Analysis",
+  "description": "模拟四腿导管架海洋平台在波浪和海流联合作用下的结构分析。水深30m，设计波浪参数H=10m（波高）、T=10s（周期），海流流速1m/s。采用Morison方程计算波浪和海流对导管架杆件的拖曳力和惯性力荷载。分析导管架在极端环境荷载下的基底剪力、倾覆力矩以及杆件应力比。导管架采用API RP 2A-WSD规范进行强度校核。",
+  "category": "offshore",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["jacket", "Morison-equation", "wave-loading", "current", "offshore-platform"],
+  "geometry": {
+    "type": "jacket",
+    "number_of_legs": 4,
+    "water_depth": 30.0,
+    "jacket_height": 38.0,
+    "leg_diameter": 1.2,
+    "leg_thickness": 0.025,
+    "brace_diameter": 0.6,
+    "brace_thickness": 0.015,
+    "batter_slope": 0.1
+  },
+  "material": {
+    "name": "API 5L X52",
+    "elastic_modulus": 207000000000.0,
+    "yield_strength": 358000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "wave_height": 10.0,
+    "wave_period": 10.0,
+    "current_speed": 1.0,
+    "wind_speed": 40.0,
+    "marine_growth_thickness": 0.05,
+    "Cd": 1.0,
+    "Cm": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "基底剪力",
+        "value": 2500.0,
+        "unit": "kN",
+        "tolerance": 15
+      },
+      {
+        "name": "倾覆力矩",
+        "value": 55000.0,
+        "unit": "kN·m",
+        "tolerance": 15
+      },
+      {
+        "name": "最大杆件应力比",
+        "value": 0.85,
+        "unit": "-",
+        "tolerance": 15
+      },
+      {
+        "name": "平台顶部位移",
+        "value": 0.12,
+        "unit": "m",
+        "tolerance": 20
+      }
+    ]
+  }
+}

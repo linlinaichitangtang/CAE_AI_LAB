@@ -1,0 +1,57 @@
+{
+  "id": "PP-38",
+  "name": "3D PDF交互报告",
+  "nameEn": "3D PDF Interactive Report - Embedded Stress Contour",
+  "description": "演示将有限元分析3D应力云图嵌入PDF文档并保持交互功能的能力。以发动机连杆为分析对象，基于U3D(Universal 3D)和PRC(PRC Product Representation Compact)格式标准，将Von Mises应力云图以3D模型形式嵌入PDF页面。生成的PDF文档支持：(1)鼠标旋转查看模型任意角度；(2)滚轮缩放模型细节；(3)交互式截面切割功能，可沿X/Y/Z轴或自定义平面剖切查看内部应力分布；(4)模型树导航，按部件/材料/应力区间筛选显示；(5)测量工具支持点-点距离和角度测量；(6)视图预设功能(前视/后视/侧视/等轴测)一键切换。PDF文件大小控制在15MB以内，兼容Adobe Acrobat Reader。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["3D PDF", "U3D格式", "PRC格式", "交互报告", "截面切割", "嵌入式可视化"],
+  "visualization": {
+    "type": "3d_pdf",
+    "field": "von_mises",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "pdf3d"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 88000,
+    "elements": 75000,
+    "results_file": "results/postprocess/connecting_rod_3dpdf_report.dat"
+  },
+  "display_settings": {
+    "title": "发动机连杆应力分析 - 3D PDF交互报告",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 520,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 80.0, "y": 60.0, "z": 90.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "3D模型节点数", "value": 88000, "unit": "个", "tolerance": 5 },
+      { "name": "3D模型单元数", "value": 75000, "unit": "个", "tolerance": 5 },
+      { "name": "PDF文件大小", "value": 12.5, "unit": "MB", "tolerance": 20 },
+      { "name": "嵌入格式", "value": 1, "unit": "U3D+PRC", "tolerance": 0 },
+      { "name": "截面切割方向数", "value": 6, "unit": "个", "tolerance": 0 },
+      { "name": "预设视图数量", "value": 4, "unit": "个", "tolerance": 0 },
+      { "name": "连杆最大应力", "value": 485, "unit": "MPa", "tolerance": 5 },
+      { "name": "杆身应力", "value": 210, "unit": "MPa", "tolerance": 5 },
+      { "name": "PDF页面总数", "value": 6, "unit": "页", "tolerance": 15 },
+      { "name": "模型加载时间", "value": 3.5, "unit": "s", "tolerance": 20 }
+    ]
+  }
+}

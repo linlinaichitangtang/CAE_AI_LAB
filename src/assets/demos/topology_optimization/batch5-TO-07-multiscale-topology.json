@@ -1,0 +1,80 @@
+{
+  "id": "TO-07",
+  "name": "多尺度拓扑优化",
+  "nameEn": "Multiscale Topology Optimization",
+  "description": "两级多尺度拓扑优化问题。采用分层优化策略：微观尺度优化单胞微结构（0.001m×0.001m）以获得等效宏观材料属性，宏观尺度利用等效属性进行结构拓扑优化。微观单胞通过SIMP方法在不同体积分数下生成一系列微结构构型，建立等效弹性模量与密度的插值关系。宏观优化在2m×1m的梁结构上进行，体积分数约束0.3。两级之间通过渐近均匀化方法（AHM）传递信息。该算例验证多尺度框架的正确性，对比均匀材料优化结果，多尺度优化可获得更好的力学性能。",
+  "category": "topology_optimization",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["SIMP", "多尺度", "微结构", "均匀化", "分级优化", "单胞"],
+  "design_domain": {
+    "type": "beam",
+    "length": 2.0,
+    "width": 1.0,
+    "height": 0.1,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 160,
+    "y_div": 80,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Base Material (Aluminum)",
+    "elastic_modulus": 70000000000,
+    "poisson_ratio": 0.3,
+    "density": 2700
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.3,
+    "penalization": 3,
+    "filter_radius": 0.04,
+    "max_iterations": 150,
+    "convergence_tolerance": 0.005
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_left_corner, bottom_right_corner",
+    "load_type": "point",
+    "load_face": "top_center",
+    "load_magnitude": 200000,
+    "load_direction": "-Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.3,
+      "unit": "ratio"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "optimal_compliance_multiscale",
+        "value": 320,
+        "unit": "N·m",
+        "tolerance": 15
+      },
+      {
+        "name": "compliance_improvement_vs_homogeneous",
+        "value": 18,
+        "unit": "percent",
+        "tolerance": 20
+      },
+      {
+        "name": "unit_cell_size",
+        "value": 0.001,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "macro_iterations",
+        "value": 85,
+        "unit": "iterations",
+        "tolerance": 25
+      }
+    ]
+  }
+}

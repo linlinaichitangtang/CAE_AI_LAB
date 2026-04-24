@@ -1,0 +1,59 @@
+{
+  "id": "RW-02",
+  "name": "轮轨接触应力",
+  "nameEn": "Wheel-Rail Contact Stress",
+  "description": "模拟车轮与钢轨之间的Hertzian接触应力分析。车轮半径R_w=0.46m，轨头踏面半径R_r=0.3m，轴重对应法向力P=125kN。采用Hertz接触理论计算接触椭圆半轴a=√(3PR/(4E*))和最大接触应力p_max=3P/(2πa²)≈1500MPa。分析接触斑形状、应力分布深度以及剪切应力分布。验证接触应力不超过材料的许用接触应力。",
+  "category": "railway",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["Hertzian-contact", "wheel-rail", "contact-stress", "elliptical-contact"],
+  "geometry": {
+    "type": "wheel_rail_contact",
+    "wheel_radius": 0.46,
+    "rail_head_radius": 0.3,
+    "wheel_tread_profile": "conical_1:40",
+    "contact_angle": 0.0
+  },
+  "material": {
+    "name": "Wheel-Rail Steel",
+    "elastic_modulus": 210000000000.0,
+    "poisson_ratio": 0.3,
+    "equivalent_elastic_modulus": 115400000000.0,
+    "hardness": 320.0
+  },
+  "loading": {
+    "normal_force": 125000.0,
+    "lateral_force": 0.0,
+    "longitudinal_force": 0.0,
+    "creepage_longitudinal": 0.0,
+    "creepage_lateral": 0.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "接触椭圆半轴a",
+        "value": 0.006,
+        "unit": "m",
+        "tolerance": 10
+      },
+      {
+        "name": "接触椭圆半轴b",
+        "value": 0.0045,
+        "unit": "m",
+        "tolerance": 10
+      },
+      {
+        "name": "最大接触应力p_max",
+        "value": 1500.0,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "最大剪切应力深度",
+        "value": 0.0035,
+        "unit": "m",
+        "tolerance": 15
+      }
+    ]
+  }
+}

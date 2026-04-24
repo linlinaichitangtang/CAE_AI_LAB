@@ -1,0 +1,121 @@
+{
+  "id": "TC-20",
+  "name": "热结构耦合拓扑优化",
+  "nameEn": "Thermal-Structural Coupled Topology Optimization",
+  "description": "热结构耦合拓扑优化设计验证。设计域尺寸0.1m×0.1m×0.01m，材料为铝合金6061-T6。中心区域施加50W集中热源，底部固定约束，两侧和顶部为对流散热边界(h=20W/(m²·K)，T_amb=293K)。优化目标：在温度约束T_max<373K条件下最小化结构柔度(compliance)。体积分数约束为30%，采用SIMP(Solid Isotropic Material with Penalization)方法，惩罚因子p=3。材料物性：导热系数k=167W/(m·K)，密度ρ=2700kg/m³，比热容c_p=896J/(kg·K)，弹性模量E=68.9GPa，热膨胀系数α=23.6×10⁻⁶/K。优化迭代约50步收敛，最优拓扑呈现类似树状导热通道结构。该案例用于验证热-力耦合拓扑优化算法的实现。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["topology_optimization", "SIMP", "compliance_minimization", "thermal_constraint", "volume_fraction", "coupled_optimization"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.01,
+    "radius": null,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 6,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Aluminum Alloy 6061-T6",
+    "elastic_modulus": 68900000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "yield_stress": 276000000,
+    "thermal_expansion": 23.6e-6,
+    "thermal_conductivity": 167,
+    "specific_heat": 896
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "thermal",
+    "load_face": "center_region",
+    "load_magnitude": 50,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": null,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 20,
+      "heat_source": 5000000
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 150000000,
+    "max_temperature": 373,
+    "formula": "min: C(u) = F^T * u; s.t.: K*u = F; V/V0 <= 0.3; T_max <= 373K; E_e = E_min + (E0-E_min)*rho_e^p; k_e = k_min + (k0-k_min)*rho_e^p",
+    "reference": "Bendsøe, Sigmund, Topology Optimization: Theory, Methods, and Applications, Ch.1 & Ch.4"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "volume_fraction_target",
+        "value": 0.3,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "max_temperature_constraint",
+        "value": 373,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "heat_source_power",
+        "value": 50,
+        "unit": "W",
+        "tolerance": 0.1
+      },
+      {
+        "name": "SIMP_penalty_factor",
+        "value": 3,
+        "unit": "",
+        "tolerance": 0.1
+      },
+      {
+        "name": "optimization_iterations_converge",
+        "value": 50,
+        "unit": "steps",
+        "tolerance": 30.0
+      },
+      {
+        "name": "initial_compliance",
+        "value": 0.05,
+        "unit": "J",
+        "tolerance": 30.0
+      },
+      {
+        "name": "optimized_compliance",
+        "value": 0.02,
+        "unit": "J",
+        "tolerance": 30.0
+      },
+      {
+        "name": "convection_coefficient",
+        "value": 20,
+        "unit": "W/(m^2*K)",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

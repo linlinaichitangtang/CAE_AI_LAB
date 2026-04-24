@@ -1,0 +1,100 @@
+{
+  "id": "FD-06",
+  "name": "机身蒙皮裂纹扩展寿命预测",
+  "nameEn": "Fuselage Skin Crack Growth Life Prediction",
+  "description": "航空铝合金2024-T3机身蒙皮中心穿透裂纹的疲劳裂纹扩展分析。初始裂纹长度a₀=2mm，临界裂纹长度a_f=20mm(蒙皮厚度限制)。基于Paris定律da/dN=C(ΔK)^m，材料参数C=2×10^-11 m/cycle, m=3.3。应力强度因子范围ΔK=Δσ√(πa)·F(a/W)，其中F为几何修正系数。循环应力范围Δσ从对应ΔK=10MPa√m变化至ΔK=30MPa√m。采用逐周期积分方法计算裂纹从a₀扩展至a_f所需的循环次数N_f。本案例适用于损伤容限设计、航空结构安全评估和断裂力学工程应用演示。",
+  "category": "fatigue",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["Paris定律", "裂纹扩展", "损伤容限", "铝合金", "机身蒙皮", "航空结构"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.15,
+    "height": 0.0016,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 60,
+    "y_div": 30,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Aluminum 2024-T3",
+    "elastic_modulus": 73100000000,
+    "poisson_ratio": 0.33,
+    "density": 2780,
+    "yield_stress": 345000000,
+    "ultimate_stress": 483000000,
+    "fatigue_strength_coefficient": 580000000,
+    "fatigue_strength_exponent": -0.08,
+    "endurance_limit": 138000000
+  },
+  "loading": {
+    "type": "constant_amplitude",
+    "mean_stress": 69000000,
+    "stress_amplitude": 69000000,
+    "stress_ratio": 0,
+    "frequency_hz": 8,
+    "temperature_K": 293,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "basquin",
+    "parameters": {
+      "crack_growth_law": "paris",
+      "C": 2e-11,
+      "m": 3.3,
+      "a_initial": 0.002,
+      "a_final": 0.02,
+      "delta_K_threshold": 2.5,
+      "K_IC": 37000000,
+      "geometry_factor": "center_crack_plate",
+      "F": 1.0
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 185000,
+    "formula": "da/dN = C·(ΔK)^m; ΔK = Δσ·√(πa)·F(a/W); N_f = ∫[a₀ to a_f] da / [C·(Δσ·√(πa)·F)^m]",
+    "reference": "Paris PC, Erdogan F. A critical analysis of crack propagation laws. Transactions of ASME, Series D, 1963; Anderson TL. Fracture Mechanics: Fundamentals and Applications, 4th ed. CRC Press, 2017."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "裂纹扩展寿命N_f",
+        "value": 185000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "裂纹扩展速率da/dN at a=5mm",
+        "value": 3.2e-8,
+        "unit": "m/cycle",
+        "tolerance": 20
+      },
+      {
+        "name": "裂纹扩展速率da/dN at a=15mm",
+        "value": 5.8e-7,
+        "unit": "m/cycle",
+        "tolerance": 20
+      },
+      {
+        "name": "临界应力强度因子K_max",
+        "value": 37000000,
+        "unit": "Pa·√m",
+        "tolerance": 5
+      },
+      {
+        "name": "检查间隔(1/2寿命)",
+        "value": 92500,
+        "unit": "cycles",
+        "tolerance": 20
+      }
+    ]
+  }
+}

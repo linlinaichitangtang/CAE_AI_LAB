@@ -1,0 +1,50 @@
+{
+  "id": "PP-01",
+  "name": "悬臂梁位移云图",
+  "nameEn": "Cantilever Beam Displacement Contour",
+  "description": "展示悬臂梁在自由端集中载荷作用下的位移分布云图。梁长1m，截面为矩形(0.05m x 0.1m)，材料为钢(E=200GPa, v=0.3)，自由端施加10kN集中力。通过此案例学习如何读取色标条、理解位移单位与数值范围，掌握云图的基本判读方法。最大位移出现在梁的自由端，约2mm，色标范围设为0-2.5mm以留有适当余量。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["位移云图", "悬臂梁", "色标判读", "基础入门"],
+  "visualization": {
+    "type": "contour",
+    "field": "displacement",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 1240,
+    "elements": 960,
+    "results_file": "results/postprocess/cantilever_beam_static.dat"
+  },
+  "display_settings": {
+    "title": "悬臂梁位移云图 - UY方向",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 2.5,
+      "label": "位移 (mm)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 1.2, "y": 0.8, "z": 0.6 },
+      "target": { "x": 0.5, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": -30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大位移", "value": 2.0, "unit": "mm", "tolerance": 5 },
+      { "name": "固定端反力", "value": 10000, "unit": "N", "tolerance": 1 },
+      { "name": "梁长度", "value": 1.0, "unit": "m", "tolerance": 0.1 }
+    ]
+  }
+}

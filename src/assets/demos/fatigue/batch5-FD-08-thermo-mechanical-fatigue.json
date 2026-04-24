@@ -1,0 +1,119 @@
+{
+  "id": "FD-08",
+  "name": "Inconel 718热-机械疲劳分析",
+  "nameEn": "Inconel 718 Thermo-Mechanical Fatigue Analysis",
+  "description": "镍基高温合金Inconel 718在热-机械疲劳(TMF)条件下的寿命预测分析。温度循环范围为T_max=923K(650°C)至T_min=573K(300°C)，机械应变幅Δε_mech=0.4%，采用同相位(in-phase)温度-应变加载，即在最高温度时施加最大拉伸应变。高温保载时间为300秒，模拟燃气轮机启动-运行-停机循环。采用应变范围分区法(Strain-Range Partitioning, SRP)将非弹性应变分解为pp、pc、cp、cc四种分量，分别计算各分量的损伤并线性叠加。本案例适用于航空发动机热端部件、燃气轮机叶片和核反应堆结构的TMF寿命评估测试验证。",
+  "category": "fatigue",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["热-机械疲劳", "TMF", "Inconel 718", "应变范围分区法", "SRP", "保载", "高温合金"],
+  "geometry": {
+    "type": "specimen",
+    "length": 0.05,
+    "width": 0.01,
+    "height": 0.005,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 25,
+    "y_div": 8,
+    "z_div": 4,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Inconel 718 (TMF Parameters)",
+    "elastic_modulus": 185000000000,
+    "poisson_ratio": 0.3,
+    "density": 8190,
+    "yield_stress": 1034000000,
+    "ultimate_stress": 1240000000,
+    "fatigue_strength_coefficient": 1600000000,
+    "fatigue_strength_exponent": -0.07,
+    "endurance_limit": 450000000
+  },
+  "loading": {
+    "type": "thermo_mechanical",
+    "mean_stress": 0,
+    "stress_amplitude": 0,
+    "stress_ratio": -1,
+    "frequency_hz": 0.001,
+    "temperature_K": 923,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "coffin_manson",
+    "parameters": {
+      "method": "strain_range_partitioning",
+      "delta_epsilon_mech": 0.004,
+      "T_max": 923,
+      "T_min": 573,
+      "hold_time": 300,
+      "phase": "in-phase",
+      "sigma_f_prime": 1600000000,
+      "b": -0.07,
+      "epsilon_f_prime": 0.35,
+      "c": -0.65,
+      "F_pp": 0.4,
+      "F_pc": 0.25,
+      "F_cp": 0.15,
+      "F_cc": 0.2,
+      "creep_damage_factor": 0.3,
+      "oxidation_factor": 0.15
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 320,
+    "formula": "SRP: Δε_ij = f_ij(Δε_inelastic, T, phase); D_ij = N_ij / N_f,ij; D_total = ΣD_ij ≤ 1.0; N_f,ij = A_ij · (Δε_ij)^α_ij",
+    "reference": "Manson SS. Halford GR. Fatigue and durability of structural materials. ASM International, 2006; Sehitoglu H. Thermo-mechanical fatigue life prediction methods. ASTM STP 1122, 1992."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "TMF疲劳寿命N_f",
+        "value": 320,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "pp分量疲劳损伤D_pp",
+        "value": 0.35,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "pc分量疲劳损伤D_pc",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "蠕变损伤D_creep",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "氧化损伤D_oxidation",
+        "value": 0.1,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "总损伤D_total",
+        "value": 0.95,
+        "unit": "",
+        "tolerance": 15
+      },
+      {
+        "name": "应力松弛量(保载300s后)",
+        "value": 180000000,
+        "unit": "Pa",
+        "tolerance": 20
+      }
+    ]
+  }
+}

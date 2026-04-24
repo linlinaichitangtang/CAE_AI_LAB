@@ -1,0 +1,330 @@
+{
+  "id": "MS-27",
+  "name": "骨植入物Ti-6Al-4V",
+  "nameEn": "Ti-6Al-4V Bone Implant Osseointegration",
+  "description": "Ti-6Al-4V骨科植入物的多尺度生物力学分析。DFT计算TiO₂氧化层形成能和表面吸附特性；MD模拟纤连蛋白(fibronectin)在TiO₂表面的吸附构象和细胞粘附分子机制；相场模型模拟骨整合(osseointegration)过程中骨组织在植入物表面的生长动力学；FE模型优化植入物几何设计以减少应力遮挡效应(stress shielding)，匹配骨组织的弹性模量(10-30GPa)。该案例为骨科植入物的生物相容性设计和力学优化提供多尺度仿真框架。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["Ti-6Al-4V", "bone implant", "osseointegration", "stress shielding", "TiO2", "fibronectin", "biocompatibility", "orthopedic"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Ti-6Al-4V with TiO2 oxide layer and bone tissue",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT TiO₂氧化层形成能计算",
+      "description": "计算Ti-6Al-4V表面TiO₂(锐钛矿/金红石)氧化层的形成能和表面性质，评估生物相容性",
+      "input": {
+        "substrate": "Ti-6Al-4V_alpha_beta",
+        "oxide_phase": "rutile_TiO2",
+        "surface_orientation": "(110)",
+        "supercell": {
+          "Ti_layers": 6,
+          "O_layers": 4,
+          "vacuum": 15,
+          "vacuum_unit": "Angstrom"
+        },
+        "adsorbates": ["H2O", "O2", "fibronectin_fragment"],
+        "calculation_types": ["oxide_formation_energy", "surface_energy", "adsorption_energy"]
+      },
+      "output": {
+        "TiO2_formation_energy": -9.82,
+        "formation_energy_unit": "eV/TiO2",
+        "surface_energy_rutile_110": 1.56,
+        "surface_energy_unit": "J/m^2",
+        "H2O_adsorption_energy": -0.85,
+        "H2O_adsorption_unit": "eV",
+        "O2_adsorption_energy": -1.42,
+        "O2_adsorption_unit": "eV",
+        "work_function": 5.12,
+        "work_function_unit": "eV",
+        "band_gap_surface": 2.85,
+        "band_gap_unit": "eV",
+        "hydrophilicity_index": 0.72,
+        "surface_charge_density": 0.035,
+        "charge_density_unit": "C/m^2"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE+U (U_Ti_d=4.2eV)",
+        "pseudopotentials": ["PAW_PBE_Ti", "PAW_PBE_O", "PAW_PBE_Al", "PAW_PBE_V"],
+        "energy_cutoff": 520,
+        "energy_cutoff_unit": "eV",
+        "k_points": [8, 8, 1],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 3,
+        "nsw": 100,
+        "dipole_correction": true,
+        "vdW_correction": "DFT-D3"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT surface energy, adsorption energy and surface charge to MD force field parameters for protein-surface interaction",
+        "data_transferred": [
+          "surface_energy_rutile_110",
+          "H2O_adsorption_energy",
+          "work_function",
+          "hydrophilicity_index",
+          "surface_charge_density"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD细胞粘附蛋白吸附模拟",
+      "description": "模拟纤连蛋白(fibronectin)在TiO₂表面的吸附构象，揭示RGD序列与表面的特异性结合机制",
+      "input": {
+        "surface": "rutile_TiO2_110",
+        "surface_dimensions": {
+          "Lx": 15,
+          "Ly": 15,
+          "unit": "nm"
+        },
+        "protein": "fibronectin_type_III_domain_7-10",
+        "protein_residues": 320,
+        "RGD_sequence": "Arg-Gly-Asp",
+        "water_model": "TIP3P",
+        "ion_concentration": 0.15,
+        "ion_concentration_unit": "M NaCl",
+        "surface_properties_source": "DFT MS-27 Step 1",
+        "temperature": 310,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "protein_adsorption_config": "fibronectin_adsorbed.pdb",
+        "adsorption_free_energy": -42.5,
+        "adsorption_energy_unit": "kcal/mol",
+        "RGD_surface_distance": 3.8,
+        "RGD_distance_unit": "Angstrom",
+        "protein_orientation": "side-on_parallel",
+        "conformational_change_RMSD": 2.8,
+        "RMSD_unit": "Angstrom",
+        "contact_area": 45.2,
+        "contact_area_unit": "nm^2",
+        "hydrogen_bonds_count": 18,
+        "desorption_time": 850,
+        "desorption_time_unit": "ns",
+        "surface_denaturation": false
+      },
+      "parameters": {
+        "force_field": "CHARMM36 with INTERFACE force field for TiO2",
+        "force_field_files": ["charmm36.prm", "interface_TiO2.prm"],
+        "timestep": 2.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Langevin",
+        "damping_coefficient": 1.0,
+        "damping_unit": "ps^-1",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 1,
+        "target_pressure_unit": "atm",
+        "cutoff_radius": 12.0,
+        "cutoff_radius_unit": "Angstrom",
+        "PME_electrostatics": true,
+        "boundary_conditions": ["periodic_xy", "vacuum_z"],
+        "total_steps": 50000000,
+        "dump_interval": 50000,
+        "umbrella_sampling": true,
+        "windows": 25
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD protein adsorption energy and conformation to phase field cell attachment probability and bone growth rate",
+        "data_transferred": [
+          "adsorption_free_energy",
+          "RGD_surface_distance",
+          "contact_area",
+          "hydrogen_bonds_count",
+          "protein_orientation"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场骨整合动力学模拟",
+      "description": "基于相场模型模拟骨组织在TiO₂涂层植入物表面的生长过程(osseointegration)，预测骨-植入物界面结合强度",
+      "input": {
+        "domain_size": {
+          "Lx": 2000,
+          "Ly": 2000,
+          "Lz": 5000,
+          "unit": "um"
+        },
+        "grid_spacing": 20,
+        "grid_spacing_unit": "um",
+        "grid_points": "100x100x250",
+        "implant_geometry": "cylindrical_diameter_5mm",
+        "surface_properties_source": "MD MS-27 Step 2",
+        "protein_adsorption_energy": -42.5,
+        "adsorption_energy_unit": "kcal/mol",
+        "initial_bone_density": 0.3,
+        "bone_density_unit": "g/cm^3",
+        "target_bone_density": 1.85,
+        "target_density_unit": "g/cm^3",
+        "healing_time_range": [1, 12],
+        "healing_time_unit": "weeks"
+      },
+      "output": {
+        "bone_growth_evolution": "osseointegration.vtk",
+        "bone_density_field": "bone_density.vtk",
+        "bone_implant_contact_ratio": 0.72,
+        "BIC_unit": "dimensionless",
+        "interface_shear_strength": 35.8,
+        "shear_strength_unit": "MPa",
+        "bone_ingrowth_depth": 850,
+        "ingrowth_unit": "um",
+        "mineralization_rate": 0.12,
+        "mineralization_unit": "g/cm^3/week",
+        "healing_time_80pct": 6.5,
+        "healing_time_unit": "weeks",
+        "pore_fill_fraction": 0.85
+      },
+      "parameters": {
+        "model": "phase_field_bone_remodeling",
+        "order_parameters": ["bone_density_phi", "osteoblast_activity", "osteoclast_activity"],
+        "interface_width": 50,
+        "interface_width_unit": "um",
+        "bone_growth_rate": 0.12,
+        "growth_rate_unit": "g/cm^3/week",
+        "osteoblast_formation_rate": 0.05,
+        "osteoblast_rate_unit": "1/day",
+        "osteoclast_resorption_rate": 0.02,
+        "osteoclast_rate_unit": "1/day",
+        "mechanical_coupling": true,
+        "mechanostimulation_threshold": 50,
+        "mechanostimulation_unit": "microstrain",
+        "time_step": 86400,
+        "time_step_unit": "s",
+        "total_time": 7308000,
+        "total_time_unit": "s",
+        "nutrient_diffusion": true,
+        "nutrient_diffusion_coefficient": 1e-9,
+        "nutrient_diffusion_unit": "m^2/s"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field bone density and BIC ratio to FE implant mechanical performance and stress shielding analysis",
+        "data_transferred": [
+          "bone_density_field",
+          "bone_implant_contact_ratio",
+          "interface_shear_strength",
+          "bone_ingrowth_depth",
+          "mineralization_rate"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE应力遮挡优化分析",
+      "description": "基于有限元方法优化Ti-6Al-4V植入物设计以减少应力遮挡效应，匹配骨组织弹性模量",
+      "input": {
+        "domain": "femur_with_implant",
+        "mesh": "tetrahedral_500000_elements",
+        "element_type": "C3D4",
+        "implant_material": "Ti-6Al-4V",
+        "implant_E": 110,
+        "implant_E_unit": "GPa",
+        "bone_material": "cortical+trabecular",
+        "bone_E_cortical": 18,
+        "bone_E_trabecular": 2,
+        "bone_E_unit": "GPa",
+        "bone_density_source": "PF MS-27 Step 3",
+        "loading": "walking_cycle_3x_body_weight",
+        "body_weight": 750,
+        "body_weight_unit": "N",
+        "porous_implant_design": true,
+        "porosity_range": [0.4, 0.7]
+      },
+      "output": {
+        "stress_distribution": "stress.vtk",
+        "stress_shielding_ratio": 0.68,
+        "shielding_ratio_unit": "dimensionless",
+        "implant_effective_E": 45,
+        "effective_E_unit": "GPa",
+        "bone_stress_reduction": 32,
+        "stress_reduction_unit": "percent",
+        "micromotion_at_interface": 28,
+        "micromotion_unit": "um",
+        "fatigue_life_implant": 1e7,
+        "fatigue_life_unit": "cycles",
+        "optimal_porosity": 0.55,
+        "optimal_pore_size": 400,
+        "pore_size_unit": "um",
+        "stress_shielding_map": "shielding_map.vtk"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "linear_elastic_with_density_dependent_E",
+        "bone_E_relation": "E=1904*rho^2.17 (MPa)",
+        "implant_E_relation": "E=E0*(1-p)^n, n=2.5",
+        "boundary_condition": "distal_femur_fixed",
+        "loading_conditions": [
+          {"name": "stance_phase", "load": 2250, "load_unit": "N", "angle": 12},
+          {"name": "swing_phase", "load": 750, "load_unit": "N", "angle": 0}
+        ],
+        "contact_algorithm": "penalty",
+        "friction_coefficient": 0.3,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 1000,
+        "topology_optimization": true,
+        "optimization_method": "SIMP",
+        "volume_fraction_constraint": 0.55
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE stress shielding analysis and implant optimization validation against Wolff's law and clinical data",
+        "data_transferred": [
+          "stress_shielding_ratio",
+          "implant_effective_E",
+          "bone_stress_reduction",
+          "micromotion_at_interface",
+          "optimal_porosity"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.biomaterials.2019.01.015",
+    "authors": "Li X, Wang X, Zhang H, Chen L",
+    "year": 2019,
+    "journal": "Biomaterials"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "TiO2 formation energy",
+        "value": -9.82,
+        "unit": "eV/TiO2",
+        "tolerance": 10
+      },
+      {
+        "name": "Fibronectin adsorption energy",
+        "value": -42.5,
+        "unit": "kcal/mol",
+        "tolerance": 20
+      },
+      {
+        "name": "Bone-implant contact ratio",
+        "value": 0.72,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "Stress shielding ratio",
+        "value": 0.68,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "Optimal implant porosity",
+        "value": 0.55,
+        "unit": "dimensionless",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

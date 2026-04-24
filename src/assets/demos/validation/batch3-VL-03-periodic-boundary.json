@@ -1,0 +1,114 @@
+{
+  "id": "VL-03",
+  "name": "周期边界条件",
+  "nameEn": "Periodic Boundary Conditions",
+  "description": "验证周期边界条件在含孔平板单胞中的正确实现。建立含圆孔(r=0.01m)的方形单胞(0.05m×0.05m×0.005m)，施加单轴应变ε_x=0.001。对比3×3阵列全模型与单胞周期边界条件模型的应力场分布，验证应力集中因子Kt=3.0的解析解。同时检验周期边界对位移连续性和应力均匀性的约束效果。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["periodic_bc", "stress_concentration", "unit_cell", "homogenization"],
+  "validation_type": "boundary_condition",
+  "test_config": {
+    "baseline": {
+      "description": "3×3阵列全模型，含9个圆孔，施加远场均匀应变",
+      "bc_type": "uniform_strain_full_array",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 40
+    },
+    "variants": [
+      {
+        "description": "单胞周期边界条件模型，对边位移耦合",
+        "bc_type": "periodic_unit_cell",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 40
+      }
+    ],
+    "comparison_metrics": ["max_stress", "stress_concentration_factor", "displacement_field", "effective_modulus"]
+  },
+  "geometry": {
+    "type": "plate",
+    "length": 0.15,
+    "width": 0.15,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 2,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 200000,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 1.5e-4,
+    "max_stress": 600000000,
+    "formula": "Applied strain ε_x = 0.001; nominal stress σ_0 = E·ε_x = 200 MPa; Kt = 3.0 for circular hole in infinite plate (Kirsch solution); σ_max = Kt·σ_0 = 600 MPa; hole radius r=0.01m, cell size a=0.05m, r/a=0.2",
+    "reference": "Kirsch, G. Die Theorie der Elastizitaet und die Beduerfnisse der Festigkeitslehre (1898); Nemat-Nasser, S. Micromechanics"
+  },
+  "acceptance": {
+    "displacement_error_limit": 3.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Stress concentration factor Kt (full array)",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Stress concentration factor Kt (periodic BC)",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Max von Mises stress at hole edge",
+        "value": 600000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Applied nominal stress σ_0",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Kt ratio (periodic/full array)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Effective elastic modulus ratio (periodic/E)",
+        "value": 0.725,
+        "unit": "",
+        "tolerance": 3.0
+      }
+    ]
+  }
+}

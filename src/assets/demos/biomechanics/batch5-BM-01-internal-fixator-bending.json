@@ -1,0 +1,75 @@
+{
+  "id": "BM-01",
+  "name": "骨科内固定器弯曲",
+  "nameEn": "Internal Fixator Bending",
+  "description": "钛合金骨板三点弯曲分析。骨板长度L=0.1m，宽度b=0.012m，厚度h=0.004m，材料为Ti-6Al-4V（E=110GPa，ν=0.33，ρ=4430kg/m³，σ_y=880MPa，σ_u=950MPa）。三点弯曲加载F=500N，跨度L_s=0.08m。验证钛合金骨板挠度并与不锈钢骨板（E=200GPa）对比。截面惯性矩I=bh³/12=6.4e-10m⁴，截面模量Z=bh²/6=3.2e-8m³。理论最大挠度δ=FL³/(48EI)=500×0.08³/(48×110e9×6.4e-10)=1.89e-4m，理论最大应力σ=FL/(4Z)=500×0.08/(4×3.2e-8)=312.5MPa。",
+  "category": "biomechanics",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["orthopedic", "bone plate", "3-point bending", "titanium", "deflection"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.1,
+    "width": 0.012,
+    "height": 0.004,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 6,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_support_left, bottom_support_right",
+    "load_type": "point",
+    "load_face": "top_center",
+    "load_magnitude": 500,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 1.89e-4,
+    "max_stress": 312500000,
+    "formula": "δ = FL³/(48EI), σ = FL/(4Z)",
+    "reference": "Timoshenko, Strength of Materials, Part I"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大挠度",
+        "value": 1.89e-4,
+        "unit": "m",
+        "tolerance": 10
+      },
+      {
+        "name": "最大应力",
+        "value": 312500000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "不锈钢骨板挠度比",
+        "value": 0.55,
+        "unit": "ratio",
+        "tolerance": 5
+      }
+    ]
+  }
+}

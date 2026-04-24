@@ -1,0 +1,261 @@
+{
+  "id": "MS-13",
+  "name": "高分子链节Rouse模型",
+  "nameEn": "Polymer Chain Rouse Model",
+  "description": "从DFT计算聚乙烯(PE)链的C-C键能出发，建立珠簧模型分子动力学模拟，通过Rouse模型预测高分子链的松弛时间τ_R=ζN²b²/(3π²kBT)。进一步将微观松弛行为映射到连续介质粘弹性本构模型，计算储能模量G'(ω)和损耗模量G''(ω)的频率依赖性。该案例展示从量子化学键能到宏观粘弹性响应的完整跨尺度预测链路。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["polyethylene", "Rouse model", "bead-spring", "viscoelasticity", "relaxation time", "storage modulus", "loss modulus"],
+  "scales": ["dft", "md", "fe"],
+  "material_system": "PE (C2H4)n",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "PE链C-C键能计算",
+      "description": "使用DFT计算聚乙烯单体和二聚体的总能量，提取C-C键能和键长，为珠簧模型提供参数",
+      "input": {
+        "molecule_type": "polyethylene_oligomer",
+        "monomer_formula": "C2H4",
+        "dimer_formula": "C4H8",
+        "conformation": "all_trans",
+        "calculation_types": ["monomer_optimization", "dimer_optimization", "torsion_scan"]
+      },
+      "output": {
+        "cc_bond_energy": 3.65,
+        "cc_bond_energy_unit": "eV",
+        "cc_bond_length": 1.534,
+        "cc_bond_length_unit": "Angstrom",
+        "cc_c_angle": 112.1,
+        "cc_c_angle_unit": "degree",
+        "torsion_barrier_trans_gauche": 0.12,
+        "torsion_barrier_unit": "eV",
+        "k_bond": 3.02e2,
+        "k_bond_unit": "N/m",
+        "k_angle": 5.44e-1,
+        "k_angle_unit": "N*m/rad^2",
+        "lennard_jones_sigma_CH2": 3.95,
+        "lennard_jones_sigma_unit": "Angstrom",
+        "lennard_jones_epsilon_CH2": 0.049,
+        "lennard_jones_epsilon_unit": "eV",
+        "monomer_energy": -40.52,
+        "monomer_energy_unit": "eV",
+        "dimer_energy": -84.37,
+        "dimer_energy_unit": "eV"
+      },
+      "parameters": {
+        "k_points": "Gamma_only",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_C_H",
+        "xc_functional": "PBE",
+        "vdw_correction": "DFT-D3",
+        "smearing": "Gaussian",
+        "smearing_width": 0.01,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "cell_type": "cubic_vacuum",
+        "vacuum_padding": 15,
+        "vacuum_padding_unit": "Angstrom",
+        "torsion_scan_points": 36,
+        "torsion_scan_range": [0, 360],
+        "torsion_scan_range_unit": "degree"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT bond/angle/torsion parameters to coarse-grained bead-spring model",
+        "data_transferred": [
+          "cc_bond_energy",
+          "cc_bond_length",
+          "k_bond",
+          "k_angle",
+          "torsion_barrier",
+          "lennard_jones_sigma_epsilon"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "PE珠簧模型Rouse动力学模拟",
+      "description": "使用DFT参数化的珠簧模型模拟PE链的Rouse动力学，计算均方位移、末端距和应力弛豫函数，提取Rouse松弛时间",
+      "input": {
+        "model_type": "bead_spring",
+        "bead_type": "united_atom_CH2",
+        "chain_length_N": 100,
+        "number_of_chains": 50,
+        "total_beads": 5000,
+        "box_size": {
+          "Lx": 15,
+          "Ly": 15,
+          "Lz": 15,
+          "unit": "nm"
+        },
+        "bond_parameters": {
+          "k_bond": 3.02e2,
+          "k_bond_unit": "N/m",
+          "r0": 0.154,
+          "r0_unit": "nm"
+        },
+        "friction_coefficient_zeta": 7.5e-12,
+        "friction_coefficient_unit": "kg/s",
+        "temperature": 450,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "mean_square_displacement": "MSD_vs_time.dat",
+        "end_to_end_distance_R2": 15.4,
+        "end_to_end_distance_unit": "nm^2",
+        "radius_of_gyration_Rg2": 2.56,
+        "radius_of_gyration_unit": "nm^2",
+        "rouse_relaxation_time": 2.8e-7,
+        "rouse_relaxation_time_unit": "s",
+        "stress_relaxation_function": "G_t_vs_t.dat",
+        "diffusion_coefficient": 1.2e-11,
+        "diffusion_coefficient_unit": "m^2/s",
+        "normal_mode_amplitudes": "normal_modes.dat",
+        "rouse_time_theory": 3.1e-7,
+        "rouse_time_theory_unit": "s"
+      },
+      "parameters": {
+        "potential": "FENE_bond + WCA_nonbonded",
+        "fene_max_extension": 1.5,
+        "fene_max_extension_unit": "nm",
+        "timestep": 5.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Langevin",
+        "langevin_gamma": 1.0,
+        "langevin_gamma_unit": "ps^-1",
+        "target_temperature": 450,
+        "target_temperature_unit": "K",
+        "equilibration_steps": 2000000,
+        "production_steps": 10000000,
+        "dump_interval": 5000,
+        "cutoff_radius": 1.2,
+        "cutoff_radius_unit": "nm",
+        "neighbor_list": "cell_list",
+        "periodic_boundary": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Rouse relaxation spectrum to generalized Maxwell viscoelastic model",
+        "data_transferred": [
+          "rouse_relaxation_time",
+          "stress_relaxation_function",
+          "plateau_modulus",
+          "diffusion_coefficient",
+          "normal_mode_spectra"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "粘弹性连续介质有限元分析",
+      "description": "基于MD得到的Rouse松弛谱构建广义Maxwell粘弹性本构模型，计算储能模量G'(ω)和损耗模量G''(ω)的频率依赖性",
+      "input": {
+        "specimen_geometry": {
+          "type": "rectangular",
+          "length": 20,
+          "width": 5,
+          "height": 2,
+          "unit": "mm"
+        },
+        "viscoelastic_model": {
+          "type": "generalized_maxwell",
+          "number_of_branches": 5,
+          "relaxation_times_source": "MD Rouse spectrum MS-13 Step 2",
+          "relaxation_times": [1e-9, 1e-8, 1e-7, 1e-6, 1e-5],
+          "relaxation_times_unit": "s",
+          "equilibrium_modulus": 0.5,
+          "equilibrium_modulus_unit": "MPa"
+        },
+        "loading": {
+          "type": "oscillatory_shear",
+          "frequency_range": [0.01, 100],
+          "frequency_unit": "Hz",
+          "strain_amplitude": 0.01
+        },
+        "density": 950,
+        "density_unit": "kg/m^3"
+      },
+      "output": {
+        "storage_modulus_G_prime": "G_prime_vs_freq.dat",
+        "loss_modulus_G_double_prime": "G_double_prime_vs_freq.dat",
+        "tan_delta": "tan_delta_vs_freq.dat",
+        "crossover_frequency": 12.5,
+        "crossover_frequency_unit": "Hz",
+        "G_prime_at_1Hz": 3.2,
+        "G_double_prime_at_1Hz": 2.8,
+        "modulus_unit": "MPa",
+        "glass_transition_frequency": 50,
+        "glass_transition_frequency_unit": "Hz",
+        "stress_response_time_history": "stress_history.dat",
+        "loss_tangent_max": 1.15
+      },
+      "parameters": {
+        "element_type": "C3D8H",
+        "mesh_density": "40x10x4",
+        "boundary_condition": "bottom_fixed_top_oscillatory_displacement",
+        "solver_type": "steady_state_dynamics_direct",
+        "material_model": "linear_viscoelastic_generalized_maxwell",
+        "prony_series_terms": 5,
+        "frequency_points": 50,
+        "damping_factor": 0.02,
+        "geometric_nonlinearity": false,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE viscoelastic response comparison with experimental DMA data",
+        "data_transferred": [
+          "storage_modulus_spectrum",
+          "loss_modulus_spectrum",
+          "tan_delta_curve",
+          "crossover_frequency"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1063/1.1724352",
+    "authors": "Rouse PE Jr",
+    "year": 1953,
+    "journal": "Journal of Chemical Physics"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "C-C bond length",
+        "value": 1.534,
+        "unit": "Angstrom",
+        "tolerance": 2
+      },
+      {
+        "name": "C-C bond energy",
+        "value": 3.65,
+        "unit": "eV",
+        "tolerance": 5
+      },
+      {
+        "name": "Rouse relaxation time",
+        "value": 2.8e-7,
+        "unit": "s",
+        "tolerance": 20
+      },
+      {
+        "name": "Storage modulus G' at 1 Hz",
+        "value": 3.2,
+        "unit": "MPa",
+        "tolerance": 25
+      },
+      {
+        "name": "Loss tangent maximum",
+        "value": 1.15,
+        "unit": "dimensionless",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

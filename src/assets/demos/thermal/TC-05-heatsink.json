@@ -1,0 +1,103 @@
+{
+  "id": "TC-05",
+  "name": "电子散热器热分析",
+  "nameEn": "Electronic Heatsink Thermal Analysis",
+  "description": "铝制电子散热器，底座尺寸0.1m×0.1m×0.005m，上面布置10个散热翅片，每个翅片尺寸0.05m(高)×0.1m(长)×0.002m(厚)。翅片间距8mm。材料为铝合金6063，导热系数k=200W/(m·K)。底面中心施加50W热源，所有暴露表面自然对流散热，h=10W/(m²·K)，环境温度300K。翅片总散热面积(含底座底面以外)约A_total=10×2×0.05×0.1+0.1×0.1=0.11m²。热阻R=1/(h·A_eff)≈0.91K/W(考虑翅片效率η≈0.95)。稳态温升ΔT=Q·R≈50×0.91=45.5K，热源处最高温度约345.5K。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["heatsink", "natural_convection", "fin_efficiency", "electronics_cooling", "aluminum"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.055,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 10,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Aluminum 6063-T5",
+    "elastic_modulus": 68900000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "yield_stress": 145000000,
+    "thermal_expansion": 23.4e-6,
+    "thermal_conductivity": 200,
+    "specific_heat": 900
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "base_bottom_center",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 500000,
+      "convection_coeff": 10,
+      "heat_source": 5000000
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-6,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 345.5,
+    "formula": "R_total = 1/(h·η·A_fin + h·A_base); ΔT = Q·R_total; η_fin = tanh(mL)/(mL), m=sqrt(2h/(k·t))",
+    "reference": "Kraus, Bar-Cohen, Thermal Analysis and Control of Electronic Equipment, Ch.2 - Heat Sinks"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_temperature",
+        "value": 345.5,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_resistance",
+        "value": 0.91,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "fin_efficiency",
+        "value": 0.95,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "total_heat_input",
+        "value": 50,
+        "unit": "W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "base_to_fin_tip_temperature_drop",
+        "value": 2.5,
+        "unit": "K",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

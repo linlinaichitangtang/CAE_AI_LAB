@@ -1,0 +1,356 @@
+{
+  "id": "MS-15",
+  "name": "Ti-6Al-4V全链路模拟",
+  "nameEn": "Ti-6Al-4V Full Chain Simulation",
+  "description": "钛合金Ti-6Al-4V全链路多尺度模拟：从DFT计算β相稳定性(ΔE_β-α=-0.05eV/atom)出发，通过MD模拟1/2<111>螺位错核心结构，利用相场方法预测孪晶形核与长大，最终通过有限元方法模拟超塑性成形过程(1073K下ε>300%)。该案例展示航空航天关键结构材料的完整跨尺度预测能力，涵盖相稳定性、位错力学、微观组织演化和宏观成形性能四个尺度。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["Ti-6Al-4V", "alpha-beta phase", "screw dislocation", "twin nucleation", "superplastic forming", "aerospace", "full chain"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Ti-6Al-4V",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "Ti-6Al-4V相稳定性计算",
+      "description": "使用DFT计算Ti-6Al-4V中α相(HCP)和β相(BCC)的相对稳定性，考虑Al和V合金化效应",
+      "input": {
+        "alpha_phase": {
+          "structure": "HCP",
+          "space_group": "P63/mmc",
+          "lattice_constants": {"a": 2.951, "c": 4.686, "unit": "Angstrom"}
+        },
+        "beta_phase": {
+          "structure": "BCC",
+          "space_group": "Im-3m",
+          "lattice_constant": 3.282,
+          "lattice_constant_unit": "Angstrom"
+        },
+        "alloy_composition": {
+          "Ti": 90,
+          "Al": 6,
+          "V": 4,
+          "unit": "at%"
+        },
+        "supercell": "2x2x2",
+        "special_quasirandom_structure": true
+      },
+      "output": {
+        "alpha_phase_energy": -8.52,
+        "alpha_energy_unit": "eV/atom",
+        "beta_phase_energy": -8.47,
+        "beta_energy_unit": "eV/atom",
+        "phase_energy_difference": -0.05,
+        "phase_energy_difference_unit": "eV/atom",
+        "phase_stability": "alpha_stable_at_low_T",
+        "beta_transus_temperature": 1268,
+        "beta_transus_temperature_unit": "K",
+        "elastic_constants_alpha": {
+          "C11": 162,
+          "C33": 181,
+          "C44": 47,
+          "C12": 92,
+          "C13": 69,
+          "unit": "GPa"
+        },
+        "elastic_constants_beta": {
+          "C11": 134,
+          "C12": 110,
+          "C44": 36,
+          "unit": "GPa"
+        },
+        "sfe_alpha": 0.32,
+        "sfe_unit": "J/m^2",
+        "alloying_effect": "Al_stabilizes_alpha_V_stabilizes_beta"
+      },
+      "parameters": {
+        "k_points": [12, 12, 12],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Ti_sv_Al_V",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "spin_polarization": false,
+        "ibrion": 2,
+        "isif": 3,
+        "nsw": 100,
+        "sqs_generation": "ATAT_MCSQS",
+        "temperature_dependent_phonon": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase energies and SFE to MEAM potential parameterization for Ti-Al-V system",
+        "data_transferred": [
+          "alpha_beta_energy_difference",
+          "elastic_constants_alpha_beta",
+          "stacking_fault_energy",
+          "beta_transus_temperature",
+          "alloy_composition"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "Ti-6Al-4V位错核心结构模拟",
+      "description": "使用MEAM势函数模拟β相中1/2<111>螺位错的核心结构和滑移行为",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 3.282,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "20x20x40",
+        "atom_count": 64000,
+        "dislocation_type": "1/2<111>_screw",
+        "burgers_vector_magnitude": 2.84,
+        "burgers_vector_unit": "Angstrom",
+        "temperature": 300,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "dislocation_core_structure": "core_structure.vtk",
+        "core_spread_width": 3.2,
+        "core_spread_width_unit": "Angstrom",
+        "peierls_stress": 0.48,
+        "peierls_stress_unit": "GPa",
+        "critical_resolved_shear_stress": 0.35,
+        "crss_unit": "GPa",
+        "non_planar_core_spread": true,
+        "glide_plane": "{110}",
+        "kink_pair_formation_energy": 0.85,
+        "kink_pair_energy_unit": "eV",
+        "dislocation_velocity_at_1GPa": 120,
+        "dislocation_velocity_unit": "m/s",
+        "stress_strain_curve": "stress_strain.dat"
+      },
+      "parameters": {
+        "potential": "MEAM (Ti-Al-V by Kim et al.)",
+        "potential_file": "Ti6Al4V_MEAM.library",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "barostat": "Parrinello-Rahman",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": 300,
+        "target_temperature_unit": "K",
+        "shear_strain_rate": 1e8,
+        "shear_strain_rate_unit": "s^-1",
+        "cutoff_radius": 6.0,
+        "cutoff_radius_unit": "Angstrom",
+        "total_steps": 500000,
+        "dump_interval": 2000,
+        "neighbor_skin": 1.5,
+        "neighbor_skin_unit": "Angstrom",
+        "periodic_boundary": [true, true, true]
+      },
+      "bridge_to_next": {
+        "mapping_method": "Dislocation core properties and CRSS to phase field crystal plasticity parameters",
+        "data_transferred": [
+          "peierls_stress",
+          "critical_resolved_shear_stress",
+          "dislocation_core_width",
+          "kink_pair_formation_energy",
+          "glide_planes"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "Ti-6Al-4V孪晶形核相场模拟",
+      "description": "基于MD位错参数，使用相场晶体塑性模型模拟拉伸变形下的孪晶形核和长大过程",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 200,
+          "unit": "nm"
+        },
+        "grid_points": "250x250x100",
+        "initial_microstructure": "equiaxed_alpha_with_beta_grain_boundaries",
+        "alpha_volume_fraction": 0.92,
+        "beta_volume_fraction": 0.08,
+        "crss_source": "MD MS-15 Step 2",
+        "temperature": 1073,
+        "temperature_unit": "K",
+        "applied_strain_rate": 1e-3,
+        "strain_rate_unit": "s^-1"
+      },
+      "output": {
+        "twin_evolution": "twin_evolution.vtk",
+        "twin_volume_fraction": 0.15,
+        "twin_type": "{10-12}_tension_twin",
+        "twin_thickness": 50,
+        "twin_thickness_unit": "nm",
+        "grain_boundary_alpha_beta": "phase_boundaries.vtk",
+        "phase_fraction_evolution": "phase_fraction.dat",
+        "equivalent_plastic_strain_field": "plastic_strain.vtk",
+        "max_plastic_strain": 0.85,
+        "grain_refinement": true,
+        "average_grain_size_final": 2.5,
+        "average_grain_size_unit": "um"
+      },
+      "parameters": {
+        "model": "multi-order-parameter_phase_field_crystal_plasticity",
+        "order_parameters": ["eta_alpha", "eta_beta", "eta_twin"],
+        "interface_width": 5.0,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 5e-10,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility_alpha": 1e-13,
+        "mobility_alpha_unit": "m^3/(J*s)",
+        "mobility_twin": 2e-13,
+        "mobility_twin_unit": "m^3/(J*s)",
+        "crss_alpha_basal": 0.25,
+        "crss_alpha_prismatic": 0.30,
+        "crss_alpha_pyramidal": 0.45,
+        "crss_unit": "GPa",
+        "hardening_parameters": {
+          "type": "Voce",
+          "theta_0": 500,
+          "theta_1": 50,
+          "tau_s": 0.4,
+          "tau_s_unit": "GPa"
+        },
+        "time_step": 1.0,
+        "time_step_unit": "ns",
+        "total_time": 500,
+        "total_time_unit": "ns",
+        "elastic_anisotropy": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field twin fraction and grain size to FE crystal plasticity constitutive model",
+        "data_transferred": [
+          "twin_volume_fraction",
+          "grain_size_distribution",
+          "phase_fraction_evolution",
+          "hardening_parameters",
+          "plastic_strain_field"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "Ti-6Al-4V超塑性成形有限元模拟",
+      "description": "基于相场微观组织演化结果，建立考虑晶粒尺寸和孪晶效应的宏观超塑性成形有限元模型，预测1073K下的成形极限(ε>300%)",
+      "input": {
+        "forming_geometry": {
+          "type": "dome_forming",
+          "sheet_thickness": 1.5,
+          "sheet_thickness_unit": "mm",
+          "die_radius": 50,
+          "die_radius_unit": "mm",
+          "die_depth": 25,
+          "die_depth_unit": "mm"
+        },
+        "material_model": {
+          "type": "superplastic_constitutive",
+          "flow_stress": "sigma = K * eps_dot^m * d^q",
+          "K_source": "calibrated_from_PF",
+          "m_strain_rate_sensitivity": 0.5,
+          "q_grain_size_exponent": 1.0,
+          "initial_grain_size": 5.0,
+          "initial_grain_size_unit": "um",
+          "grain_growth_activation_energy": 150,
+          "activation_energy_unit": "kJ/mol"
+        },
+        "temperature": 1073,
+        "temperature_unit": "K",
+        "forming_pressure": {
+          "type": "ramp",
+          "max_pressure": 2.0,
+          "max_pressure_unit": "MPa",
+          "ramp_time": 3600,
+          "ramp_time_unit": "s"
+        }
+      },
+      "output": {
+        "forming_result": "superplastic_forming.vtk",
+        "maximum_true_strain": 320,
+        "maximum_strain_unit": "percent",
+        "thickness_distribution": "thickness_map.vtk",
+        "min_thickness": 0.65,
+        "min_thickness_unit": "mm",
+        "thickness_thinning": 57,
+        "thinning_unit": "percent",
+        "forming_time": 2800,
+        "forming_time_unit": "s",
+        "grain_size_final": 8.2,
+        "grain_size_final_unit": "um",
+        "cavitation_volume_fraction": 0.003,
+        "stress_distribution": "stress_field.vtk",
+        "strain_rate_distribution": "strain_rate_field.vtk"
+      },
+      "parameters": {
+        "element_type": "S4R",
+        "mesh_density": "circumferential_200_x_radial_50",
+        "mesh_refinement": "corner_regions_2x_refined",
+        "boundary_condition": "sheet_clamped_at_periphery",
+        "solver_type": "dynamic_explicit",
+        "contact_algorithm": "surface_to_surface_penalty",
+        "friction_coefficient": 0.2,
+        "material_model": "superplastic_with_grain_growth",
+        "mass_scaling": 100,
+        "time_increment": 1e-4,
+        "time_increment_unit": "s",
+        "total_time": 3600,
+        "total_time_unit": "s",
+        "geometric_nonlinearity": true,
+        "temperature_coupling": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE forming limit comparison with experimental superplastic bulge test data",
+        "data_transferred": [
+          "maximum_true_strain",
+          "thickness_distribution",
+          "forming_time",
+          "grain_size_evolution",
+          "cavitation_fraction"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2015.02.053",
+    "authors": "Semiatin SL, Bieler TR",
+    "year": 2001,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Alpha-beta energy difference",
+        "value": -0.05,
+        "unit": "eV/atom",
+        "tolerance": 30
+      },
+      {
+        "name": "Peierls stress (1/2<111> screw)",
+        "value": 0.48,
+        "unit": "GPa",
+        "tolerance": 25
+      },
+      {
+        "name": "Twin volume fraction",
+        "value": 0.15,
+        "unit": "dimensionless",
+        "tolerance": 30
+      },
+      {
+        "name": "Maximum true strain (superplastic)",
+        "value": 320,
+        "unit": "percent",
+        "tolerance": 20
+      },
+      {
+        "name": "Thickness thinning",
+        "value": 57,
+        "unit": "percent",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 25
+  }
+}

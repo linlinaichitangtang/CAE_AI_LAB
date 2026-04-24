@@ -1,0 +1,323 @@
+{
+  "id": "MS-21",
+  "name": "位错芯结构 Peierls-Nabarro",
+  "nameEn": "Dislocation Core Structure via Peierls-Nabarro Model",
+  "description": "BCC Fe中1/2<111>螺位错的位错芯结构多尺度分析。首先通过DFT计算γ-surface（广义层错能面），获取{110}和{112}滑移面的层错能曲线；然后基于Peierls-Nabarro半解析模型拟合位错芯宽度ζ和Peierls势垒；接着利用MD原子模拟直接观测非平面芯结构（polarized core）和位错运动机制（kink-pair nucleation）；最后通过连续介质位错理论（Hirth-Lothe）建立宏观位错场。关键验证量包括Peierls应力τ_P≈300MPa、位错芯宽度ζ≈5Å、以及BCC Fe螺位错的非平面芯分裂特征。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["dislocation core", "Peierls-Nabarro", "gamma-surface", "BCC Fe", "screw dislocation", "kink-pair", "Hirth-Lothe", "non-planar core"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "BCC Fe (alpha-iron)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT γ-surface计算",
+      "description": "计算BCC Fe在{110}和{112}滑移面上的广义层错能面(γ-surface)，为Peierls-Nabarro模型提供本征层错能输入",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 2.87,
+        "lattice_constant_unit": "Angstrom",
+        "slip_planes": ["{110}", "{112}"],
+        "burgers_vector": "1/2<111>",
+        "burgers_vector_magnitude": 2.48,
+        "burgers_vector_unit": "Angstrom",
+        "supercell": {
+          "layers": 20,
+          "vacuum": 15,
+          "vacuum_unit": "Angstrom"
+        },
+        "displacement_range": [0, 1],
+        "displacement_unit": "fraction_of_b"
+      },
+      "output": {
+        "gamma_surface_110": "gamma_surface_110.dat",
+        "gamma_surface_112": "gamma_surface_112.dat",
+        "maximum_gamma": 1.72,
+        "maximum_gamma_unit": "J/m^2",
+        "intrinsic_sfe_110": 0.62,
+        "intrinsic_sfe_110_unit": "J/m^2",
+        "unstable_sfe_110": 1.12,
+        "unstable_sfe_110_unit": "J/m^2",
+        "gamma_line_profile": "gamma_line.dat",
+        "stacking_fault_path": "sf_path.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Fe",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": [16, 16, 1],
+        "k_point_type": "Monkhorst-Pack",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 2,
+        "nsw": 0,
+        "dipole_correction": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT γ-surface data fitted to Fourier series for Peierls-Nabarro model input",
+        "data_transferred": [
+          "gamma_line_profile",
+          "maximum_gamma",
+          "unstable_sfe_110",
+          "intrinsic_sfe_110"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD原子级位错芯结构模拟",
+      "description": "利用MD模拟直接观测BCC Fe 1/2<111>螺位错的非平面芯结构、kink-pair形核和位错滑移过程",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 2.87,
+        "lattice_constant_unit": "Angstrom",
+        "simulation_box": {
+          "Lx": 60,
+          "Ly": 60,
+          "Lz": 300,
+          "unit": "Angstrom",
+          "atom_count": 432000
+        },
+        "dislocation_type": "1/2[111]_screw",
+        "burgers_vector": [1, 1, 1],
+        "gamma_surface_source": "DFT MS-21 Step 1",
+        "applied_shear_stress_range": [0, 500],
+        "applied_stress_unit": "MPa",
+        "temperature": 10,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "core_structure": "core_structure.vtk",
+        "differential_displacement_map": "ddm.vtk",
+        "core_width_zeta": 4.8,
+        "core_width_unit": "Angstrom",
+        "non_planar_spread": 2.1,
+        "non_planar_spread_unit": "Angstrom",
+        "peierls_stress": 310,
+        "peierls_stress_unit": "MPa",
+        "kink_pair_energy": 0.87,
+        "kink_pair_energy_unit": "eV",
+        "kink_width": 8.5,
+        "kink_width_unit": "b",
+        "dislocation_velocity_curve": "v_vs_tau.dat",
+        "phonon_drag_velocity": 850,
+        "phonon_drag_velocity_unit": "m/s"
+      },
+      "parameters": {
+        "potential": "EAM (Mendelev Fe-4)",
+        "potential_file": "Fe_EAM_Mendelev4.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "none",
+        "cutoff_radius": 5.5,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_x", "periodic_y", "fixed_z"],
+        "pad_atoms": 5,
+        "pad_atoms_unit": "layers",
+        "total_steps": 500000,
+        "dump_interval": 2000,
+        "stress_application": "incremental_shear",
+        "stress_increment": 10,
+        "stress_increment_unit": "MPa"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD core structure and Peierls stress to phase field dislocation density via coarse-graining of Nye tensor",
+        "data_transferred": [
+          "core_width_zeta",
+          "peierls_stress",
+          "kink_pair_energy",
+          "dislocation_velocity_curve",
+          "core_structure_field"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场位错动力学模拟",
+      "description": "基于相场晶体模型(PFC)或连续位错密度场模型，模拟螺位错的Peierls势垒越障过程和kink-pair形核动力学",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 100,
+          "Lz": 400,
+          "unit": "Angstrom"
+        },
+        "grid_spacing": 1.0,
+        "grid_spacing_unit": "Angstrom",
+        "grid_points": "100x100x400",
+        "initial_dislocation": "1/2[111]_screw_at_center",
+        "peierls_potential_source": "DFT+PN MS-21 Steps 1-2",
+        "peierls_stress": 310,
+        "peierls_stress_unit": "MPa",
+        "core_width": 4.8,
+        "core_width_unit": "Angstrom",
+        "applied_shear_stress": 300,
+        "applied_stress_unit": "MPa",
+        "temperature": 300,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "dislocation_density_field": "alpha_field.vtk",
+        "kink_pair_nucleation_rate": "nucleation_rate.dat",
+        "peierls_barrier_height": 0.87,
+        "peierls_barrier_unit": "eV",
+        "kink_migration_energy": 0.42,
+        "kink_migration_energy_unit": "eV",
+        "dislocation_velocity_pf": 12.5,
+        "dislocation_velocity_unit": "m/s",
+        "stress_strain_curve": "stress_strain.dat",
+        "thermally_activated_peierls_stress": 180,
+        "thermally_activated_stress_unit": "MPa"
+      },
+      "parameters": {
+        "model": "phase_field_crystal_dislocation",
+        "order_parameter": "density_wave_amplitude_psi",
+        "interface_width": 3.0,
+        "interface_width_unit": "Angstrom",
+        "gradient_energy_coefficient": 2e-11,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility": 5e-14,
+        "mobility_unit": "m^4/(J*s)",
+        "elastic_constants": {
+          "C11": 230,
+          "C12": 135,
+          "C44": 117,
+          "unit": "GPa"
+        },
+        "time_step": 0.5,
+        "time_step_unit": "ps",
+        "total_time": 500,
+        "total_time_unit": "ps",
+        "thermal_noise": true,
+        "noise_amplitude": 0.01
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field dislocation density to FE continuum stress field via eigenstrain homogenization",
+        "data_transferred": [
+          "dislocation_density_field",
+          "peierls_barrier_height",
+          "dislocation_velocity_pf",
+          "kink_pair_nucleation_rate"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE连续介质位错场分析",
+      "description": "基于Hirth-Lothe线弹性位错理论，建立BCC Fe螺位错的宏观应力场和应变场，验证多尺度一致性",
+      "input": {
+        "domain_size": {
+          "Lx": 5000,
+          "Ly": 5000,
+          "Lz": 5000,
+          "unit": "Angstrom"
+        },
+        "mesh": "100x100x100",
+        "element_type": "C3D8R",
+        "dislocation_line": "along_[111]_at_center",
+        "burgers_vector": [1, 1, 1],
+        "burgers_vector_magnitude": 2.48,
+        "burgers_vector_unit": "Angstrom",
+        "elastic_constants_source": "DFT",
+        "peierls_stress_source": "MD",
+        "dislocation_density_source": "PF MS-21 Step 3",
+        "applied_shear_stress": 300,
+        "applied_stress_unit": "MPa"
+      },
+      "output": {
+        "stress_field": "stress_FE.vtk",
+        "displacement_field": "displacement_FE.vtk",
+        "strain_energy_density": "strain_energy.vtk",
+        "core_energy_continuum": 1.65,
+        "core_energy_unit": "eV/Angstrom",
+        "stress_at_1b": 12.8,
+        "stress_at_1b_unit": "GPa",
+        "far_field_stress_agreement": 98.5,
+        "far_field_agreement_unit": "percent",
+        "peierls_nabarro_core_width": 5.1,
+        "pn_core_width_unit": "Angstrom",
+        "j_integral": 2.35,
+        "j_integral_unit": "N/m",
+        "dislocation_line_energy": 4.2,
+        "line_energy_unit": "eV/Angstrom"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "anisotropic_linear_elastic",
+        "elastic_constants": {
+          "C11": 230,
+          "C12": 135,
+          "C44": 117,
+          "unit": "GPa"
+        },
+        "boundary_condition": "remote_displacement",
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 500,
+        "geometric_nonlinearity": false,
+        "volterra_dislocation": true,
+        "core_regularization": "isotropic"
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE continuum stress field validation against Hirth-Lothe analytical solution and multiscale consistency check",
+        "data_transferred": [
+          "stress_field",
+          "core_energy_continuum",
+          "far_field_stress_agreement",
+          "dislocation_line_energy"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.78.214104",
+    "authors": "Mendelev MI, Han S, Srolovitz DJ, Ackland GJ, Sun DY, Asta M",
+    "year": 2008,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Peierls stress",
+        "value": 300,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "Dislocation core width zeta",
+        "value": 5.0,
+        "unit": "Angstrom",
+        "tolerance": 20
+      },
+      {
+        "name": "Maximum gamma-surface energy",
+        "value": 1.72,
+        "unit": "J/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "Kink-pair formation energy",
+        "value": 0.87,
+        "unit": "eV",
+        "tolerance": 15
+      },
+      {
+        "name": "Far-field stress agreement with Hirth-Lothe",
+        "value": 98.5,
+        "unit": "percent",
+        "tolerance": 5
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

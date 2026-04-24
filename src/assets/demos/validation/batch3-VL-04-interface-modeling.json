@@ -1,0 +1,126 @@
+{
+  "id": "VL-04",
+  "name": "接触vs绑定vs连续边界",
+  "nameEn": "Contact vs Tied vs Continuous Interface Modeling",
+  "description": "验证不同界面建模方法对接触应力分布的影响。两个钢块(0.05m×0.05m×0.05m)在F=100kN压力下接触，分别采用绑定约束(连续界面)、无摩擦接触和有摩擦接触(μ=0.3)三种模型。对比界面处的应力分布、接触压力和相对滑移量，验证接触算法的正确性和不同界面模型之间的力学行为差异。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["contact", "tied_interface", "friction", "interface_modeling", "nonlinear"],
+  "validation_type": "boundary_condition",
+  "test_config": {
+    "baseline": {
+      "description": "绑定约束模型，两块完全连续，等效单块压缩",
+      "bc_type": "tied_continuous",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "无摩擦接触模型，界面法向分离但切向自由滑动",
+        "bc_type": "frictionless_contact",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "有摩擦接触模型，μ=0.3，界面存在切向摩擦力",
+        "bc_type": "frictional_contact",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["max_stress", "contact_pressure", "interface_slip", "discontinuity_at_interface"]
+  },
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 20,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "z_min",
+    "load_type": "uniform",
+    "load_face": "z_max",
+    "load_magnitude": 100000,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 5.0e-5,
+    "max_stress": 40000000,
+    "formula": "Contact area A = 0.05×0.05 = 2.5e-3 m²; Nominal pressure p = F/A = 40 MPa; Tied model: uniform stress σ_z = 40 MPa, σ_x = σ_y = -ν·p = -12 MPa; Contact models: stress concentration at edges, Hertzian-like distribution; Friction model: τ = μ·p = 12 MPa at interface",
+    "reference": "Johnson, K.L. Contact Mechanics (1985); Wriggers, P. Computational Contact Mechanics"
+  },
+  "acceptance": {
+    "displacement_error_limit": 3.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Tied model max compressive stress",
+        "value": 40000000,
+        "unit": "Pa",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Tied model interface continuity (stress jump ratio)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Frictionless contact max contact pressure",
+        "value": 48000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Frictionless contact edge stress concentration factor",
+        "value": 1.2,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Frictional contact interface shear stress",
+        "value": 12000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Frictional contact max tangential slip",
+        "value": 1.5e-5,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Total compression displacement",
+        "value": 5.0e-5,
+        "unit": "m",
+        "tolerance": 3.0
+      }
+    ]
+  }
+}

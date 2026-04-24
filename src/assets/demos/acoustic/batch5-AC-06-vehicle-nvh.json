@@ -1,0 +1,94 @@
+{
+  "id": "AC-06",
+  "name": "车内NVH分析",
+  "nameEn": "Vehicle Interior NVH Analysis",
+  "description": "汽车车身面板在发动机怠速激励下的NVH（噪声、振动与声振粗糙度）分析。车身钢板面板1m×0.8m×0.8mm，发动机怠速激励频率为25Hz、50Hz、75Hz（对应四缸发动机半阶、一阶、1.5阶）。通过模态分析确定面板固有频率，确保其避开发动机主阶次，并通过声学响应分析预测车内噪声水平。",
+  "category": "acoustic",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["NVH", "vehicle", "body-panel", "engine-idle", "modal-analysis", "acoustic-response"],
+  "geometry": {
+    "type": "plate",
+    "length": 1.0,
+    "width": 0.8,
+    "height": 0.0008,
+    "radius": null,
+    "thickness": 0.0008,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 32,
+    "z_div": 2,
+    "element_type": "S4R"
+  },
+  "material": {
+    "name": "Automotive Steel Sheet",
+    "elastic_modulus": 2.1e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 1.8e8,
+    "speed_of_sound": 5900,
+    "bulk_modulus": 1.75e11
+  },
+  "boundaryConditions": {
+    "fixed_face": "panel_edges_welded",
+    "load_type": "harmonic",
+    "load_face": "panel_surface",
+    "load_magnitude": 50,
+    "load_direction": "Z",
+    "frequency_hz": 50,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "harmonic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [10, 500]
+  },
+  "theoretical": {
+    "max_displacement": 3.5e-5,
+    "max_stress": 8.0e6,
+    "natural_frequency": 50,
+    "formula": "f_mn = (pi/2) * sqrt(D/(rho*h)) * ((m/a)^2 + (n/b)^2), D = Eh^3/(12(1-nu^2))",
+    "reference": "Norton, Fundamentals of Noise and Vibration Analysis for Engineers, Ch.12"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "first_panel_natural_frequency",
+        "value": 42,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "second_panel_natural_frequency",
+        "value": 68,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "max_displacement_at_50Hz",
+        "value": 3.5e-5,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "interior_SPL_at_driver_ear",
+        "value": 55,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "vibration_velocity_level",
+        "value": 95,
+        "unit": "dB",
+        "tolerance": 5
+      }
+    ]
+  }
+}

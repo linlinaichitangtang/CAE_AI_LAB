@@ -1,0 +1,121 @@
+{
+  "id": "TC-17",
+  "name": "涡轮叶片冷却",
+  "nameEn": "Turbine Blade Internal Cooling Analysis",
+  "description": "航空发动机涡轮叶片冷却结构热分析。叶片材料为Inconel 718镍基高温合金，工作环境：燃气温度T_gas=1600K，冷却剂温度T_coolant=800K。叶片采用气膜冷却+内部冲击冷却复合方案，气膜孔直径d=0.5mm。材料物性：导热系数k=11.4W/(m·K)，密度ρ=8190kg/m³，比热容c_p=435J/(kg·K)，热膨胀系数α=13×10⁻⁶/K，弹性模量E=200GPa。综合冷却效率η=(T_gas-T_surface)/(T_gas-T_coolant)≈0.5，叶片表面最高温度T_surface=T_gas-η(T_gas-T_coolant)=1600-0.5×800=1200K。外部对流换热系数h_gas≈2000W/(m²·K)，内部对流换热系数h_cool≈5000W/(m²·K)。该案例用于验证复杂冷却结构的热分析能力。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["turbine_blade", "film_cooling", "Inconel_718", "gas_turbine", "cooling_effectiveness", "superalloy"],
+  "geometry": {
+    "type": "block",
+    "length": 0.06,
+    "width": 0.03,
+    "height": 0.005,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 15,
+    "z_div": 8,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Inconel 718 Superalloy",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 8190,
+    "yield_stress": 1034000000,
+    "thermal_expansion": 13e-6,
+    "thermal_conductivity": 11.4,
+    "specific_heat": 435
+  },
+  "boundaryConditions": {
+    "fixed_face": "root_face",
+    "load_type": "convection",
+    "load_face": "outer_surface",
+    "load_magnitude": 2000,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 800,
+      "T_boundary": null,
+      "T_ambient": 1600,
+      "heat_flux": 0,
+      "convection_coeff": 2000,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.1,
+    "total_time": 10
+  },
+  "theoretical": {
+    "max_displacement": 0.00052,
+    "max_stress": 650000000,
+    "max_temperature": 1200,
+    "formula": "eta = (T_gas - T_surface) / (T_gas - T_coolant); T_surface = T_gas - eta*(T_gas - T_coolant); q = h_gas*(T_gas - T_surface)",
+    "reference": "Han, Gas Turbine Heat Transfer and Cooling Technology, Ch.5 - Turbine Blade Cooling"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 20.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "cooling_effectiveness",
+        "value": 0.5,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "blade_surface_max_temperature",
+        "value": 1200,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "gas_temperature",
+        "value": 1600,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "coolant_temperature",
+        "value": 800,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "external_heat_transfer_coeff",
+        "value": 2000,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "max_thermal_stress",
+        "value": 650000000,
+        "unit": "Pa",
+        "tolerance": 20.0
+      },
+      {
+        "name": "film_hole_diameter",
+        "value": 0.0005,
+        "unit": "m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "heat_flux_into_blade",
+        "value": 800000,
+        "unit": "W/m^2",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

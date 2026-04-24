@@ -1,0 +1,325 @@
+{
+  "id": "MS-23",
+  "name": "裂纹尖端塑性区 HRR场",
+  "nameEn": "Crack Tip Plastic Zone HRR Field",
+  "description": "钢材裂纹尖端塑性区的多尺度断裂力学分析。材料参数：屈服强度σ_y=500MPa，断裂韧性K_IC=100MPa√m。DFT计算断裂表面能γ_s，为Griffith断裂判据提供参数；MD在原子尺度模拟裂纹尖端分解、位错发射和原子级断裂过程；相场模型基于HRR(Hutchinson-Rice-Rosengren)奇异场描述裂纹尖端塑性区的弹塑性场；FE计算J积分并验证塑性区尺寸r_p=(1/6π)(K/σ_y)²。该案例建立了从原子断裂到宏观断裂力学的完整多尺度断裂分析框架。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 5,
+  "tags": ["crack tip", "plastic zone", "HRR field", "J-integral", "fracture toughness", "dislocation emission", "Griffith criterion", "steel"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Structural steel (σ_y=500MPa, K_IC=100MPa√m)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT断裂表面能计算",
+      "description": "计算钢材主要解理面{100}和{110}的断裂表面能γ_s，为Griffith断裂判据和MD模拟提供参数",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 2.87,
+        "lattice_constant_unit": "Angstrom",
+        "cleavage_planes": ["{100}", "{110}"],
+        "supercell": {
+          "layers": 16,
+          "vacuum": 15,
+          "vacuum_unit": "Angstrom"
+        },
+        "composition": "Fe-0.2C (dilute)"
+      },
+      "output": {
+        "surface_energy_100": 2.41,
+        "surface_energy_100_unit": "J/m^2",
+        "surface_energy_110": 1.72,
+        "surface_energy_110_unit": "J/m^2",
+        "griffith_toughness": 3.2,
+        "griffith_toughness_unit": "MPa*sqrt(m)",
+        "ideal_tensile_strength": 28.5,
+        "ideal_tensile_unit": "GPa",
+        "work_of_separation": 4.82,
+        "work_of_separation_unit": "J/m^2",
+        "charge_density_difference": "delta_rho.dat",
+        "surface_relaxation": "relaxation.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Fe",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": [16, 16, 1],
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 3,
+        "nsw": 100,
+        "dipole_correction": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT surface energy and work of separation to MD cohesive zone model parameters",
+        "data_transferred": [
+          "surface_energy_100",
+          "surface_energy_110",
+          "work_of_separation",
+          "ideal_tensile_strength"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD裂纹尖端原子模拟",
+      "description": "在原子尺度模拟裂纹尖端的位错发射、裂纹扩展和塑性区形成过程",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 2.87,
+        "lattice_constant_unit": "Angstrom",
+        "simulation_box": {
+          "Lx": 200,
+          "Ly": 400,
+          "Lz": 10,
+          "unit": "Angstrom",
+          "atom_count": 1200000
+        },
+        "crack_orientation": {
+          "crack_plane": "(100)",
+          "crack_front": "[001]",
+          "crack_direction": "[010]"
+        },
+        "initial_crack_length": 60,
+        "initial_crack_length_unit": "Angstrom",
+        "surface_energy_source": "DFT MS-23 Step 1",
+        "work_of_separation": 4.82,
+        "work_of_separation_unit": "J/m^2",
+        "loading": "mode_I_displacement",
+        "temperature": 300,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "crack_tip_atomistic": "crack_tip.vtk",
+        "dislocation_emission_events": "dislocation_events.dat",
+        "crack_tip_opening_displacement": 8.5,
+        "ctod_unit": "Angstrom",
+        "critical_stress_intensity_MD": 4.8,
+        "critical_K_unit": "MPa*sqrt(m)",
+        "plastic_zone_atoms": "plastic_zone.vtk",
+        "plastic_zone_size_MD": 35,
+        "plastic_zone_unit": "Angstrom",
+        "dislocation_density_near_tip": 2.5e15,
+        "dislocation_density_unit": "m^-2",
+        "brittle_ductile_transition_T": 250,
+        "transition_T_unit": "K"
+      },
+      "parameters": {
+        "potential": "EAM (Mendelev Fe-4)",
+        "potential_file": "Fe_EAM_Mendelev4.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVE",
+        "cutoff_radius": 5.5,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_z", "fixed_x_top", "fixed_x_bottom"],
+        "pad_atoms": 5,
+        "pad_atoms_unit": "layers",
+        "total_steps": 500000,
+        "dump_interval": 1000,
+        "strain_rate": 1e8,
+        "strain_rate_unit": "1/s",
+        "loading_mode": "displacement_controlled"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD crack tip process zone and dislocation emission to phase field HRR field via coarse-grained plastic strain",
+        "data_transferred": [
+          "plastic_zone_size_MD",
+          "dislocation_density_near_tip",
+          "critical_stress_intensity_MD",
+          "crack_tip_opening_displacement"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场HRR奇异场模拟",
+      "description": "基于相场断裂模型模拟裂纹尖端HRR弹塑性奇异场，验证塑性区尺寸和应力分布",
+      "input": {
+        "domain_size": {
+          "Lx": 2000,
+          "Ly": 4000,
+          "Lz": 100,
+          "unit": "Angstrom"
+        },
+        "grid_spacing": 5.0,
+        "grid_spacing_unit": "Angstrom",
+        "grid_points": "400x800x20",
+        "crack_length": 500,
+        "crack_length_unit": "Angstrom",
+        "yield_strength": 500,
+        "yield_strength_unit": "MPa",
+        "hardening_exponent_n": 0.2,
+        "youngs_modulus": 210,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.3,
+        "K_IC": 100,
+        "K_IC_unit": "MPa*sqrt(m)",
+        "plastic_zone_source": "MD MS-23 Step 2"
+      },
+      "output": {
+        "HRR_stress_field": "HRR_stress.vtk",
+        "plastic_zone_shape": "plastic_zone.vtk",
+        "plastic_zone_size_rp": 3.18,
+        "plastic_zone_size_unit": "mm",
+        "J_integral_pf": 52.8,
+        "J_integral_unit": "kJ/m^2",
+        "CTOD_pf": 0.85,
+        "CTOD_unit": "mm",
+        "stress_triaxiality": 2.85,
+        "HRR_exponent_validation": 0.198,
+        "crack_tip_blunting_radius": 0.42,
+        "blunting_radius_unit": "mm"
+      },
+      "parameters": {
+        "model": "phase_field_fracture_Miehe",
+        "order_parameter": "crack_phase_field_d",
+        "fracture_energy_Gc": 52.8,
+        "fracture_energy_unit": "kJ/m^2",
+        "length_scale_l": 0.05,
+        "length_scale_unit": "mm",
+        "degradation_function": "quadratic_1-d",
+        "plasticity_coupling": "J2_plasticity",
+        "hardening_law": "power_law",
+        "hardening_exponent": 0.2,
+        "time_step": 0.001,
+        "time_step_unit": "s",
+        "total_time": 1.0,
+        "total_time_unit": "s",
+        "staggered_scheme": true,
+        "max_PF_iterations": 50
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field HRR field and J-integral to FE fracture mechanics validation",
+        "data_transferred": [
+          "plastic_zone_size_rp",
+          "J_integral_pf",
+          "CTOD_pf",
+          "HRR_stress_field",
+          "stress_triaxiality"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE J积分与塑性区验证",
+      "description": "基于有限元方法计算J积分，验证HRR场和塑性区尺寸r_p=(1/6π)(K/σ_y)²的理论预测",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 200,
+          "Lz": 10,
+          "unit": "mm"
+        },
+        "mesh": "CT_specimen_SENB",
+        "element_type": "CPE8R",
+        "crack_length_a": 50,
+        "crack_length_unit": "mm",
+        "specimen_width_W": 100,
+        "specimen_width_unit": "mm",
+        "yield_strength": 500,
+        "yield_strength_unit": "MPa",
+        "K_IC": 100,
+        "K_IC_unit": "MPa*sqrt(m)",
+        "youngs_modulus": 210,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.3,
+        "hardening_exponent": 0.2,
+        "HRR_field_source": "PF MS-23 Step 3"
+      },
+      "output": {
+        "J_integral_FE": 53.5,
+        "J_integral_unit": "kJ/m^2",
+        "plastic_zone_size_FE": 3.18,
+        "plastic_zone_size_unit": "mm",
+        "plastic_zone_shape_FE": "butterfly.vtk",
+        "CTOD_FE": 0.88,
+        "CTOD_unit": "mm",
+        "HRR_stress_comparison": "HRR_comparison.dat",
+        "plastic_zone_analytical": 3.18,
+        "analytical_unit": "mm",
+        "J_K_agreement": 98.5,
+        "J_K_agreement_unit": "percent",
+        "load_displacement_curve": "P_delta.dat"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "J2_plasticity_power_law_hardening",
+        "yield_stress": 500,
+        "yield_stress_unit": "MPa",
+        "hardening_exponent": 0.2,
+        "K_hardening": 1000,
+        "K_hardening_unit": "MPa",
+        "J_integral_contours": 8,
+        "J_integral_domain_type": "interaction_integral",
+        "mesh_refinement_at_tip": true,
+        "min_element_size": 0.05,
+        "min_element_size_unit": "mm",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 1000,
+        "geometric_nonlinearity": true,
+        "large_deformation": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE J-integral and plastic zone size validation against analytical HRR solution and multiscale consistency",
+        "data_transferred": [
+          "J_integral_FE",
+          "plastic_zone_size_FE",
+          "CTOD_FE",
+          "J_K_agreement",
+          "load_displacement_curve"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/S0022-5096(98)00016-3",
+    "authors": "Rice JR, Rosengren GF",
+    "year": 1968,
+    "journal": "Journal of the Mechanics and Physics of Solids"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Plastic zone size r_p",
+        "value": 3.18,
+        "unit": "mm",
+        "tolerance": 10
+      },
+      {
+        "name": "J-integral",
+        "value": 53.0,
+        "unit": "kJ/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "DFT surface energy {100}",
+        "value": 2.41,
+        "unit": "J/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "CTOD",
+        "value": 0.85,
+        "unit": "mm",
+        "tolerance": 15
+      },
+      {
+        "name": "J-K agreement",
+        "value": 98.5,
+        "unit": "percent",
+        "tolerance": 5
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

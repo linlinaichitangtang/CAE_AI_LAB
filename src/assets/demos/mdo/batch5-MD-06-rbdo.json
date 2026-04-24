@@ -1,0 +1,81 @@
+{
+  "id": "MD-06",
+  "name": "RBDO可靠度优化",
+  "nameEn": "Reliability-Based Design Optimization (RBDO)",
+  "description": "采用基于可靠度的设计优化（RBDO）方法，在满足结构可靠度约束的前提下最小化结构质量。可靠度指标要求β≥3.09，对应失效概率Pf≤0.001。采用一次可靠度方法（FORM）计算可靠度指标，结合梯度优化器进行迭代求解。考虑载荷和材料强度的随机不确定性，验证优化后结构的失效概率满足要求。",
+  "category": "mdo",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["RBDO", "FORM", "reliability", "probabilistic", "uncertainty"],
+  "design_variables": [
+    {
+      "name": "截面宽度",
+      "lower_bound": 0.02,
+      "upper_bound": 0.15,
+      "initial": 0.08
+    },
+    {
+      "name": "截面高度",
+      "lower_bound": 0.05,
+      "upper_bound": 0.3,
+      "initial": 0.15
+    },
+    {
+      "name": "板厚度",
+      "lower_bound": 0.003,
+      "upper_bound": 0.02,
+      "initial": 0.01
+    }
+  ],
+  "objectives": [
+    {
+      "name": "结构质量",
+      "type": "minimize"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "可靠度指标β",
+      "type": "inequality",
+      "limit": 3.09
+    },
+    {
+      "name": "失效概率Pf",
+      "type": "inequality",
+      "limit": 0.001
+    }
+  ],
+  "optimization_method": {
+    "type": "rbdo",
+    "population": 50,
+    "generations": 80
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "优化后可靠度指标β",
+        "value": 3.09,
+        "unit": "-",
+        "tolerance": 5
+      },
+      {
+        "name": "优化后失效概率Pf",
+        "value": 0.001,
+        "unit": "-",
+        "tolerance": 20
+      },
+      {
+        "name": "优化后质量",
+        "value": 3.8,
+        "unit": "kg",
+        "tolerance": 15
+      },
+      {
+        "name": "FORM迭代次数",
+        "value": 8,
+        "unit": "-",
+        "tolerance": 25
+      }
+    ]
+  }
+}

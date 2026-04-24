@@ -1,0 +1,63 @@
+{
+  "id": "CP-05",
+  "name": "抗震设计谱",
+  "nameEn": "Seismic Design Spectrum",
+  "description": "按GB 50011建筑抗震设计规范生成地震影响系数谱曲线。场地类别II类，设计地震分组第一组，特征周期Tg=0.35s，设防烈度8度（0.2g），多遇地震α_max=0.16。验证设计谱的五个区段：直线上升段（T<0.1s）、平台段（0.1s≤T≤Tg）、曲线下降段（Tg<T≤5Tg）、直线下降段（5Tg<T≤6s）以及各控制点参数。分析结构在不同自振周期下的地震作用大小。",
+  "category": "compliance",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["seismic-spectrum", "GB-50011", "design-response-spectrum", "earthquake", "site-classification"],
+  "geometry": {
+    "type": "building_frame",
+    "stories": 10,
+    "story_height": 3.6,
+    "total_height": 36.0,
+    "fundamental_period": 1.0,
+    "site_class": "II",
+    "seismic_group": 1
+  },
+  "material": {
+    "name": "RC Frame Structure",
+    "concrete_grade": "C40",
+    "steel_grade": "HRB400",
+    "structural_damping_ratio": 0.05
+  },
+  "loading": {
+    "seismic_fortification_intensity": 8,
+    "design_basic_acceleration": 0.2,
+    "peak_ground_acceleration": 0.9,
+    "alpha_max": 0.16,
+    "characteristic_period_Tg": 0.35,
+    "damping_ratio": 0.05,
+    "damping_correction_eta_1": 0.02,
+    "damping_correction_eta_2": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大地震影响系数α_max",
+        "value": 0.16,
+        "unit": "-",
+        "tolerance": 0
+      },
+      {
+        "name": "特征周期Tg",
+        "value": 0.35,
+        "unit": "s",
+        "tolerance": 0
+      },
+      {
+        "name": "T=1.0s时地震影响系数",
+        "value": 0.078,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "结构底部剪力",
+        "value": 1250.0,
+        "unit": "kN",
+        "tolerance": 15
+      }
+    ]
+  }
+}

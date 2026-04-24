@@ -1,0 +1,96 @@
+{
+  "id": "SS-21",
+  "name": "航空翼梁结构屈曲分析",
+  "nameEn": "Aircraft Wing Spar Buckling Analysis",
+  "description": "航空翼梁加筋壁板的压缩屈曲分析。壁板尺寸L=0.8m×b=0.3m，蒙皮厚度t=2mm，材料Al7075-T6（E=71.7GPa），加筋条间距0.1m。基于板屈曲理论，加筋壁板临界屈曲载荷Pcr=k·π²D/b²，其中k为约束系数。蒙皮局部屈曲后加筋条继续承载，需进行后屈曲强度评估。该算例验证加筋板屈曲和后屈曲有限元分析能力。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "翼梁",
+    "屈曲",
+    "加筋板",
+    "后屈曲",
+    "Al7075"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.8,
+    "width": 0.3,
+    "thickness": 0.002,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 30,
+    "z_div": 2,
+    "element_type": "S4R"
+  },
+  "material": {
+    "name": "Al7075-T6",
+    "elastic_modulus": 71700000000.0,
+    "poisson_ratio": 0.33,
+    "density": 2810.0,
+    "yield_stress": 503000000.0,
+    "thermal_expansion": 2.36e-05,
+    "thermal_conductivity": 130.0,
+    "specific_heat": 960.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 500000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "buckling",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.001,
+    "max_stress": 250000000.0,
+    "formula": "Pcr=k·π²D/b², D=Et³/(12(1-ν²))=71.7e9×8e-9/(12×0.891)=53.7N·m, k≈4.0(四边简支), Pcr=4×π²×53.7/0.01=211.8kN/m",
+    "reference": "Bleich, Buckling Strength of Metal Structures; Megson, Aircraft Structures for Engineering Students, Ch. 16"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "一阶屈曲特征值",
+        "value": 0.424,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "临界屈曲载荷",
+        "value": 211800.0,
+        "unit": "N/m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "屈曲模态半波数",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "蒙皮局部屈曲应力",
+        "value": 141200000.0,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "后屈曲极限载荷",
+        "value": 420000.0,
+        "unit": "N/m",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

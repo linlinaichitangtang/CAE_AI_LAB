@@ -1,0 +1,121 @@
+{
+  "id": "TC-18",
+  "name": "激光焊接",
+  "nameEn": "Laser Welding Thermal Process Simulation",
+  "description": "钢板激光焊接热过程数值模拟。钢板尺寸0.1m×0.05m×0.003m(厚3mm)，激光功率P=3000W，材料对激光吸收率A=0.7，焊接速度v=10mm/s=0.01m/s，光束直径d=0.3mm。有效热输入q_eff=P×A/v=3000×0.7/0.01=210000J/m。采用高斯旋转体热源模型(Goldak双椭球热源)，热源参数：前半轴a_f=0.002m，后半轴a_r=0.004m，宽度b=0.002m，深度c=0.003m。材料为低碳钢，导热系数k=45W/(m·K)，密度ρ=7850kg/m³，比热容c_p=500J/(kg·K)。峰值温度约3000K(超过熔点~1800K)，熔池深度约3mm(全熔透)，热影响区宽度约2mm。该案例用于验证移动热源和相变模型的耦合分析能力。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["laser_welding", "moving_heat_source", "Goldak_model", "melting_pool", "HAZ", "Gaussian_distribution"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.1,
+    "width": 0.05,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 8,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Low Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 45,
+    "specific_heat": 500
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "top_surface",
+    "load_magnitude": 210000,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": null,
+      "T_ambient": 293,
+      "heat_flux": 210000,
+      "convection_coeff": 25,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.01,
+    "total_time": 8
+  },
+  "theoretical": {
+    "max_displacement": 0.0015,
+    "max_stress": 450000000,
+    "max_temperature": 3000,
+    "formula": "q_eff = P*A/v; Q(x,y,z) = (6*sqrt(3)*f_f*q_eff)/(a_f*b*c*pi*sqrt(pi)) * exp(-3x^2/a_f^2-3y^2/b^2-3z^2/c^2); Rosenthal solution for moving source",
+    "reference": "Goldak, Chakravarti, Bibby, A New Finite Element Model for Welding Heat Sources, Metallurgical Transactions B, 1984"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "effective_heat_input",
+        "value": 210000,
+        "unit": "J/m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "peak_temperature",
+        "value": 3000,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "melting_temperature_steel",
+        "value": 1800,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "weld_pool_depth",
+        "value": 0.003,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "HAZ_width",
+        "value": 0.002,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "laser_power",
+        "value": 3000,
+        "unit": "W",
+        "tolerance": 0.1
+      },
+      {
+        "name": "welding_speed",
+        "value": 0.01,
+        "unit": "m/s",
+        "tolerance": 0.5
+      },
+      {
+        "name": "absorptivity",
+        "value": 0.7,
+        "unit": "",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

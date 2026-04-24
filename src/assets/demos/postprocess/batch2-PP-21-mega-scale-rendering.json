@@ -1,0 +1,56 @@
+{
+  "id": "PP-21",
+  "name": "超大规模结果并行渲染",
+  "nameEn": "Mega-Scale Result Parallel Rendering - 1M Node Performance Test",
+  "description": "测试CAELab后处理模块对超大规模有限元模型(1,000,000节点)的并行渲染性能极限。模型为某大型船舶整体结构，包含船体、上层建筑和内部舱室结构，总计1,000,000个节点和820,000个单元。测试目标：(1)WebGL渲染帧率在旋转交互时保持>30fps；(2)GPU显存占用<4GB；(3)模型加载时间<15s；(4)渐进式LOD(Level of Detail)渲染在不同缩放级别下的切换流畅度。采用八叉树空间索引、视锥体裁剪、GPU实例化渲染等优化策略。通过此极限测试验证后处理引擎的超大规模数据承载能力。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["超大规模", "并行渲染", "性能极限", "LOD", "WebGL", "GPU优化", "百万节点"],
+  "visualization": {
+    "type": "contour",
+    "field": "von_mises",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 600,
+      "fps": 30,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 1000000,
+    "elements": 820000,
+    "results_file": "results/postprocess/mega_scale_ship_structure.dat"
+  },
+  "display_settings": {
+    "title": "超大规模并行渲染测试 - 1,000,000节点船舶结构",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 350,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 80.0, "y": 50.0, "z": 60.0 },
+      "target": { "x": 0.0, "y": 10.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "节点总数", "value": 1000000, "unit": "个", "tolerance": 0 },
+      { "name": "单元总数", "value": 820000, "unit": "个", "tolerance": 0 },
+      { "name": "目标渲染帧率", "value": 30, "unit": "fps", "tolerance": 0 },
+      { "name": "GPU显存上限", "value": 4.0, "unit": "GB", "tolerance": 0 },
+      { "name": "模型加载时间", "value": 15, "unit": "s", "tolerance": 20 },
+      { "name": "LOD层级数", "value": 5, "unit": "级", "tolerance": 0 },
+      { "name": "最粗LOD面片数", "value": 50000, "unit": "个", "tolerance": 10 },
+      { "name": "最细LOD面片数", "value": 1640000, "unit": "个", "tolerance": 5 },
+      { "name": "视锥体裁剪率", "value": 60, "unit": "%", "tolerance": 15 }
+    ]
+  }
+}

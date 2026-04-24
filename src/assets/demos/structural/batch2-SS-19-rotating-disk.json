@@ -1,0 +1,94 @@
+{
+  "id": "SS-19",
+  "name": "旋转圆盘应力分析",
+  "nameEn": "Rotating Disk Stress Analysis",
+  "description": "等厚度旋转圆盘的离心应力分析。圆盘半径R=0.2m，厚度t=0.02m，角速度ω=1000rad/s（约9550rpm），钢材。离心力产生的环向应力在圆盘中心最大：σ_θ_max=ρω²(3+ν)R²/8=7850×1e6×3.3×0.04/8=129.4MPa。径向应力在r=0.577R处达到最大值。该算例验证旋转体离心应力解析解。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": [
+    "旋转圆盘",
+    "离心应力",
+    "旋转体",
+    "角速度"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.02,
+    "radius": 0.2,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 2,
+    "y_div": 20,
+    "z_div": 20,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "center_axis",
+    "load_type": "none",
+    "load_face": "",
+    "load_magnitude": 0.0,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 1.29e-04,
+    "max_stress": 129400000.0,
+    "formula": "σ_θ_max=ρω²(3+ν)R²/8 (at center), σ_r_max=ρω²(3+ν)R²/8 (at r≈0.577R), ω=1000rad/s",
+    "reference": "Timoshenko, Theory of Elasticity, Sec. 132; Juvinall, Fundamentals of Machine Component Design, Ch. 9"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "中心最大环向应力",
+        "value": 129400000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "中心径向应力",
+        "value": 129400000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "边缘环向应力",
+        "value": 64700000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "边缘径向应力",
+        "value": 0.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "外缘径向位移",
+        "value": 1.29e-04,
+        "unit": "m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "id": "CP-01",
+  "name": "ASD vs LRFD对比",
+  "nameEn": "ASD vs LRFD Comparison",
+  "description": "对比容许应力设计法（ASD）和荷载与抗力分项系数设计法（LRFD）在相同荷载条件下的设计差异。以简支钢梁为例，ASD方法：σ=S/F.S，其中F.S为安全系数；LRFD方法：ΣγQ≤φR，其中γ为荷载分项系数，φ为抗力分项系数。在相同荷载工况下分别计算所需截面，比较两种方法的构件尺寸差异和经济性。验证LRFD方法在荷载组合方面的优势。",
+  "category": "compliance",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["ASD", "LRFD", "design-method", "steel-beam", "code-comparison"],
+  "geometry": {
+    "type": "simply_supported_beam",
+    "span": 6.0,
+    "section_type": "I-beam",
+    "loading_type": "uniform_and_point"
+  },
+  "material": {
+    "name": "Q235B",
+    "elastic_modulus": 206000000000.0,
+    "yield_strength": 235000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "dead_load": 15.0,
+    "live_load": 20.0,
+    "point_load": 50000.0,
+    "ASD_safety_factor": 1.67,
+    "LRFD_load_factor_dead": 1.2,
+    "LRFD_load_factor_live": 1.6,
+    "LRFD_resistance_factor": 0.9
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "ASD所需截面模量",
+        "value": 450.0,
+        "unit": "cm³",
+        "tolerance": 10
+      },
+      {
+        "name": "LRFD所需截面模量",
+        "value": 420.0,
+        "unit": "cm³",
+        "tolerance": 10
+      },
+      {
+        "name": "LRFD截面节省比例",
+        "value": 7.0,
+        "unit": "%",
+        "tolerance": 20
+      },
+      {
+        "name": "ASD应力比",
+        "value": 0.98,
+        "unit": "-",
+        "tolerance": 5
+      }
+    ]
+  }
+}

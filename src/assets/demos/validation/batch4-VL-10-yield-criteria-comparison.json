@@ -1,0 +1,144 @@
+{
+  "id": "VL-10",
+  "name": "屈服准则对比验证",
+  "nameEn": "Yield Criteria Comparison: Von Mises vs Tresca vs Drucker-Prager",
+  "description": "验证Von Mises、Tresca和Drucker-Prager三种屈服准则在复杂应力状态下的预测差异。采用钢块(0.1m×0.1m×0.1m)施加组合应力σ₁、σ₂、σ₃，分别采用VM(J2塑性)、Tresca(最大剪应力)和DP(内摩擦角φ=30°, 粘聚力c=50MPa)准则求解。对比三种屈服面在π平面上的形状差异：VM为圆形，Tresca为正六边形，DP为六边形(带帽)。验证DP准则在φ=0时退化为VM准则(1:1对应)，Tresca与VM最大偏差为15.5%(纯剪切状态)。通过三组典型应力路径验证：(1)纯剪切τ=100MPa，(2)双轴等压σ₁=σ₂=-50MPa, σ₃=0，(3)三轴不等压σ₁=-100MPa, σ₂=-50MPa, σ₃=0。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["yield_criteria", "von_mises", "tresca", "drucker_prager", "constitutive_model", "plasticity"],
+  "validation_type": "constitutive_model",
+  "test_config": {
+    "baseline": {
+      "description": "Von Mises屈服准则，J2塑性，圆形屈服面",
+      "bc_type": "multi_axial_loading",
+      "material_type": "von_mises_plasticity",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "Tresca屈服准则，最大剪应力理论，正六边形屈服面",
+        "bc_type": "multi_axial_loading",
+        "material_type": "tresca_plasticity",
+        "mesh_density": 10
+      },
+      {
+        "description": "Drucker-Prager屈服准则，φ=30°, c=50MPa，六边形屈服面",
+        "bc_type": "multi_axial_loading",
+        "material_type": "drucker_prager_plasticity",
+        "mesh_density": 10
+      },
+      {
+        "description": "Drucker-Prager退化验证，φ=0°, c=σ_y/√3，应与VM一致",
+        "bc_type": "multi_axial_loading",
+        "material_type": "drucker_prager_zero_friction",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["yield_stress_pure_shear", "yield_stress_biaxial", "yield_surface_radius_pi_plane", "vm_tresca_ratio"]
+  },
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 10,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel Q345",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 345000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490,
+    "yield_criteria_params": {
+      "von_mises": { "yield_stress": 345000000 },
+      "tresca": { "yield_stress": 345000000 },
+      "drucker_prager": { "friction_angle": 30, "cohesion": 50000000, "dilation_angle": 0 },
+      "drucker_prager_degraded": { "friction_angle": 0, "cohesion": 199186000, "dilation_angle": 0 }
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "z_min",
+    "load_type": "pressure_multi_axial",
+    "load_face": "all_faces",
+    "load_magnitude": 100000000,
+    "load_direction": "multi_direction",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 345000000,
+    "formula": "Von Mises: σ_vm = √(0.5[(σ₁-σ₂)²+(σ₂-σ₃)²+(σ₃-σ₁)²]); Tresca: σ_tr = max(|σ₁-σ₂|, |σ₂-σ₃|, |σ₃-σ₁|); Drucker-Prager: f = √(J₂) + η·I₁ - k; where η = 2sinφ/(√3(3-sinφ)), k = 6ccosφ/(√3(3-sinφ)); Pure shear (σ₁=τ, σ₂=-τ, σ₃=0): VM yield at τ=σ_y/√3=199.2MPa; Tresca yield at τ=σ_y/2=172.5MPa; ratio VM/Tresca = 2/√3 = 1.155; DP with φ=30°: η=0.366, k=30.0MPa; DP with φ=0°: η=0, k=σ_y/√3=199.2MPa (reduces to VM); Biaxial (σ₁=σ₂=σ, σ₃=0): VM yield at σ=σ_y; Tresca yield at σ=σ_y; both agree for equal biaxial",
+    "reference": "Chen, W.F. Plasticity in Reinforced Concrete; de Souza Neto, E.A. Computational Methods for Plasticity"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "VM yield stress in pure shear",
+        "value": 199186000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Tresca yield stress in pure shear",
+        "value": 172500000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "VM/Tresca ratio in pure shear",
+        "value": 1.155,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "DP yield stress in pure shear (φ=30°)",
+        "value": 82000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "DP zero-friction yield stress (should match VM)",
+        "value": 199186000,
+        "unit": "Pa",
+        "tolerance": 3.0
+      },
+      {
+        "name": "VM yield stress in biaxial tension",
+        "value": 345000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Tresca yield stress in biaxial tension",
+        "value": 345000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "DP-to-VM deviation percentage (φ=0°)",
+        "value": 0.0,
+        "unit": "%",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

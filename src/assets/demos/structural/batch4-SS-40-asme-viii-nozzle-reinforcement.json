@@ -1,0 +1,86 @@
+{
+  "id": "SS-40",
+  "name": "ASME VIII开孔补强校核",
+  "nameEn": "ASME VIII Nozzle Reinforcement Check",
+  "description": "基于ASME BPVC Section VIII Division 1的等面积补强法，对圆柱形压力容器径向接管进行开孔补强校核。容器内径R=1m，壁厚t=0.02m，接管DN200（R_n=0.1m，t_n=0.01m），设计压力p=5MPa。计算所需补强面积A_req=p·R·r/(S·E)，验证补强板面积是否满足要求。环向应力σ_hoop=pR/t=250MPa，材料SA-516 Gr.70许用应力S=138MPa。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["压力容器", "ASME VIII", "开孔补强", "面积替代法"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 2.0,
+    "width": 0.1,
+    "height": 0.02,
+    "radius": 1.0,
+    "thickness": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 48,
+    "y_div": 24,
+    "z_div": 6,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "SA-516 Gr.70",
+    "elastic_modulus": 2.0e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 260e6,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "cylinder_end_face",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 5e6,
+    "load_direction": "normal",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 2.5e-4,
+    "max_stress": 250e6,
+    "formula": "σ_hoop = pR/t = 5e6×1.0/0.02 = 250 MPa; A_required = p·R·r/(S·E) = 5e6×1.0×0.1/(138e6×1.0) = 3623 mm²",
+    "reference": "ASME BPVC Section VIII Div.1 UG-37, UG-40"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "环向应力 Hoop Stress",
+        "value": 250,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "所需补强面积 Required Reinforcement Area",
+        "value": 3623,
+        "unit": "mm²",
+        "tolerance": 5
+      },
+      {
+        "name": "最大径向位移 Max Radial Displacement",
+        "value": 0.25,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "应力集中系数 SCF at Nozzle",
+        "value": 2.5,
+        "unit": "-",
+        "tolerance": 10
+      }
+    ]
+  }
+}

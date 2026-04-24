@@ -1,0 +1,60 @@
+{
+  "id": "RW-05",
+  "name": "高速列车气动噪声",
+  "nameEn": "High-Speed Train Aerodynamic Noise",
+  "description": "模拟高速列车在350km/h运行速度下的气动噪声分析。采用大涡模拟（LES）计算列车周围的非定常湍流场，然后通过FW-H声学类比方法将湍流脉动转换为远场噪声。分析主要噪声源（车头、转向架区域、车顶受电弓、车间间隙等）的贡献量和频谱特性。验证距轨道中心线25m处、距地面3.5m高度的A计权声压级SPL。按ISO 3095标准评估铁路噪声。",
+  "category": "railway",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["aero-noise", "LES", "FW-H", "high-speed-train", "SPL", "ISO-3095"],
+  "geometry": {
+    "type": "train_model",
+    "train_length": 200.0,
+    "train_width": 3.38,
+    "train_height": 3.7,
+    "nose_length": 12.0,
+    "bogie_spacing": 15.0,
+    "inter_car_gap": 0.5,
+    "pantograph_height": 0.7
+  },
+  "material": {
+    "name": "N/A (Fluid Analysis)",
+    "air_density": 1.225,
+    "air_viscosity": 1.81e-5,
+    "speed_of_sound": 340.0
+  },
+  "loading": {
+    "train_speed": 97.2,
+    "mach_number": 0.286,
+    "turbulence_intensity": 0.5,
+    "reynolds_number": 23000000.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "A计权总声压级(25m)",
+        "value": 92.0,
+        "unit": "dBA",
+        "tolerance": 10
+      },
+      {
+        "name": "车头噪声贡献",
+        "value": 78.0,
+        "unit": "dBA",
+        "tolerance": 15
+      },
+      {
+        "name": "转向架区域噪声贡献",
+        "value": 85.0,
+        "unit": "dBA",
+        "tolerance": 15
+      },
+      {
+        "name": "峰值噪声频率",
+        "value": 1000.0,
+        "unit": "Hz",
+        "tolerance": 20
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "PP-16",
+  "name": "响应谱分析",
+  "nameEn": "Response Spectrum Analysis - 3-Story Frame Under Earthquake",
+  "description": "展示三层框架结构在地震作用下的响应谱分析结果。依据GB50011建筑抗震设计规范，设防烈度8度(0.2g)，场地类别II类，设计地震分组第二组。框架层高3.6m，跨度6m，采用C30混凝土柱和HRB400钢筋梁。采用模态叠加法(CQC组合规则)计算结构地震响应，提取前5阶模态参与计算。可视化内容包括：(1)设计反应谱曲线(谱加速度vs周期)；(2)各楼层最大位移和层间位移角；(3)基底剪力时程。通过此案例学习反应谱分析的基本原理和工程应用方法。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["响应谱", "地震分析", "GB50011", "模态叠加", "CQC组合", "层间位移角"],
+  "visualization": {
+    "type": "spectrum",
+    "field": "frequency_response",
+    "color_map": "plasma",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": true,
+      "frames": 60,
+      "fps": 15,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 4200,
+    "elements": 3600,
+    "results_file": "results/postprocess/frame_response_spectrum.dat"
+  },
+  "display_settings": {
+    "title": "三层框架地震响应谱分析 - GB50011 8度(0.2g)",
+    "axis_labels": ["周期 T (s)", "谱加速度 Sa (g)", "层数"],
+    "color_bar": {
+      "min": 0,
+      "max": 0.5,
+      "label": "谱加速度 (g)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 12.0, "y": 5.0, "z": 12.0 },
+      "target": { "x": 6.0, "y": 5.4, "z": 3.0 },
+      "rotation": { "pitch": -20, "yaw": 35 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "第1阶自振周期T₁", "value": 0.65, "unit": "s", "tolerance": 5 },
+      { "name": "第2阶自振周期T₂", "value": 0.22, "unit": "s", "tolerance": 5 },
+      { "name": "第3阶自振周期T₃", "value": 0.14, "unit": "s", "tolerance": 5 },
+      { "name": "最大层间位移角", "value": 1.0, "unit": "‰", "tolerance": 15 },
+      { "name": "基底剪力", "value": 185, "unit": "kN", "tolerance": 10 },
+      { "name": "顶层最大位移", "value": 18.5, "unit": "mm", "tolerance": 10 },
+      { "name": "参与模态数", "value": 5, "unit": "阶", "tolerance": 0 },
+      { "name": "有效质量参与系数", "value": 95, "unit": "%", "tolerance": 5 }
+    ]
+  }
+}

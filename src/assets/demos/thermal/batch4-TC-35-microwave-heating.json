@@ -1,0 +1,134 @@
+{
+  "id": "TC-35",
+  "name": "微波加热体热源分析",
+  "nameEn": "Microwave Volumetric Heating Analysis - Food Sample Dielectric Heating",
+  "description": "微波加热食品样品的体积热源与温度均匀性分析。样品尺寸0.05m×0.05m×0.03m，介电常数ε_r=50，损耗角正切tanδ=0.3，微波频率f=2.45GHz，输入功率P=800W。体积热源密度Q=2πf·ε₀·ε_r·tanδ·|E|²，其中ε₀=8.854×10⁻¹²F/m。假设电场强度|E|≈5000V/m，则Q≈2π×2.45e9×8.854e-12×50×0.3×(5000)²≈5.13×10⁶W/m³。食品物性：k=0.5W/(m·K)，ρ=1050kg/m³，c_p=3800J/(kg·K)。热扩散系数α_th=k/(ρ·c_p)=1.26×10⁻⁷m²/s。穿透深度δ_p=c/(2πf·√(2ε_r·(√(1+tan²δ)-1)))≈0.012m。分析60s加热过程，验证热点形成位置及温度均匀性指数。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["microwave", "dielectric_heating", "volumetric_heat_source", "food_processing", "penetration_depth", "hot_spot", "transient_thermal", "electromagnetic"],
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.03,
+    "radius": null,
+    "thickness": 0.03,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 20,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Food Sample (High Moisture)",
+    "elastic_modulus": 1000000,
+    "poisson_ratio": 0.45,
+    "density": 1050,
+    "yield_stress": 50000,
+    "thermal_expansion": 5.0e-5,
+    "thermal_conductivity": 0.5,
+    "specific_heat": 3800
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "all_surfaces",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": null,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 10,
+      "heat_source": 5130000,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.5,
+    "total_time": 60
+  },
+  "theoretical": {
+    "max_displacement": 1e-4,
+    "max_stress": 50000,
+    "max_temperature": 385,
+    "formula": "Q = 2*pi*f*epsilon_0*epsilon_r*tan_delta*|E|^2; delta_p = c/(2*pi*f*sqrt(2*epsilon_r*(sqrt(1+tan^2(delta))-1))); alpha_th = k/(rho*c_p); dT/dt = Q/(rho*c_p) - h*A*(T-T_amb)/(rho*c_p*V)",
+    "reference": "Metaxas & Meredith, Industrial Microwave Heating, IET, 1983; Chamchong & Datta, Thawing of Foods in a Microwave Oven, J. Microwave Power, 1999"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 20.0,
+    "temperature_error_limit": 8.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "volumetric_heat_source",
+        "value": 5130000,
+        "unit": "W/m^3",
+        "tolerance": 15.0
+      },
+      {
+        "name": "microwave_frequency",
+        "value": 2.45e9,
+        "unit": "Hz",
+        "tolerance": 1.0
+      },
+      {
+        "name": "dielectric_constant",
+        "value": 50,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "loss_tangent",
+        "value": 0.3,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "penetration_depth",
+        "value": 0.012,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "thermal_diffusivity",
+        "value": 1.26e-7,
+        "unit": "m^2/s",
+        "tolerance": 5.0
+      },
+      {
+        "name": "average_temperature_rise_60s",
+        "value": 73,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "max_temperature_60s",
+        "value": 385,
+        "unit": "K",
+        "tolerance": 8.0
+      },
+      {
+        "name": "temperature_uniformity_index",
+        "value": 0.72,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "input_power",
+        "value": 800,
+        "unit": "W",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

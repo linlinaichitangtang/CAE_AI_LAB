@@ -1,0 +1,102 @@
+{
+  "id": "SS-27",
+  "name": "冲击动力学分析",
+  "nameEn": "Impact Dynamics Analysis",
+  "description": "锥形冲击体以v=100m/s冲击铝合金板的动态响应分析。靶板尺寸0.3m×0.3m×0.005m，材料Al6061-T6。弹性波速c=√(E/ρ)=√(68.9e9/2700)=5048m/s。波前到达靶板远端时间t=L/c=0.3/5048=59.4μs。冲击持续时间约2L/c=118.8μs。需考虑应力波传播、动态接触和应变率效应。该算例验证显式动力学求解器的波传播精度。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": [
+    "冲击",
+    "应力波传播",
+    "动态接触",
+    "显式动力学",
+    "应变率"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.3,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 4,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Al6061-T6",
+    "elastic_modulus": 68900000000.0,
+    "poisson_ratio": 0.33,
+    "density": 2700.0,
+    "yield_stress": 276000000.0,
+    "thermal_expansion": 2.36e-05,
+    "thermal_conductivity": 167.0,
+    "specific_heat": 896.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "edges",
+    "load_type": "point",
+    "load_face": "center",
+    "load_magnitude": 50000.0,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 5000,
+    "convergence_tolerance": 1e-06
+  },
+  "theoretical": {
+    "max_displacement": 0.008,
+    "max_stress": 414000000.0,
+    "formula": "c=√(E/ρ)=5048m/s, t_wave=L/c=59.4μs, σ_dynamic=ρ·c·v=2700×5048×100=1.363GPa (一维波), σ_plate≈σ_dynamic/2=681MPa",
+    "reference": "Johnson, Impact Strength of Materials; Zukas, High Velocity Impact Dynamics"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "弹性波速",
+        "value": 5048.0,
+        "unit": "m/s",
+        "tolerance": 2.0
+      },
+      {
+        "name": "波前到达时间",
+        "value": 5.94e-05,
+        "unit": "s",
+        "tolerance": 5.0
+      },
+      {
+        "name": "冲击接触力峰值",
+        "value": 50000.0,
+        "unit": "N",
+        "tolerance": 15.0
+      },
+      {
+        "name": "靶板最大变形",
+        "value": 0.008,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "冲击持续时间",
+        "value": 0.000119,
+        "unit": "s",
+        "tolerance": 10.0
+      },
+      {
+        "name": "动态屈服应力(含应变率)",
+        "value": 414000000.0,
+        "unit": "Pa",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

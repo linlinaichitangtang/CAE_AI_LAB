@@ -1,0 +1,53 @@
+{
+  "id": "PP-13",
+  "name": "主应力轨迹线",
+  "nameEn": "Principal Stress Trajectories - Kirsch Problem",
+  "description": "展示带中心圆孔平板在单向拉伸下的主应力轨迹线分布。基于经典Kirsch解析解，平板尺寸200mm x 100mm x 5mm，中心圆孔半径r=10mm，远场施加均布拉应力σ_applied=100MPa，材料为钢(E=200GPa, v=0.3)。主应力轨迹线以拉格朗日流线形式绘制，σ₁轨迹线(红色)沿拉伸方向，在孔边弯曲绕行并在应力集中点汇聚；σ₂轨迹线(蓝色)垂直于拉伸方向，在孔边发散。孔边最大应力σ_max=300MPa(K_t=3.0)，通过此案例学习应力轨迹的物理意义及其在结构优化中的应用。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["主应力轨迹", "Kirsch问题", "应力集中", "流线可视化", "拉格朗日轨迹"],
+  "visualization": {
+    "type": "trajectory",
+    "field": "principal",
+    "color_map": "rainbow",
+    "view_mode": "2d_section",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 8560,
+    "elements": 8000,
+    "results_file": "results/postprocess/kirsch_plate_principal_trajectory.dat"
+  },
+  "display_settings": {
+    "title": "Kirsch问题 - 主应力轨迹线 (σ₁/σ₂/σ₃)",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 300,
+      "label": "主应力 (MPa)",
+      "n_levels": 15
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 0.25 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "远场施加应力σ_applied", "value": 100, "unit": "MPa", "tolerance": 0 },
+      { "name": "孔边最大应力σ_max", "value": 300, "unit": "MPa", "tolerance": 3 },
+      { "name": "应力集中系数K_t", "value": 3.0, "unit": "", "tolerance": 3 },
+      { "name": "圆孔半径r", "value": 10, "unit": "mm", "tolerance": 0 },
+      { "name": "σ₁轨迹线数量", "value": 24, "unit": "条", "tolerance": 10 },
+      { "name": "σ₂轨迹线数量", "value": 24, "unit": "条", "tolerance": 10 }
+    ]
+  }
+}

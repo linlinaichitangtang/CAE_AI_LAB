@@ -1,0 +1,86 @@
+{
+  "id": "SS-32",
+  "name": "桥梁抗震加固CFRP分析",
+  "nameEn": "Bridge Seismic Retrofit with CFRP Wrapping",
+  "description": "钢筋混凝土桥墩(0.6m×0.6m×4m)采用CFRP布包裹加固后的抗震性能分析。CFRP厚度t=3mm，弹性模量E_frp=240GPa。加固后约束混凝土抗压强度f_cc=f_co+3.5·f_l，其中f_l为CFRP提供的侧向约束应力。本案例展示了FRP加固技术对混凝土柱延性和承载力的提升效果，适用于桥梁抗震加固工程演示。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["CFRP加固", "桥梁", "抗震", "约束混凝土", "FRP", "桥墩"],
+  "geometry": {
+    "type": "column",
+    "length": 4.0,
+    "width": 0.6,
+    "height": 0.6,
+    "radius": 0,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 40,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "RC with CFRP wrapping (C30 concrete, HRB400 steel)",
+    "elastic_modulus": 33000000000,
+    "poisson_ratio": 0.2,
+    "density": 2500,
+    "yield_stress": 45000000,
+    "thermal_expansion": 1.0e-5,
+    "thermal_conductivity": 1.7,
+    "specific_heat": 880
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom",
+    "load_type": "uniform",
+    "load_face": "top",
+    "load_magnitude": 500000,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.02,
+    "max_stress": 45000000,
+    "formula": "f_cc = f_co + 3.5·f_l, f_l = 2·E_frp·t_frp·ε_frp / D, ε_frp = 0.012",
+    "reference": "ACI 440.2R-17: Guide for the Design and Construction of Externally Bonded FRP Systems."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "加固后约束混凝土强度f_cc",
+        "value": 51000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "CFRP侧向约束应力f_l",
+        "value": 2880000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "墩顶水平位移",
+        "value": 0.02,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "延性系数",
+        "value": 6.5,
+        "unit": "",
+        "tolerance": 10
+      }
+    ]
+  }
+}

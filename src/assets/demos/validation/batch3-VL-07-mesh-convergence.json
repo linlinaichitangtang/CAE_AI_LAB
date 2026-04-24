@@ -1,0 +1,144 @@
+{
+  "id": "VL-07",
+  "name": "网格尺寸收敛性 h-收敛",
+  "nameEn": "Mesh Size Convergence: h-Refinement Study",
+  "description": "验证有限元解随网格细化单调收敛至解析解的h-收敛特性。对悬臂梁(L=1m, F=1000N, 钢材)采用5种网格密度(5×1×1至80×8×8)进行求解。绘制最大位移与1/h²的关系曲线，验证Richardson外推法预测的收敛极限值与理论解δ=0.2mm一致。最细网格误差目标小于1%。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 3,
+  "tags": ["mesh_convergence", "h_refinement", "richardson_extrapolation", "error_estimation"],
+  "validation_type": "mesh",
+  "test_config": {
+    "baseline": {
+      "description": "最细网格80×8×8=5120单元，基准高精度解",
+      "bc_type": "fixed-free_cantilever",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 80
+    },
+    "variants": [
+      {
+        "description": "粗网格5×1×1=5单元，预期误差较大",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 5
+      },
+      {
+        "description": "中粗网格10×2×2=40单元",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "中等网格20×2×2=80单元",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      },
+      {
+        "description": "中细网格40×4×4=640单元",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 40
+      }
+    ],
+    "comparison_metrics": ["max_displacement", "max_stress", "convergence_rate", "richardson_extrapolated_value"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 80,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; δ_exact = FL³/(3EI) = 1000×1/(3×200e9×8.333e-6) = 2.0e-4 m; σ_exact = Mc/I = 1000×1×0.05/8.333e-6 = 6.0e6 Pa; Richardson extrapolation: δ_R = δ_fine + (δ_fine - δ_coarse)/(r^p - 1), where r=2, p=2 for C3D20R; Expected convergence rate p≈2 for displacement",
+    "reference": "Bathe, K.J. Finite Element Procedures; Zienkiewicz, O.C. The Finite Element Method"
+  },
+  "acceptance": {
+    "displacement_error_limit": 1.0,
+    "stress_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Theoretical max displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "Mesh 5×1×1 displacement error",
+        "value": 8.0,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Mesh 10×2×2 displacement error",
+        "value": 3.0,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Mesh 20×2×2 displacement error",
+        "value": 1.5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Mesh 40×4×4 displacement error",
+        "value": 0.5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Mesh 80×8×8 displacement error",
+        "value": 0.15,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Richardson extrapolated displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "Observed convergence rate p",
+        "value": 2.0,
+        "unit": "",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

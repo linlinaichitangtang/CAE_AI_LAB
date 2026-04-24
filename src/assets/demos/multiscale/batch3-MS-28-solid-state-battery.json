@@ -1,0 +1,338 @@
+{
+  "id": "MS-28",
+  "name": "全固态电池硫化物电解质",
+  "nameEn": "Solid-State Battery with Sulfide Electrolyte",
+  "description": "全固态锂电池Li₆PS₅Cl硫化物电解质的多尺度模拟。DFT计算Li⁺在Li₆PS₅Cl中的迁移路径和能垒，确定体相离子电导率；MD模拟大尺度电解质-电极界面的离子传输动力学，提取界面阻抗；相场模型模拟锂枝晶在电解质中的生长和抑制机制；FE模型预测宏观电池性能(电压-容量曲线、循环寿命)。该案例为全固态电池电解质设计和界面工程提供多尺度仿真工具链。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["solid-state battery", "sulfide electrolyte", "Li6PS5Cl", "ionic conductivity", "lithium dendrite", "argyrodite", "all-solid-state"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Li6PS5Cl argyrodite sulfide electrolyte with Li metal anode",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT Li⁺迁移能垒计算",
+      "description": "计算Li₆PS₅Cl argyrodite中Li⁺的迁移路径、能垒和体相离子电导率",
+      "input": {
+        "crystal_structure": "argyrodite_cubic_F-43m",
+        "lattice_constant": 9.85,
+        "lattice_constant_unit": "Angstrom",
+        "space_group": "F-43m (216)",
+        "Li_sites": ["48h", "24g", "4a", "4b"],
+        "migration_path_types": ["intra-cage", "inter-cage"],
+        "neb_images": 7,
+        "defect_types": ["Li_vacancy", "Li_interstitial", "S/Cl_disorder"]
+      },
+      "output": {
+        "intra_cage_migration_barrier": 0.16,
+        "barrier_unit": "eV",
+        "inter_cage_migration_barrier": 0.35,
+        "barrier_unit": "eV",
+        "overall_migration_barrier": 0.22,
+        "overall_barrier_unit": "eV",
+        "attempt_frequency": 8.5e12,
+        "attempt_frequency_unit": "Hz",
+        "DFT_ionic_conductivity_300K": 3.2e-3,
+        "conductivity_unit": "S/cm",
+        "activation_energy": 0.24,
+        "activation_energy_unit": "eV",
+        "Li_vacancy_formation_energy": 0.42,
+        "vacancy_formation_unit": "eV",
+        "migration_path": "migration_path.cif",
+        "electron_density_migration": "charge_density.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotentials": ["PAW_PBE_Li", "PAW_PBE_P", "PAW_PBE_S", "PAW_PBE_Cl"],
+        "energy_cutoff": 520,
+        "energy_cutoff_unit": "eV",
+        "k_points": [4, 4, 4],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 2,
+        "nsw": 0,
+        "neb_method": "CI-NEB",
+        "spring_constant": 5.0,
+        "spring_constant_unit": "eV/Angstrom^2",
+        "vdW_correction": "DFT-D3"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT migration barriers and attempt frequencies to MD machine learning interatomic potential training and validation",
+        "data_transferred": [
+          "intra_cage_migration_barrier",
+          "inter_cage_migration_barrier",
+          "attempt_frequency",
+          "DFT_ionic_conductivity_300K",
+          "activation_energy"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD离子电导率与界面模拟",
+      "description": "大尺度MD模拟Li₆PS₅Cl电解质体相离子电导率和电解质-电极界面离子传输动力学",
+      "input": {
+        "crystal_structure": "argyrodite_F-43m",
+        "lattice_constant": 9.85,
+        "lattice_constant_unit": "Angstrom",
+        "bulk_system": {
+          "Lx": 50,
+          "Ly": 50,
+          "Lz": 50,
+          "unit": "Angstrom",
+          "formula_units": 6400,
+          "atom_count": 51200
+        },
+        "interface_system": {
+          "electrolyte": "Li6PS5Cl_20nm",
+          "anode": "Li_metal_5nm",
+          "cathode": "NCM811_10nm"
+        },
+        "migration_barrier_source": "DFT MS-28 Step 1",
+        "temperature_range": [300, 500],
+        "temperature_unit": "K"
+      },
+      "output": {
+        "ionic_conductivity_300K": 1.2e-3,
+        "conductivity_unit": "S/cm",
+        "activation_energy_MD": 0.25,
+        "activation_energy_unit": "eV",
+        "Li_diffusion_coefficient": 3.8e-12,
+        "diffusion_unit": "m^2/s",
+        "MSD_vs_time": "msd.dat",
+        "interface_resistance": 15,
+        "interface_resistance_unit": "ohm*cm^2",
+        "space_charge_layer_width": 3.2,
+        "space_charge_unit": "nm",
+        "Li_depletion_at_interface": 0.65,
+        "depletion_unit": "dimensionless",
+        "tracer_correlation_factor": 0.72,
+        " Haven_ratio": 0.85
+      },
+      "parameters": {
+        "potential": "ML-IAP (Neural Network Potential trained on DFT)",
+        "potential_file": "Li6PS5Cl_NNP.pt",
+        "training_reference": "DFT PBE + D3",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 0,
+        "target_pressure_unit": "bar",
+        "cutoff_radius": 7.0,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_x", "periodic_y", "periodic_z"],
+        "total_steps": 5000000,
+        "dump_interval": 5000,
+        "mean_square_displacement": true,
+        "velocity_autocorrelation": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD ionic conductivity, interface resistance and space charge layer to phase field dendrite growth model",
+        "data_transferred": [
+          "ionic_conductivity_300K",
+          "activation_energy_MD",
+          "interface_resistance",
+          "space_charge_layer_width",
+          "Li_depletion_at_interface"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场锂枝晶抑制模拟",
+      "description": "基于相场模型模拟锂枝晶在硫化物电解质中的生长动力学，评估临界电流密度和枝晶抑制策略",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 5000,
+          "unit": "nm"
+        },
+        "grid_spacing": 10,
+        "grid_spacing_unit": "nm",
+        "grid_points": "50x50x500",
+        "electrolyte": "Li6PS5Cl",
+        "ionic_conductivity_source": "MD MS-28 Step 2",
+        "ionic_conductivity": 1.2e-3,
+        "conductivity_unit": "S/cm",
+        "interface_resistance": 15,
+        "interface_resistance_unit": "ohm*cm^2",
+        "applied_current_density_range": [0.1, 5.0],
+        "current_density_unit": "mA/cm^2",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "grain_boundary_effect": true
+      },
+      "output": {
+        "dendrite_growth": "dendrite.vtk",
+        "critical_current_density": 1.8,
+        "CCD_unit": "mA/cm^2",
+        "dendrite_growth_velocity": 0.85,
+        "growth_velocity_unit": "um/s",
+        "dendrite_tip_radius": 50,
+        "tip_radius_unit": "nm",
+        "Li_filament_penetration_time": 420,
+        "penetration_time_unit": "s",
+        "short_circuit_probability": "short_circuit.dat",
+        "grain_boundary_dendrite_preference": 2.5,
+        "preference_unit": "ratio",
+        "overpotential_at_dendrite": 0.35,
+        "overpotential_unit": "V"
+      },
+      "parameters": {
+        "model": "phase_field_electrodeposition",
+        "order_parameters": ["Li_concentration_c", "electrode_potential_phi", "electrolyte_phase_eta"],
+        "interface_width": 20,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 5e-10,
+        "gradient_energy_unit": "J/m",
+        "ionic_conductivity": 1.2e-3,
+        "ionic_conductivity_unit": "S/cm",
+        "exchange_current_density": 0.5,
+        "exchange_current_unit": "mA/cm^2",
+        "transfer_coefficient_alpha": 0.5,
+        "elastic_energy": true,
+        "electrolyte_shear_modulus": 18.5,
+        "shear_modulus_unit": "GPa",
+        "time_step": 0.01,
+        "time_step_unit": "s",
+        "total_time": 1000,
+        "total_time_unit": "s",
+        "noise_term": true,
+        "noise_amplitude": 0.005
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field critical current density and dendrite growth to FE macro cell performance model",
+        "data_transferred": [
+          "critical_current_density",
+          "dendrite_growth_velocity",
+          "Li_filament_penetration_time",
+          "short_circuit_probability",
+          "overpotential_at_dendrite"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE宏观电池性能预测",
+      "description": "基于有限元方法预测全固态电池的宏观性能，包括电压-容量曲线、倍率性能和循环寿命",
+      "input": {
+        "cell_geometry": "pouch_cell_50x80x5mm",
+        "mesh": "100000_elements",
+        "element_type": "C3D8",
+        "anode": "Li_metal_50um",
+        "electrolyte": "Li6PS5Cl_30um",
+        "cathode": "NCM811_80um",
+        "ionic_conductivity_source": "MD MS-28 Step 2",
+        "ionic_conductivity": 1.2e-3,
+        "conductivity_unit": "S/cm",
+        "CCD_source": "PF MS-28 Step 3",
+        "critical_current_density": 1.8,
+        "CCD_unit": "mA/cm^2",
+        "operating_temperature": 300,
+        "operating_temperature_unit": "K",
+        "C_rates": [0.1, 0.5, 1.0, 2.0]
+      },
+      "output": {
+        "voltage_capacity_curve": "V_Q.dat",
+        "discharge_capacity_0.1C": 195,
+        "capacity_unit": "mAh/g",
+        "discharge_capacity_1C": 168,
+        "capacity_unit": "mAh/g",
+        "energy_density": 380,
+        "energy_density_unit": "Wh/kg",
+        "coulombic_efficiency": 99.7,
+        "efficiency_unit": "percent",
+        "cycle_life_at_1C": 850,
+        "cycle_life_unit": "cycles",
+        "capacity_retention_500cycles": 82,
+        "retention_unit": "percent",
+        "internal_resistance": 12,
+        "resistance_unit": "ohm*cm^2",
+        "voltage_profile": "voltage_profile.dat"
+      },
+      "parameters": {
+        "solver_type": "transient_implicit",
+        "material_model": "Newman_porous_electrode_with_solid_electrolyte",
+        "anode_OCP": "Li_Li+_0V",
+        "cathode_OCP": "NCM811_fit_function",
+        "electronic_conductivity_cathode": 0.1,
+        "electronic_conductivity_unit": "S/cm",
+        "ionic_conductivity_electrolyte": 1.2e-3,
+        "ionic_conductivity_unit": "S/cm",
+        "Li_diffusion_cathode": 1e-14,
+        "Li_diffusion_unit": "m^2/s",
+        "SEI_resistance": 0,
+        "SEI_unit": "ohm*cm^2",
+        "time_step": 1.0,
+        "time_step_unit": "s",
+        "total_time": 36000,
+        "total_time_unit": "s",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200,
+        "thermal_coupling": false
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE cell performance validation against experimental charge-discharge data and cycling stability",
+        "data_transferred": [
+          "voltage_capacity_curve",
+          "discharge_capacity_1C",
+          "energy_density",
+          "cycle_life_at_1C",
+          "capacity_retention_500cycles"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1021/acs.chemmater.9b02005",
+    "authors": "Kuhn A, Epp V, Schmidt G, Kuhn P, Narayanan S, Thangadurai V, Wilkening M",
+    "year": 2019,
+    "journal": "Chemistry of Materials"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Li+ migration barrier",
+        "value": 0.22,
+        "unit": "eV",
+        "tolerance": 15
+      },
+      {
+        "name": "Ionic conductivity at 300K",
+        "value": 1.2e-3,
+        "unit": "S/cm",
+        "tolerance": 20
+      },
+      {
+        "name": "Critical current density",
+        "value": 1.8,
+        "unit": "mA/cm^2",
+        "tolerance": 25
+      },
+      {
+        "name": "Discharge capacity at 1C",
+        "value": 168,
+        "unit": "mAh/g",
+        "tolerance": 10
+      },
+      {
+        "name": "Interface resistance",
+        "value": 15,
+        "unit": "ohm*cm^2",
+        "tolerance": 30
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

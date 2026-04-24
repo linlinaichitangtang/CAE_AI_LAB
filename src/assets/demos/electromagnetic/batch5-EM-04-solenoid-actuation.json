@@ -1,0 +1,87 @@
+{
+  "id": "EM-04",
+  "name": "开关电磁铁吸合",
+  "nameEn": "Solenoid Actuation",
+  "description": "开关电磁铁瞬态吸合过程电磁-结构耦合分析。螺线管参数：线圈匝数N=500，电流I=2A，铁芯相对磁导率μ_r=5000，铁芯截面积A_core=π×(0.01)²=3.14e-4m²，初始气隙g=0.005m。电磁吸力公式：F=μ₀N²I²A/(2g²)=4π×1e-7×500²×2²×3.14e-4/(2×0.005²)=4π×1e-7×250000×4×3.14e-4/5e-5=4π×1e-7×62800=78.9N。衔铁质量m=0.2kg，运动行程s=0.005m。瞬态响应：吸合时间t_act≈√(2ms/F)=√(2×0.2×0.005/78.9)=5.03ms。验证瞬态吸力-位移-时间曲线。",
+  "category": "electromagnetic",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["solenoid", "electromagnetic actuation", "transient", "air gap", "force-stroke"],
+  "geometry": {
+    "type": "coil",
+    "length": 0.06,
+    "radius": 0.015,
+    "height": 0.06,
+    "turns": 500,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 20,
+    "z_div": 24,
+    "element_type": "SOLID97"
+  },
+  "material": {
+    "name": "Electrical Steel Core",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "electrical_conductivity": 2000000,
+    "relative_permeability": 5000
+  },
+  "electromagnetic_bc": {
+    "current": 2,
+    "voltage": 24,
+    "frequency_hz": 0,
+    "magnetic_flux_density": 1.6
+  },
+  "boundaryConditions": {
+    "fixed_face": "coil_housing",
+    "load_type": "electromagnetic_force",
+    "load_magnitude": 78.9
+  },
+  "solver": {
+    "type": "coupled_em_thermal_structural",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_stress": 30000000,
+    "magnetic_force": 78.9,
+    "temperature_rise": 35,
+    "formula": "F = μ₀N²I²A/(2g²), t_act ≈ √(2ms/F)",
+    "reference": "Roters, Electromagnetic Devices; IEC 60947-5-1"
+  },
+  "acceptance": {
+    "force_error_limit": 10,
+    "temperature_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "初始吸力",
+        "value": 78.9,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "吸合时间",
+        "value": 5.03,
+        "unit": "ms",
+        "tolerance": 15
+      },
+      {
+        "name": "闭合位置保持力",
+        "value": 2000,
+        "unit": "N",
+        "tolerance": 15
+      },
+      {
+        "name": "线圈温升",
+        "value": 35,
+        "unit": "K",
+        "tolerance": 15
+      }
+    ]
+  }
+}

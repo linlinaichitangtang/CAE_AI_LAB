@@ -1,0 +1,94 @@
+{
+  "id": "AC-08",
+  "name": "声-结构耦合分析",
+  "nameEn": "Acoustic-Structural Coupling Analysis",
+  "description": "钢板在声学围腔中的完整声振耦合分析。钢板尺寸0.5m×0.5m×0.003m，四边固定，置于封闭声腔内。采用耦合声学-结构有限元方法，同时求解结构振动方程和声学波动方程。验证声传输损失STL随频率的变化规律，特别关注吻合频率处STL的急剧下降。",
+  "category": "acoustic",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["coupled-analysis", "vibro-acoustic", "transmission-loss", "STL", "plate-cavity", "FEM"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.5,
+    "width": 0.5,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 25,
+    "y_div": 25,
+    "z_div": 2,
+    "element_type": "S4R"
+  },
+  "material": {
+    "name": "Structural Steel",
+    "elastic_modulus": 2.0e11,
+    "poisson_ratio": 0.3,
+    "density": 7800,
+    "yield_stress": 2.5e8,
+    "speed_of_sound": 5900,
+    "bulk_modulus": 1.667e11
+  },
+  "boundaryConditions": {
+    "fixed_face": "plate_edges_clamped",
+    "load_type": "pressure",
+    "load_face": "plate_surface_incident",
+    "load_magnitude": 1,
+    "load_direction": "Z",
+    "frequency_hz": 1000,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "coupled_acoustic_structural",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [100, 4000]
+  },
+  "theoretical": {
+    "max_displacement": 1.5e-6,
+    "max_stress": 2.0e6,
+    "natural_frequency": 1000,
+    "formula": "STL = 10*log10(1 + (pi*rho_s*f*cos(theta)/(2*rho_0*c_0))^2); f_critical = c_0^2/(2*pi)*sqrt(rho_s*h/D)",
+    "reference": "Fahy & Gardonio, Sound and Structural Vibration, 2nd Ed., Ch.7-8"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "sound_transmission_loss_at_500Hz",
+        "value": 32,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "sound_transmission_loss_at_1000Hz",
+        "value": 38,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "sound_transmission_loss_at_2000Hz",
+        "value": 44,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "critical_frequency_coincidence",
+        "value": 3100,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "mass_law_STL_at_1000Hz",
+        "value": 36,
+        "unit": "dB",
+        "tolerance": 5
+      }
+    ]
+  }
+}

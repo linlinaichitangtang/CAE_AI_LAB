@@ -1,0 +1,88 @@
+{
+  "id": "FD-01",
+  "name": "S-N曲线Basquin方程拟合",
+  "nameEn": "S-N Curve Basquin Equation Fitting",
+  "description": "基于Basquin方程(σ_a=σ'_f(2N_f)^b)的结构钢S-N曲线疲劳寿命预测。材料疲劳强度系数σ'_f=900MPa，疲劳强度指数b=-0.085。在应力幅σ_a=400MPa至200MPa范围内，计算不同应力水平下的疲劳寿命N_f，并验证在σ_a=300MPa时N_f≈2.5×10^5次循环。本案例适用于高周疲劳(HCF)寿命预测教学，帮助学生理解Basquin方程的物理意义及双对数坐标下S-N曲线的线性特征。",
+  "category": "fatigue",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["Basquin方程", "S-N曲线", "高周疲劳", "疲劳强度系数", "应力-寿命法"],
+  "geometry": {
+    "type": "specimen",
+    "length": 0.15,
+    "width": 0.02,
+    "height": 0.01,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 8,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "AISI 4340 Steel (Basquin Parameters)",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 860000000,
+    "ultimate_stress": 1010000000,
+    "fatigue_strength_coefficient": 900000000,
+    "fatigue_strength_exponent": -0.085,
+    "endurance_limit": 350000000
+  },
+  "loading": {
+    "type": "constant_amplitude",
+    "mean_stress": 0,
+    "stress_amplitude": 300000000,
+    "stress_ratio": -1,
+    "frequency_hz": 20,
+    "temperature_K": 293,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "basquin",
+    "parameters": {
+      "sigma_f_prime": 900000000,
+      "b": -0.085,
+      "stress_levels": [400000000, 350000000, 300000000, 250000000, 200000000]
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 250000,
+    "formula": "σ_a = σ'_f · (2N_f)^b → N_f = 0.5 · (σ_a / σ'_f)^(1/b)",
+    "reference": "Basquin OH. The exponential law of endurance tests. ASTM Proceedings, 1910."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "N_f at σ_a=300MPa",
+        "value": 250000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at σ_a=400MPa",
+        "value": 18500,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at σ_a=200MPa",
+        "value": 8400000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "S-N曲线斜率(log-log)",
+        "value": -0.085,
+        "unit": "",
+        "tolerance": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "id": "PP-18",
+  "name": "流固耦合FSI",
+  "nameEn": "Fluid-Structure Interaction - Suspension Bridge Vortex-Induced Vibration",
+  "description": "展示悬索桥在湍流风载荷作用下的流固耦合(FSI)分析结果。桥梁主跨200m，桥面宽25m，加劲梁为钢箱梁截面。来流风速v=30m/s(湍流强度I=15%)，攻角α=0°。采用耦合CFD-FEM方法，流体域使用LES大涡模拟，结构域使用模态叠加法。可视化内容包括：(1)桥面位移场(竖向和横向)；(2)涡脱落频率约0.2Hz(Strouhal数St≈0.12)；(3)风压分布云图。重点关注涡激共振现象和锁定区间，最大竖向振幅约0.5m。通过此案例学习流固耦合后处理的多场同步显示方法。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["流固耦合", "FSI", "涡激振动", "悬索桥", "CFD-FEM", "涡脱落"],
+  "visualization": {
+    "type": "fsi",
+    "field": "displacement",
+    "color_map": "cool",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 120,
+      "fps": 30,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "coupled",
+    "nodes": 285000,
+    "elements": 246000,
+    "results_file": "results/postprocess/fsi_bridge_vibration.dat"
+  },
+  "display_settings": {
+    "title": "悬索桥流固耦合分析 - 涡激振动 (v=30m/s)",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": -0.5,
+      "max": 0.5,
+      "label": "竖向位移 (m)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 150.0, "y": 80.0, "z": 60.0 },
+      "target": { "x": 100.0, "y": 0.0, "z": 30.0 },
+      "rotation": { "pitch": -15, "yaw": 25 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "来流风速", "value": 30, "unit": "m/s", "tolerance": 0 },
+      { "name": "涡脱落频率", "value": 0.2, "unit": "Hz", "tolerance": 10 },
+      { "name": "Strouhal数St", "value": 0.12, "unit": "", "tolerance": 10 },
+      { "name": "最大竖向振幅", "value": 0.5, "unit": "m", "tolerance": 15 },
+      { "name": "最大横向振幅", "value": 0.08, "unit": "m", "tolerance": 15 },
+      { "name": "锁定区间风速范围", "value": 25, "unit": "m/s (下限)", "tolerance": 10 },
+      { "name": "CFD时间步长", "value": 0.005, "unit": "s", "tolerance": 0 },
+      { "name": "耦合迭代次数", "value": 8, "unit": "次/步", "tolerance": 20 }
+    ]
+  }
+}

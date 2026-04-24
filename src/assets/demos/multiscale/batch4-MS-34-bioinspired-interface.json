@@ -1,0 +1,361 @@
+{
+  "id": "MS-34",
+  "name": "生物仿生界面骨胶原矿化",
+  "nameEn": "Bioinspired Interface: Collagen Mineralization",
+  "description": "骨胶原-羟基磷灰石(HA)生物仿生界面矿化的全链条多尺度模拟。首先通过DFT计算羟基磷灰石(HA)与I型胶原蛋白三股螺旋之间的结合能和界面电荷转移，揭示生物矿化的分子机制；MD模拟HA晶体在胶原纤维上的成核与生长过程，包括钙离子通道和磷酸根团簇的组装动力学；相场模型基于Wolff定律描述骨重建过程中的矿化密度分布和微结构演化；FE模型优化骨植入体的界面结合强度和力学相容性。该案例为仿生骨修复材料设计提供多尺度理论框架。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["biomimetic", "hydroxyapatite", "collagen", "bone mineralization", "Wolff's law", "bone remodeling", "implant interface", "triple helix"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Hydroxyapatite-Collagen Type I (Bone Tissue)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "HA-胶原蛋白界面结合能计算",
+      "description": "DFT计算羟基磷灰石(001)表面与I型胶原蛋白三股螺旋关键氨基酸残基的结合能和界面电荷转移",
+      "input": {
+        "HA_surface": "hydroxyapatite_(001)",
+        "HA_composition": "Ca10(PO4)6(OH)2",
+        "HA_slab_layers": 4,
+        "supercell": "2x2",
+        "vacuum_gap": 20,
+        "vacuum_gap_unit": "Angstrom",
+        "collagen_fragment": "Gly-Pro-Hyp_tripeptide",
+        "amino_acid_residues": ["Gly", "Pro", "Hyp", "Lys", "Glu"],
+        "adsorption_sites": ["Ca_site", "PO4_site", "OH_channel"],
+        "solvation": "implicit_water_dielectric_78.4",
+        "vdW_correction": "DFT-D3_BJ"
+      },
+      "output": {
+        "binding_energy_Gly_Pro_Hyp": -1.25,
+        "binding_energy_unit": "eV",
+        "binding_energy_Lys": -0.92,
+        "binding_energy_unit": "eV",
+        "binding_energy_Glu": -1.58,
+        "binding_energy_unit": "eV",
+        "optimal_binding_site": "Ca_site",
+        "Ca-O_bond_length": 2.38,
+        "bond_length_unit": "Angstrom",
+        "charge_transfer": 0.12,
+        "charge_transfer_unit": "e",
+        "interface_binding_energy_gamma": 0.38,
+        "binding_energy_gamma_unit": "J/m^2",
+        "electron_density_difference": "delta_rho.cube",
+        "binding_energy_by_residue": "binding_residues.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": [3, 3, 1],
+        "vdW_correction": "DFT-D3_BJ",
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "ibrion": 2,
+        "isif": 2,
+        "ediffg": -0.01,
+        "ediffg_unit": "eV/Angstrom",
+        "solvent_model": "VASPsol",
+        "implicit_dielectric": 78.4
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT binding energies and Ca-O bond lengths to MD force field (CHARMM36 for collagen + INTERFACE force field for HA with LJ cross terms)",
+        "data_transferred": [
+          "binding_energy_Gly_Pro_Hyp",
+          "optimal_binding_site",
+          "Ca-O_bond_length",
+          "charge_transfer",
+          "interface_binding_energy_gamma"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "HA晶体在胶原纤维上的成核模拟",
+      "description": "MD模拟HA纳米晶体在胶原纤维间隙区的成核与生长过程，包括钙离子通道和磷酸根团簇的组装动力学",
+      "input": {
+        "collagen_fibril": "type_I_triple_helix_300_residues",
+        "fibril_length": 100,
+        "fibril_length_unit": "nm",
+        "fibril_diameter": 1.5,
+        "fibril_diameter_unit": "nm",
+        "gap_region": "40nm_overlap_27nm_gap_zone",
+        "mineral_ions": {
+          "Ca2+": 500,
+          "PO4(3-)": 300,
+          "OH-": 100
+        },
+        "water_box": "TIP3P",
+        "ionic_strength": 0.15,
+        "ionic_strength_unit": "M",
+        "temperature": 310,
+        "temperature_unit": "K",
+        "pH": 7.4,
+        "total_atoms": 120000,
+        "binding_energy_gamma": 0.38,
+        "binding_energy_gamma_unit": "J/m^2"
+      },
+      "output": {
+        "nucleation_time": 85,
+        "nucleation_time_unit": "ns",
+        "critical_nucleus_size": 2.5,
+        "nucleus_size_unit": "nm",
+        "HA_crystal_orientation": "c_axis_parallel_to_fibril",
+        "crystal_growth_rate": 0.8,
+        "growth_rate_unit": "nm/ns",
+        "mineral_density_in_gap": 0.45,
+        "mineral_density_unit": "volume_fraction",
+        "Ca-O_radial_distribution": "rdf_CaO.dat",
+        "nucleation_free_energy": -12.5,
+        "nucleation_energy_unit": "kcal/mol",
+        "HA_platelet_morphology": "platelet_50x25x3_nm",
+        "platelet_spacing": 1.5,
+        "spacing_unit": "nm"
+      },
+      "parameters": {
+        "code": "NAMD",
+        "collagen_force_field": "CHARMM36",
+        "HA_force_field": "INTERFACE_FF",
+        "water_model": "TIP3P",
+        "ion_parameters": "CHARMM_modified",
+        "timestep": 2.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Langevin",
+        "damping_coefficient": 1.0,
+        "damping_coefficient_unit": "ps^-1",
+        "barostat": "Nosé-Hoover_Langevin",
+        "temperature": 310,
+        "temperature_unit": "K",
+        "pressure": 1,
+        "pressure_unit": "atm",
+        "PME_tolerance": 1e-6,
+        "cutoff": 12,
+        "cutoff_unit": "Angstrom",
+        "switching_distance": 10,
+        "switching_distance_unit": "Angstrom",
+        "total_simulation_time": 500,
+        "total_time_unit": "ns",
+        "constraints": "SETTLE_for_water"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD nucleation kinetics, HA platelet morphology and mineral density to phase field bone remodeling model parameters",
+        "data_transferred": [
+          "nucleation_time",
+          "critical_nucleus_size",
+          "HA_crystal_orientation",
+          "mineral_density_in_gap",
+          "HA_platelet_morphology"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "骨重建相场模拟",
+      "description": "基于Wolff定律的相场模型描述骨重建过程中的矿化密度分布和微结构演化",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 500,
+          "unit": "um"
+        },
+        "grid_spacing": 2.5,
+        "grid_spacing_unit": "um",
+        "grid_points": "200x200x200",
+        "initial_bone_microstructure": "trabecular_from_microCT",
+        "initial_mineral_density": 0.35,
+        "mineral_density_unit": "volume_fraction",
+        "Wolffs_law_parameters": {
+          "mechanostat_setpoint_S0": 50,
+          "S0_unit": "MPa",
+          "lazy_zone_width": 15,
+          "lazy_zone_unit": "percent",
+          "resorption_rate": 0.5,
+          "resorption_rate_unit": "um/day",
+          "formation_rate": 1.2,
+          "formation_rate_unit": "um/day"
+        },
+        "HA_platelet_orientation": "aligned_with_fibril",
+        "mineral_density_target": 0.45,
+        "mechanical_loading": "physiological_gait_cycle",
+        "loading_frequency": 1,
+        "loading_frequency_unit": "Hz"
+      },
+      "output": {
+        "final_mineral_density": 0.48,
+        "mineral_density_unit": "volume_fraction",
+        "bone_volume_fraction_BVTV": 0.32,
+        "BVTV_unit": "dimensionless",
+        "trabecular_thickness_TbTh": 180,
+        "TbTh_unit": "um",
+        "trabecular_separation_TbSp": 420,
+        "TbSp_unit": "um",
+        "bone_surface_density_BS_BV": 8.5,
+        "BSBV_unit": "mm^-1",
+        "mineralization_evolution": "mineral_evo.vtk",
+        "microstructure_evolution": "micro_evo.vtk",
+        "mechanical_compliance": 2.8e-4,
+        "compliance_unit": "1/GPa",
+        "remodeling_time": 120,
+        "remodeling_time_unit": "days"
+      },
+      "parameters": {
+        "code": "custom_phase_field_bone_remodeling",
+        "model": "phase_field_Wolffs_law_coupled_mechanics",
+        "order_parameter": "bone_density_rho",
+        "diffusivity": 1e-14,
+        "diffusivity_unit": "m^2/s",
+        "interface_energy_kappa": 5e-8,
+        "kappa_unit": "J/m",
+        "mechanical_solver": "FFT_elasticity",
+        "elastic_modulus_relation": "E = 10.5 * rho^2.5",
+        "E_unit": "GPa",
+        "time_integration": "semi_implicit",
+        "time_step": 3600,
+        "time_step_unit": "s",
+        "total_time": 10368000,
+        "total_time_unit": "s",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 500
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field bone density distribution and microstructural parameters to FE implant-bone interface model",
+        "data_transferred": [
+          "final_mineral_density",
+          "bone_volume_fraction_BVTV",
+          "trabecular_thickness_TbTh",
+          "mechanical_compliance",
+          "mineralization_evolution"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "骨植入体界面优化",
+      "description": "基于相场骨重建结果，FE模型优化骨植入体界面结合强度和力学相容性",
+      "input": {
+        "implant_geometry": "titanium_screw_diameter_4mm_length_12mm",
+        "implant_material": "Ti6Al4V",
+        "implant_properties": {
+          "E": 110,
+          "nu": 0.32,
+          "yield_strength": 880,
+          "unit_E": "GPa",
+          "unit_yield": "MPa"
+        },
+        "bone_domain": "cancellous_bone_block_20x20x20_mm",
+        "bone_density_map": "from_phase_field_MS-34_Step3",
+        "bone_E_relation": "E = 10.5 * rho^2.5",
+        "interface_properties": {
+          "binding_energy_gamma": 0.38,
+          "gamma_unit": "J/m^2",
+          "cohesive_strength": 45,
+          "strength_unit": "MPa",
+          "fracture_energy": 0.5,
+          "fracture_energy_unit": "kJ/m^2"
+        },
+        "loading": "physiological_gait_3x_body_weight",
+        "peak_load": 2250,
+        "peak_load_unit": "N"
+      },
+      "output": {
+        "implant_bone_interface_stress": 35,
+        "interface_stress_unit": "MPa",
+        "micromotion_at_interface": 28,
+        "micromotion_unit": "um",
+        "osseointegration_quality": "good",
+        "stress_shielding_ratio": 0.62,
+        "shielding_ratio_unit": "dimensionless",
+        "bone_stress_distribution": "bone_stress.vtk",
+        "implant_stress_distribution": "implant_stress.vtk",
+        "safety_factor_implant": 3.2,
+        "safety_factor_bone": 2.1,
+        "fatigue_life_cycles": 1e7,
+        "fatigue_life_unit": "cycles",
+        "optimal_thread_pitch": 0.8,
+        "thread_pitch_unit": "mm"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "element_type": "C3D10M",
+        "mesh_strategy": "graded_refined_at_interface",
+        "element_size_min": 0.1,
+        "element_size_min_unit": "mm",
+        "bone_material": "inhhomogeneous_elastic_from_density_map",
+        "interface": "cohesive_zone_CZM",
+        "cohesive_law": "bilinear_traction_separation",
+        "damage_initiation": "Quads_damage",
+        "damage_evolution": "energy_based",
+        "loading": "cyclic_axial_+_lateral",
+        "amplitude": "sinusoidal",
+        "frequency": 1,
+        "frequency_unit": "Hz",
+        "cycles": 1000,
+        "step_type": "static_riks",
+        "nlgeom": true,
+        "convergence_tolerance": 1e-8,
+        "max_increment": 500
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE implant optimization results for bioinspired bone-implant interface design feedback and clinical translation",
+        "data_transferred": [
+          "implant_bone_interface_stress",
+          "micromotion_at_interface",
+          "osseointegration_quality",
+          "stress_shielding_ratio",
+          "optimal_thread_pitch"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.biomaterials.2016.06.028",
+    "authors": "Niu LN, Zhang W, Pashley DH, Breschi L, Mao J, Chen JH, Tay FR",
+    "year": 2016,
+    "journal": "Biomaterials"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "HA-collagen interface binding energy",
+        "value": -1.58,
+        "unit": "eV",
+        "tolerance": 10
+      },
+      {
+        "name": "HA nucleation time",
+        "value": 85,
+        "unit": "ns",
+        "tolerance": 20
+      },
+      {
+        "name": "Final mineral density (PF)",
+        "value": 0.48,
+        "unit": "volume_fraction",
+        "tolerance": 10
+      },
+      {
+        "name": "Implant-bone interface stress",
+        "value": 35,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "Micromotion at interface",
+        "value": 28,
+        "unit": "um",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

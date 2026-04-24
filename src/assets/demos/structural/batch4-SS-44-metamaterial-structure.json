@@ -1,0 +1,86 @@
+{
+  "id": "SS-44",
+  "name": "超材料拉胀结构分析",
+  "nameEn": "Metamaterial Auxetic Structure Analysis",
+  "description": "对re-entrant内凹型拉胀超材料单胞进行周期性边界条件下的单轴拉伸试验。有效泊松比ν_eff=-0.5（负泊松比效应），均质化等效弹性模量E_eff=2GPa。单胞尺寸0.02m，5×5周期阵列。施加周期性边界条件验证横向膨胀行为，确认材料在拉伸时横向同步膨胀而非收缩。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["超材料", "负泊松比", "拉胀结构", "周期性边界", "均质化"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.02,
+    "radius": 0.0,
+    "thickness": 0.0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 50,
+    "y_div": 50,
+    "z_div": 10,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Nylon 6/6 (Base Material)",
+    "elastic_modulus": 2.8e9,
+    "poisson_ratio": 0.39,
+    "density": 1140,
+    "yield_stress": 82e6,
+    "thermal_expansion": 8.0e-5,
+    "thermal_conductivity": 0.25,
+    "specific_heat": 1700
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_periodic_face",
+    "load_type": "uniform",
+    "load_face": "top_periodic_face",
+    "load_magnitude": 10000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 5e-4,
+    "max_stress": 82e6,
+    "formula": "ν_eff = -ε_transverse/ε_axial = -0.5; E_eff = σ_applied/ε_axial = 2 GPa; ε_axial = F/(E_eff·A) = 10000/(2e9×0.1×0.1) = 5e-4",
+    "reference": "Lakes R.S. (1987) Science 235, 1038-1040; Gibson & Ashby, Cellular Solids"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "有效泊松比 Effective Poisson Ratio ν_eff",
+        "value": -0.5,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "等效弹性模量 Effective Elastic Modulus E_eff",
+        "value": 2.0,
+        "unit": "GPa",
+        "tolerance": 10
+      },
+      {
+        "name": "轴向应变 Axial Strain",
+        "value": 0.05,
+        "unit": "%",
+        "tolerance": 5
+      },
+      {
+        "name": "横向膨胀应变 Transverse Strain (expansion)",
+        "value": 0.025,
+        "unit": "%",
+        "tolerance": 10
+      }
+    ]
+  }
+}

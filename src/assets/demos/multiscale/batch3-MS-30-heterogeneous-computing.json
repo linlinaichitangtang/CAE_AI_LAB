@@ -1,0 +1,333 @@
+{
+  "id": "MS-30",
+  "name": "异构计算尺度耦合",
+  "nameEn": "Heterogeneous Computing Scale Coupling",
+  "description": "GPU加速MD(LAMMPS/GPU)与CPU FE(Abaqus/ANSYS)的异构并行尺度耦合性能测试。验证GPU-MD与CPU-FE之间的数据传输延迟(<1ms/step)、弱扩展效率(>80% up to 64 GPUs)和计算吞吐量。测试包括：MD区域在GPU上的计算加速比、FE区域在CPU集群上的并行效率、MD-FE耦合界面的数据交换协议(MPI+CUDA)、以及整体多尺度模拟的负载均衡策略。该案例为大规模多尺度模拟的异构计算部署提供性能基准和优化指南。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["heterogeneous computing", "GPU acceleration", "LAMMPS", "Abaqus", "MPI+CUDA", "weak scaling", "data transfer latency", "load balancing"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Al FCC for heterogeneous computing benchmark",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT基准计算与参数生成",
+      "description": "执行小规模DFT基准计算，生成多尺度模拟的初始参数，并记录单节点DFT计算性能基准",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "2x2x2",
+        "atom_count": 32,
+        "k_points": [8, 8, 8],
+        "purpose": "generate_reference_parameters_and_benchmark"
+      },
+      "output": {
+        "reference_energy": -3.74,
+        "energy_unit": "eV/atom",
+        "reference_forces": "forces_ref.dat",
+        "elastic_constants": {
+          "C11": 118,
+          "C12": 63,
+          "C44": 34,
+          "unit": "GPa"
+        },
+        "dft_wall_time_per_atom": 2.5,
+        "wall_time_unit": "s/atom",
+        "dft_memory_per_core": 4.2,
+        "memory_unit": "GB/core",
+        "dft_parallel_efficiency_32cores": 78,
+        "efficiency_unit": "percent"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Al",
+        "energy_cutoff": 400,
+        "energy_cutoff_unit": "eV",
+        "k_points": [8, 8, 8],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "parallel_cores": [1, 4, 8, 16, 32],
+        "benchmark_mode": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT reference parameters and elastic constants to MD and FE simulation setup",
+        "data_transferred": [
+          "reference_energy",
+          "reference_forces",
+          "elastic_constants",
+          "dft_wall_time_per_atom"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "GPU加速MD性能测试",
+      "description": "在GPU集群上运行LAMMPS MD模拟，测试GPU加速比、弱扩展效率和MD-FE数据传输延迟",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "test_configurations": {
+          "single_GPU": {"atoms": 1000000, "GPUs": 1},
+          "multi_GPU_4": {"atoms": 4000000, "GPUs": 4},
+          "multi_GPU_16": {"atoms": 16000000, "GPUs": 16},
+          "multi_GPU_32": {"atoms": 32000000, "GPUs": 32},
+          "multi_GPU_64": {"atoms": 64000000, "GPUs": 64}
+        },
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "steps_per_test": 10000,
+        "GPU_type": "NVIDIA_A100_80GB",
+        "coupling_interface": "MPI+CUDA_Aware",
+        "FE_data_exchange": true
+      },
+      "output": {
+        "GPU_speedup_vs_CPU": 45,
+        "speedup_unit": "x",
+        "single_GPU_throughput": 85,
+        "throughput_unit": "ns/day",
+        "weak_scaling_efficiency": {
+          "4_GPUs": 96,
+          "16_GPUs": 91,
+          "32_GPUs": 85,
+          "64_GPUs": 82,
+          "unit": "percent"
+        },
+        "GPU_memory_usage_per_device": 18.5,
+        "memory_unit": "GB",
+        "MD_to_FE_data_transfer_latency": 0.65,
+        "transfer_latency_unit": "ms/step",
+        "data_transfer_bandwidth": 12.5,
+        "bandwidth_unit": "GB/s",
+        "MD_FE_handshake_overhead": 2.8,
+        "handshake_overhead_unit": "percent",
+        "GPU_utilization": 92,
+        "utilization_unit": "percent",
+        "performance_log": "gpu_performance.log"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "package": "gpu",
+        "GPU_architecture": "Ampere_A100",
+        "CUDA_version": "12.0",
+        "MPI_library": "OpenMPI_4.1",
+        "neighbor_skin": 2.0,
+        "neighbor_skin_unit": "Angstrom",
+        "neighbor_build": "every_10_steps",
+        "ppn_GPU": 1,
+        "ppn_CPU": 4,
+        "binding": "core",
+        "communication": "CUDA_aware_MPI",
+        "load_balancing": "dynamic_bond_comm",
+        "output_frequency": 1000
+      },
+      "bridge_to_next": {
+        "mapping_method": "GPU-MD stress/displacement data to CPU-FE via CUDA-aware MPI with sub-millisecond latency",
+        "data_transferred": [
+          "GPU_speedup_vs_CPU",
+          "weak_scaling_efficiency",
+          "MD_to_FE_data_transfer_latency",
+          "data_transfer_bandwidth",
+          "MD_FE_handshake_overhead"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场GPU并行性能测试",
+      "description": "测试相场求解器在GPU上的并行性能，评估FFT求解器的GPU加速效果和与MD/FE的数据交换效率",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 500,
+          "unit": "nm"
+        },
+        "grid_sizes": ["128^3", "256^3", "512^3"],
+        "model": "Cahn-Hilliard_equation",
+        "order_parameter": "composition_c",
+        "GPU_configurations": [1, 4, 16, 64],
+        "GPU_type": "NVIDIA_A100_80GB",
+        "FFT_solver": "cuFFT",
+        "coupling_mode": "concurrent_with_MD_and_FE"
+      },
+      "output": {
+        "FFT_GPU_speedup": 28,
+        "speedup_unit": "x_vs_CPU",
+        "time_per_step_128": 0.005,
+        "time_per_step_unit": "s",
+        "time_per_step_256": 0.035,
+        "time_per_step_unit": "s",
+        "time_per_step_512": 0.25,
+        "time_per_step_unit": "s",
+        "weak_scaling_PF": {
+          "4_GPUs": 94,
+          "16_GPUs": 88,
+          "64_GPUs": 83,
+          "unit": "percent"
+        },
+        "PF_to_MD_data_latency": 0.42,
+        "latency_unit": "ms/step",
+        "PF_to_FE_data_latency": 0.38,
+        "latency_unit": "ms/step",
+        "GPU_memory_PF_512": 8.2,
+        "memory_unit": "GB",
+        "total_coupling_overhead_PF": 3.5,
+        "coupling_overhead_unit": "percent"
+      },
+      "parameters": {
+        "code": "custom_CUDA_phase_field",
+        "FFT_library": "cuFFT",
+        "GPU_architecture": "Ampere_A100",
+        "CUDA_version": "12.0",
+        "MPI_library": "OpenMPI_4.1",
+        "time_integration": "semi-implicit_spectral",
+        "stabilization": "convex_splitting",
+        "communication_pattern": "halo_exchange",
+        "halo_width": 1,
+        "load_balancing": "domain_decomposition_3D"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field order parameter field to FE continuum model via spatial averaging on GPU",
+        "data_transferred": [
+          "FFT_GPU_speedup",
+          "weak_scaling_PF",
+          "PF_to_FE_data_latency",
+          "total_coupling_overhead_PF"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE CPU并行与整体耦合性能评估",
+      "description": "在CPU集群上运行FE模拟，评估CPU并行效率，并汇总MD-PF-FE异构耦合的整体性能指标",
+      "input": {
+        "domain_size": {
+          "Lx": 1000,
+          "Ly": 1000,
+          "Lz": 1000,
+          "unit": "um"
+        },
+        "mesh_sizes": ["100000_elem", "500000_elem", "2000000_elem"],
+        "element_type": "C3D8R",
+        "CPU_configurations": [32, 64, 128, 256, 512],
+        "solver_type": "iterative_PCG_with_AMG",
+        "coupling_sources": {
+          "MD": "stress_displacement_from_GPU_MD",
+          "PF": "order_parameter_from_GPU_PF"
+        },
+        "data_transfer_protocol": "MPI+CUDA_aware",
+        "target_latency": 1.0,
+        "target_latency_unit": "ms/step"
+      },
+      "output": {
+        "CPU_parallel_efficiency": {
+          "32_cores": 95,
+          "64_cores": 90,
+          "128_cores": 84,
+          "256_cores": 78,
+          "512_cores": 72,
+          "unit": "percent"
+        },
+        "FE_wall_time_500k_elem": 12.5,
+        "wall_time_unit": "s/step",
+        "FE_to_MD_data_latency": 0.72,
+        "latency_unit": "ms/step",
+        "overall_coupling_latency": 0.85,
+        "overall_latency_unit": "ms/step",
+        "total_system_weak_scaling": {
+          "4_nodes": 94,
+          "16_nodes": 87,
+          "64_nodes": 81,
+          "unit": "percent"
+        },
+        "load_balance_ratio": 0.88,
+        "load_balance_unit": "dimensionless",
+        "total_coupling_overhead": 4.2,
+        "total_overhead_unit": "percent",
+        "end_to_end_speedup_vs_serial": 320,
+        "end_to_end_unit": "x",
+        "performance_summary": "performance_report.dat",
+        "scaling_analysis": "scaling.dat"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard + custom_user_subroutine",
+        "solver_type": "iterative_PCG_AMG_preconditioner",
+        "AMG_levels": 8,
+        "AMG_coarsening": "aggregation",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 500,
+        "MPI_library": "Intel_MPI_2021",
+        "domain_decomposition": "graph_based",
+        "communication_pattern": "neighbor_exchange",
+        "I/O": "parallel_HDF5",
+        "checkpoint_interval": 1000,
+        "coupling_strategy": "staggered_MD-PF-FE",
+        "coupling_interval": 100,
+        "coupling_interval_unit": "MD_steps"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Overall heterogeneous computing performance assessment and scaling analysis for CAELab deployment guidance",
+        "data_transferred": [
+          "overall_coupling_latency",
+          "total_system_weak_scaling",
+          "load_balance_ratio",
+          "total_coupling_overhead",
+          "end_to_end_speedup_vs_serial",
+          "performance_summary"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.cpc.2020.107549",
+    "authors": "Plimpton SJ, Thompson AP, Crozier PS, Kohlmeyer A",
+    "year": 2021,
+    "journal": "Computer Physics Communications"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "GPU speedup vs CPU (MD)",
+        "value": 45,
+        "unit": "x",
+        "tolerance": 25
+      },
+      {
+        "name": "Data transfer latency",
+        "value": 0.85,
+        "unit": "ms/step",
+        "tolerance": 30
+      },
+      {
+        "name": "Weak scaling efficiency at 64 GPUs",
+        "value": 81,
+        "unit": "percent",
+        "tolerance": 15
+      },
+      {
+        "name": "Total coupling overhead",
+        "value": 4.2,
+        "unit": "percent",
+        "tolerance": 30
+      },
+      {
+        "name": "Load balance ratio",
+        "value": 0.88,
+        "unit": "dimensionless",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 20
+  }
+}

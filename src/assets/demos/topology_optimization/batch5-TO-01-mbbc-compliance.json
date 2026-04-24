@@ -1,0 +1,74 @@
+{
+  "id": "TO-01",
+  "name": "MBB梁最小柔度优化",
+  "nameEn": "MBB Beam Minimum Compliance Optimization",
+  "description": "经典MBB（Messerschmitt-Bolkow-Blohm）梁拓扑优化问题。在给定体积分数约束下，通过SIMP方法寻找使结构柔度最小的材料分布。MBB梁是拓扑优化领域的基准算例，广泛应用于验证算法正确性。载荷施加在梁跨度的1/4处，底部两端简支，优化后应形成类似桁架的传力路径。通过与文献中的最优柔度值对比验证计算精度。",
+  "category": "topology_optimization",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["SIMP", "柔度优化", "MBB梁", "经典算例", "基准验证"],
+  "design_domain": {
+    "type": "beam",
+    "length": 2.0,
+    "width": 0.5,
+    "height": 0.5,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 200,
+    "y_div": 50,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Structural Steel",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.4,
+    "penalization": 3,
+    "filter_radius": 0.02,
+    "max_iterations": 100,
+    "convergence_tolerance": 0.01
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_left_corner, bottom_right_corner",
+    "load_type": "point",
+    "load_face": "top_quarter_span",
+    "load_magnitude": 100000,
+    "load_direction": "-Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.4,
+      "unit": "ratio"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "optimal_compliance",
+        "value": 185,
+        "unit": "N·m",
+        "tolerance": 10
+      },
+      {
+        "name": "final_volume_fraction",
+        "value": 0.4,
+        "unit": "ratio",
+        "tolerance": 5
+      },
+      {
+        "name": "iteration_count",
+        "value": 65,
+        "unit": "iterations",
+        "tolerance": 30
+      }
+    ]
+  }
+}

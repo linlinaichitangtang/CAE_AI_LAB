@@ -1,0 +1,136 @@
+{
+  "id": "SS-15",
+  "name": "复合材料层合板分析",
+  "nameEn": "Composite Laminate Analysis",
+  "description": "碳纤维/环氧树脂层合板[0/45/-45/90]s的力学性能分析。材料参数：E₁=140GPa, E₂=10GPa, G₁₂=5GPa, ν₁₂=0.3。单层厚度t=0.125mm，共8层，总厚度1.0mm。计算拉伸刚度矩阵A、弯曲刚度矩阵D和耦合刚度矩阵B（对称铺层B=0）。该算例用于验证有限元程序中复合材料层合板经典理论(CLPT)的实现。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": [
+    "复合材料",
+    "层合板",
+    "ABD矩阵",
+    "CLPT"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.2,
+    "thickness": 0.001,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "element_type": "S4R"
+  },
+  "material": {
+    "name": "Carbon/Epoxy T300/5208",
+    "elastic_modulus": 140000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 1600.0,
+    "yield_stress": 0.0,
+    "thermal_expansion": 2e-07,
+    "thermal_conductivity": 10.0,
+    "specific_heat": 800.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 1000000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 1e-05,
+    "max_stress": 100000000.0,
+    "formula": "CLPT: [N]=[A][ε⁰]+[B][κ], [M]=[B][ε⁰]+[D][κ], 对称铺层B=0",
+    "reference": "Jones, Mechanics of Composite Materials, Ch. 4"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "A11",
+        "value": 59868799.425,
+        "unit": "N/m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "A22",
+        "value": 59868799.425,
+        "unit": "N/m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "A12",
+        "value": 18635873.472,
+        "unit": "N/m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "A66",
+        "value": 20616462.976,
+        "unit": "N/m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "D11",
+        "value": 8.299663,
+        "unit": "N·m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "D22",
+        "value": 2.166485,
+        "unit": "N·m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "D12",
+        "value": 1.308982,
+        "unit": "N·m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "D66",
+        "value": 1.474031,
+        "unit": "N·m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "等效Ex",
+        "value": 54067851628.816,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "等效Ey",
+        "value": 54067851628.816,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "等效Gxy",
+        "value": 20616462976.276,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "等效νxy",
+        "value": 0.3113,
+        "unit": "",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

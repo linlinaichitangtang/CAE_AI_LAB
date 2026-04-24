@@ -1,0 +1,71 @@
+{
+  "id": "RL-04",
+  "name": "齿轮弯曲疲劳可靠度",
+  "nameEn": "Gear Bending Fatigue Reliability Analysis",
+  "description": "齿轮弯曲疲劳可靠度分析问题。基于ISO 6336标准计算齿轮齿根弯曲应力，结合Weibull分布描述疲劳寿命的分散性。齿轮参数：模数m=4mm，齿数z=25，齿宽b=30mm，传递扭矩T=500N·m。疲劳强度服从三参数Weibull分布，形状参数k=2.5，尺度参数lambda=350MPa，位置参数gamma=100MPa。在目标寿命N=10^6次循环下，计算齿轮弯曲疲劳失效概率。考虑载荷谱的随机性和材料疲劳性能的分散性，采用对数正态分布描述疲劳寿命，通过S-N曲线和Miner累积损伤准则进行寿命预测。",
+  "category": "reliability",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["齿轮", "疲劳", "Weibull分布", "ISO 6336", "S-N曲线", "累积损伤"],
+  "random_variables": [
+    {
+      "name": "fatigue_strength",
+      "distribution": "weibull",
+      "mean": 350000000,
+      "stddev": 50000000,
+      "cov": 0.143
+    },
+    {
+      "name": "applied_torque",
+      "distribution": "normal",
+      "mean": 500,
+      "stddev": 75,
+      "cov": 0.15
+    },
+    {
+      "name": "tooth_root_stress_concentration",
+      "distribution": "lognormal",
+      "mean": 1.6,
+      "stddev": 0.16,
+      "cov": 0.1
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "sigma_fatigue_limit(N) - sigma_bending(T, m, z, b, K_sc)",
+    "description": "齿根弯曲疲劳强度与计算弯曲应力之差。疲劳强度随寿命N变化，通过S-N曲线确定"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 500000,
+    "target_reliability_index": 3.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "failure_probability_at_N_1e6",
+        "value": 0.00023,
+        "unit": "",
+        "tolerance": 25
+      },
+      {
+        "name": "reliability_index",
+        "value": 3.5,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "median_fatigue_life",
+        "value": 2000000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "B10_fatigue_life",
+        "value": 800000,
+        "unit": "cycles",
+        "tolerance": 20
+      }
+    ]
+  }
+}

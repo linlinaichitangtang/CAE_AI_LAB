@@ -1,0 +1,58 @@
+{
+  "id": "OS-04",
+  "name": "深水管线铺设",
+  "nameEn": "Deepwater Pipeline Laying",
+  "description": "模拟深水海底管道S型铺设过程中的力学分析。管道外径D=0.324m，铺设水深500m。采用悬链线方程分析管道在铺设状态下的形态和内力分布：T=wh²/(8d)，其中w为单位长度水下重量，h为悬垂段高度，d为悬垂段水平投影。验证管道最大弯矩位置（通常在拱弯区和垂弯区）、管道最大等效应力以及铺管船上的张力要求。按DNV-OS-F101规范校核管道铺设应力。",
+  "category": "offshore",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["deepwater", "pipeline-lay", "catenary", "S-lay", "DNV-OS-F101"],
+  "geometry": {
+    "type": "pipe",
+    "outer_diameter": 0.324,
+    "wall_thickness": 0.012,
+    "length": 2000.0,
+    "water_depth": 500.0
+  },
+  "material": {
+    "name": "API 5L X65",
+    "elastic_modulus": 207000000000.0,
+    "yield_strength": 448000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "submerged_weight_per_meter": 800.0,
+    "lay_tension": 1500000.0,
+    "stinger_radius": 200.0,
+    "current_speed": 0.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "铺管张力",
+        "value": 1500.0,
+        "unit": "kN",
+        "tolerance": 15
+      },
+      {
+        "name": "垂弯区最大弯矩",
+        "value": 180.0,
+        "unit": "kN·m",
+        "tolerance": 15
+      },
+      {
+        "name": "管道最大等效应力",
+        "value": 350.0,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "离船角",
+        "value": 65.0,
+        "unit": "deg",
+        "tolerance": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "id": "MS-35",
+  "name": "粗糙表面接触",
+  "nameEn": "Rough Surface Contact Mechanics",
+  "description": "粗糙表面接触力学从表面能到宏观接触行为的跨尺度模拟验证。首先通过DFT计算金属表面(Al(111))的表面能γ_s，为接触力学提供基本热力学参数；然后通过MD生成分形粗糙表面(D_f=2.3)，模拟纳米尺度接触的弹塑性变形和粘附力；基于Winkler弹性基础梁模型建立介观尺度接触力学解析模型，预测真实接触面积随载荷的变化关系；FE模型进行宏观接触力学的数值验证，与Greenwood-Williamson(GW)和Persson理论对比。该案例为接触力学方法论的跨尺度一致性验证。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["rough surface", "contact mechanics", "fractal surface", "Winkler foundation", "Greenwood-Williamson", "Persson theory", "adhesion", "surface energy"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Aluminum (Al) Rough Surface Contact",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "表面能计算",
+      "description": "DFT计算Al(111)、Al(100)和Al(110)表面的表面能，为接触力学提供基本热力学参数",
+      "input": {
+        "surfaces": ["Al(111)", "Al(100)", "Al(110)"],
+        "slab_layers": 12,
+        "vacuum_gap": 20,
+        "vacuum_gap_unit": "Angstrom",
+        "supercells": {
+          "Al(111)": "4x4",
+          "Al(100)": "4x4",
+          "Al(110)": "3x4"
+        },
+        "k_points": [12, 12, 1],
+        "surface_relaxation": true
+      },
+      "output": {
+        "surface_energy_111": 1.14,
+        "surface_energy_unit": "J/m^2",
+        "surface_energy_100": 1.35,
+        "surface_energy_unit": "J/m^2",
+        "surface_energy_110": 1.27,
+        "surface_energy_unit": "J/m^2",
+        "surface_relaxation_111": -2.5,
+        "relaxation_unit": "percent",
+        "work_of_adhesion_Al_Al": 1.28,
+        "adhesion_unit": "J/m^2",
+        "surface_stress_111": 0.85,
+        "surface_stress_unit": "N/m",
+        "electron_density_111": "rho_111.cube",
+        "surface_energy_anisotropy_ratio": 0.84
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Al",
+        "energy_cutoff": 450,
+        "energy_cutoff_unit": "eV",
+        "k_points": [12, 12, 1],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "ibrion": 2,
+        "isif": 2,
+        "ediffg": -0.005,
+        "ediffg_unit": "eV/Angstrom",
+        "symmetry": "off_for_surface"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT surface energy gamma_s and work of adhesion to MD interatomic potential validation and contact adhesion parameters",
+        "data_transferred": [
+          "surface_energy_111",
+          "work_of_adhesion_Al_Al",
+          "surface_stress_111",
+          "surface_energy_anisotropy_ratio"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "分形粗糙表面生成与纳米接触模拟",
+      "description": "MD生成分形粗糙表面(D_f=2.3)，模拟纳米尺度弹塑性接触变形和粘附力",
+      "input": {
+        "material": "Al_FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "rough_surface_generation": "fractal_midpoint_displacement",
+        "fractal_dimension_Df": 2.3,
+        "RMS_roughness_Rq": 2.0,
+        "Rq_unit": "nm",
+        "correlation_length_xi": 20,
+        "xi_unit": "nm",
+        "surface_size": "50x50",
+        "surface_size_unit": "nm",
+        "flat_counter_surface": "rigid_Al(111)",
+        "potential": "EAM_Mishin_Al",
+        "surface_energy_gamma_s": 1.14,
+        "gamma_s_unit": "J/m^2",
+        "normal_loads": [10, 50, 100, 200, 500],
+        "load_unit": "nN"
+      },
+      "output": {
+        "real_contact_area_ratio": {
+          "10nN": 0.025,
+          "50nN": 0.085,
+          "100nN": 0.14,
+          "200nN": 0.22,
+          "500nN": 0.35
+        },
+        "contact_area_unit": "dimensionless",
+        "adhesion_force": 15,
+        "adhesion_force_unit": "nN",
+        "pull_off_force": 8.5,
+        "pull_off_unit": "nN",
+        "contact_stiffness": 120,
+        "stiffness_unit": "N/m",
+        "asperity_deformation": "mixed_elastic_plastic",
+        "pressure_distribution": "pressure.dat",
+        "surface_profile": "rough_surface.dat",
+        "contact_map": "contact_map.vtk"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "potential": "EAM_Mishin_Al",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nose-Hoover",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "rigid_surface": "lower_surface_fixed",
+        "loading": "displacement_controlled",
+        "approach_rate": 0.01,
+        "approach_rate_unit": "nm/ps",
+        "max_indentation": 3.0,
+        "max_indentation_unit": "nm",
+        "neighbor_skin": 2.5,
+        "neighbor_skin_unit": "Angstrom",
+        "dump_interval": 5000,
+        "contact_detection": "atom_distance_threshold_3.2_A"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD real contact area ratio, adhesion force and asperity deformation mode to Winkler elastic foundation beam contact model parameters",
+        "data_transferred": [
+          "real_contact_area_ratio",
+          "adhesion_force",
+          "pull_off_force",
+          "contact_stiffness",
+          "asperity_deformation"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "Winkler弹性基础接触模型",
+      "description": "基于Winkler弹性基础模型建立介观尺度粗糙表面接触力学解析模型，预测真实接触面积随载荷的变化",
+      "input": {
+        "model": "Winkler_elastic_foundation",
+        "surface_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "unit": "um"
+        },
+        "roughness_parameters": {
+          "RMS_Rq": 2.0,
+          "Rq_unit": "um",
+          "fractal_dimension_Df": 2.3,
+          "correlation_length_xi": 20,
+          "xi_unit": "um",
+          "Hurst_exponent_H": 0.3
+        },
+        "elastic_foundation_stiffness": 120,
+        "stiffness_unit": "N/m",
+        "surface_energy_gamma_s": 1.14,
+        "gamma_s_unit": "J/m^2",
+        "load_range": [0.1, 1000],
+        "load_unit": "mN",
+        "adhesion_parameter": "Maugis_DMT_transition"
+      },
+      "output": {
+        "contact_area_vs_load": "A_vs_P.dat",
+        "contact_area_at_100mN": 0.18,
+        "contact_area_unit": "dimensionless",
+        "mean_contact_pressure": 580,
+        "pressure_unit": "MPa",
+        "GW_prediction": "GW_A_vs_P.dat",
+        "Persson_prediction": "Persson_A_vs_P.dat",
+        "MD_agreement_error": 8.5,
+        "agreement_error_unit": "percent",
+        "adhesion_parameter_psi": 1.2,
+        "psi_unit": "dimensionless",
+        "JKR_GW_transition_load": 0.5,
+        "transition_unit": "mN",
+        "contact_pressure_histogram": "pressure_hist.dat"
+      },
+      "parameters": {
+        "code": "custom_Winkler_contact_solver",
+        "surface_discretization": "256x256_grid",
+        "grid_spacing": 1.95,
+        "grid_spacing_unit": "um",
+        "foundation_springs": "independent_linear",
+        "adhesion_model": "Maugis_DMT_approximation",
+        "Tabor_parameter": 1.2,
+        "load_steps": 200,
+        "convergence_tolerance": 1e-6,
+        "max_iterations": 100,
+        "asperity_interaction": "none",
+        "surface_generation": "spectral_synthesis",
+        "random_seed": 42
+      },
+      "bridge_to_next": {
+        "mapping_method": "Winkler model contact area predictions and pressure distributions to FE contact mechanics numerical verification",
+        "data_transferred": [
+          "contact_area_vs_load",
+          "contact_area_at_100mN",
+          "mean_contact_pressure",
+          "GW_prediction",
+          "Persson_prediction"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE接触力学数值验证",
+      "description": "FE模型进行宏观粗糙表面接触力学数值模拟，验证Winkler模型和GW/Persson理论的预测精度",
+      "input": {
+        "surface_pair": "rough_Al_vs_flat_Al",
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 250,
+          "unit": "um"
+        },
+        "rough_surface": "from_MD_MS-35_Step2",
+        "RMS_roughness_Rq": 2.0,
+        "Rq_unit": "um",
+        "fractal_dimension_Df": 2.3,
+        "mesh": "refined_at_contact",
+        "element_type": "C3D8R",
+        "min_element_size": 0.5,
+        "min_element_size_unit": "um",
+        "material": {
+          "E": 70,
+          "nu": 0.33,
+          "sigma_yield": 280,
+          "unit_E": "GPa",
+          "unit_yield": "MPa"
+        },
+        "surface_energy_gamma_s": 1.14,
+        "gamma_s_unit": "J/m^2",
+        "load_range": [0.1, 1000],
+        "load_unit": "mN"
+      },
+      "output": {
+        "FE_contact_area_at_100mN": 0.175,
+        "contact_area_unit": "dimensionless",
+        "FE_vs_Winkler_error": 2.8,
+        "error_unit": "percent",
+        "FE_vs_GW_error": 5.2,
+        "error_unit": "percent",
+        "FE_vs_Persson_error": 4.1,
+        "error_unit": "percent",
+        "FE_vs_MD_error": 9.5,
+        "error_unit": "percent",
+        "contact_pressure_field": "pressure_FE.vtk",
+        "stress_field": "stress_FE.vtk",
+        "subsurface_stress_depth": 3.2,
+        "stress_depth_unit": "um",
+        "max_subsurface_stress": 420,
+        "subsurface_stress_unit": "MPa",
+        "comparison_summary": "contact_comparison.dat"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "element_type": "C3D8R",
+        "contact_algorithm": "penalty_method",
+        "friction_formulation": "penalty",
+        "friction_coefficient": 0.3,
+        "allow_separation": true,
+        "surface_to_surface": true,
+        "slave_surface": "rough_surface",
+        "master_surface": "flat_surface",
+        "contact_stiffness_scale": 10,
+        "step_type": "static_general",
+        "nlgeom": true,
+        "increment_size": 0.01,
+        "max_increment": 2000,
+        "convergence_tolerance": 1e-8,
+        "stabilization": "automatic",
+        "damping_factor": 0.0002
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE contact mechanics verification results and multi-model comparison for rough surface contact methodology validation",
+        "data_transferred": [
+          "FE_contact_area_at_100mN",
+          "FE_vs_Winkler_error",
+          "FE_vs_GW_error",
+          "FE_vs_Persson_error",
+          "comparison_summary"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.triboint.2018.04.005",
+    "authors": "Persson BNJ, Scaraggi M",
+    "year": 2018,
+    "journal": "Tribology International"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Surface energy Al(111)",
+        "value": 1.14,
+        "unit": "J/m^2",
+        "tolerance": 5
+      },
+      {
+        "name": "Adhesion force (MD)",
+        "value": 15,
+        "unit": "nN",
+        "tolerance": 15
+      },
+      {
+        "name": "Contact area ratio at 100mN (Winkler)",
+        "value": 0.18,
+        "unit": "dimensionless",
+        "tolerance": 10
+      },
+      {
+        "name": "FE vs Winkler error",
+        "value": 2.8,
+        "unit": "percent",
+        "tolerance": 30
+      },
+      {
+        "name": "FE vs GW error",
+        "value": 5.2,
+        "unit": "percent",
+        "tolerance": 30
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

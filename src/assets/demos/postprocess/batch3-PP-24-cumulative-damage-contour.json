@@ -1,0 +1,54 @@
+{
+  "id": "PP-24",
+  "name": "累积损伤等值面",
+  "nameEn": "Cumulative Damage Isosurface - Bracket Under Cyclic Loading",
+  "description": "展示发动机支架在交变载荷下的疲劳累积损伤分布，基于Miner线性累积损伤理论D=Σ(n_i/N_i)。支架材料为铝合金6061-T6(E=69GPa, σ_y=276MPa)，承受R=-1的对称循环载荷，载荷谱包含3个应力水平(σ₁=180MPa, σ₂=140MPa, σ₃=100MPa)，对应循环次数n₁=5000, n₂=20000, n₃=100000次。通过S-N曲线计算各应力水平下的疲劳寿命N_i，得到累积损伤D分布。在支架根部圆角处D值最高，设置D=0.5(警告阈值)和D=1.0(失效阈值)两个等值面，分别以黄色和红色半透明显示，直观标识疲劳危险区域。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["疲劳损伤", "Miner法则", "等值面", "累积损伤", "S-N曲线", "支架"],
+  "visualization": {
+    "type": "isosurface",
+    "field": "damage",
+    "color_map": "hot",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 30,
+      "fps": 6,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "transient",
+    "nodes": 32000,
+    "elements": 27500,
+    "results_file": "results/postprocess/bracket_fatigue_damage.dat"
+  },
+  "display_settings": {
+    "title": "发动机支架 - 累积疲劳损伤等值面 (Miner法则)",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0.0,
+      "max": 1.2,
+      "label": "累积损伤 D",
+      "n_levels": 12
+    },
+    "camera": {
+      "position": { "x": 0.12, "y": 0.10, "z": 0.15 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.02 },
+      "rotation": { "pitch": -25, "yaw": 35 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大累积损伤D_max", "value": 1.05, "unit": "", "tolerance": 5 },
+      { "name": "D=0.5等值面包裹体积", "value": 850, "unit": "mm³", "tolerance": 15 },
+      { "name": "D=1.0等值面包裹体积", "value": 120, "unit": "mm³", "tolerance": 20 },
+      { "name": "应力水平σ₁疲劳寿命N₁", "value": 8500, "unit": "次", "tolerance": 10 },
+      { "name": "应力水平σ₂疲劳寿命N₂", "value": 52000, "unit": "次", "tolerance": 10 },
+      { "name": "应力水平σ₃疲劳寿命N₃", "value": 850000, "unit": "次", "tolerance": 10 },
+      { "name": "危险区域位置(圆角半径)", "value": 3.0, "unit": "mm", "tolerance": 0 }
+    ]
+  }
+}

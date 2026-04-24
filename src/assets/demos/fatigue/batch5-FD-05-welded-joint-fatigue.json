@@ -1,0 +1,100 @@
+{
+  "id": "FD-05",
+  "name": "焊接接头热点应力疲劳分析",
+  "nameEn": "Welded Joint Hot Spot Stress Fatigue Analysis",
+  "description": "角焊缝焊接接头疲劳分析，采用IIW(国际焊接学会)热点应力法。焊接接头为纵向角焊缝T型接头，板厚t=12mm，焊脚尺寸a=8mm。依据IIW疲劳设计规范，FAT等级为80(对应2×10^6次循环的热点应力范围为80MPa)。验证在热点应力范围Δσ_hs=100MPa时，疲劳寿命N_f≈2×10^6次循环。S-N曲线斜率m=3.0，截止限N=10^7次循环对应的热点应力范围为37MPa。本案例适用于焊接结构疲劳评估、IIW规范应用和海洋工程/桥梁焊接接头设计的工程演示。",
+  "category": "fatigue",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["焊接疲劳", "热点应力法", "IIW规范", "FAT等级", "角焊缝", "S-N曲线"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.1,
+    "height": 0.012,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "S355 Structural Steel (Welded)",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 355000000,
+    "ultimate_stress": 510000000,
+    "fatigue_strength_coefficient": 750000000,
+    "fatigue_strength_exponent": -0.1,
+    "endurance_limit": 170000000
+  },
+  "loading": {
+    "type": "constant_amplitude",
+    "mean_stress": 0,
+    "stress_amplitude": 50000000,
+    "stress_ratio": 0,
+    "frequency_hz": 5,
+    "temperature_K": 293,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "basquin",
+    "parameters": {
+      "FAT_class": 80,
+      "m": 3.0,
+      "N_ref": 2000000,
+      "delta_sigma_ref": 80000000,
+      "delta_sigma_cutoff": 37000000,
+      "N_cutoff": 10000000,
+      "SCF": 1.25,
+      "thickness_correction_exponent": 0.25,
+      "reference_thickness": 0.025
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 2000000,
+    "formula": "Δσ_hs^m · N_f = Δσ_ref^m · N_ref; N_f = N_ref · (Δσ_ref / Δσ_hs)^m",
+    "reference": "IIW-2259-15. Recommendations for fatigue design of welded joints and components. IIW Document XIII-2460-13/XV-1440-13, International Institute of Welding, 2015."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "N_f at Δσ_hs=100MPa",
+        "value": 1024000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at Δσ_hs=80MPa (FAT80)",
+        "value": 2000000,
+        "unit": "cycles",
+        "tolerance": 10
+      },
+      {
+        "name": "热点应力集中系数SCF",
+        "value": 1.25,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "板厚修正系数",
+        "value": 1.14,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "截止限应力范围",
+        "value": 37000000,
+        "unit": "Pa",
+        "tolerance": 5
+      }
+    ]
+  }
+}

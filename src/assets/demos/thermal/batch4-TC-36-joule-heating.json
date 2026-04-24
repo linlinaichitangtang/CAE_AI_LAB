@@ -1,0 +1,134 @@
+{
+  "id": "TC-36",
+  "name": "CFRP电阻焦耳热分析",
+  "nameEn": "CFRP Composite Joule Heating Analysis - Anisotropic Resistivity",
+  "description": "碳纤维增强复合材料(CFRP)电阻焦耳热分析。试样尺寸0.3m×0.1m×0.003m，厚度方向电阻率ρ_e=1e-5Ω·m(各向异性：面内ρ_∥=1e-6Ω·m，厚度方向ρ_⊥=1e-5Ω·m)。施加电压V=10V(厚度方向)，截面积A=0.3×0.1=0.03m²，厚度L=0.003m。电阻R=ρ_e·L/A=1e-5×0.003/0.03=1e-6Ω。电流I=V/R=10/1e-6=1e7A(理论值，实际受接触电阻限制)。焦耳热Q=V²/R=10²/1e-6=1e8W(理论值)。实际考虑接触电阻R_c≈0.01Ω，有效电流I_eff≈V/R_c=1000A，焦耳热Q_eff=I²R=1e6×0.01=10000W。CFRP物性：k_∥=10W/(m·K)(面内)，k_⊥=0.5W/(m·K)(厚度方向)，ρ=1600kg/m³，c_p=800J/(kg·K)。验证各向异性电阻率导致的非均匀温度分布。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["joule_heating", "CFRP", "anisotropic_resistivity", "composite", "electrical_heating", "non_uniform_temperature", "transient_thermal", "resistance_heating"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.1,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 10,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "CFRP Composite (Anisotropic)",
+    "elastic_modulus": 70000000000,
+    "poisson_ratio": 0.3,
+    "density": 1600,
+    "yield_stress": 600000000,
+    "thermal_expansion": 2.0e-6,
+    "thermal_conductivity": 0.5,
+    "specific_heat": 800
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "top_bottom_surfaces",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": null,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 15,
+      "heat_source": 10000,
+      "emissivity": 0.85
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.1,
+    "total_time": 30
+  },
+  "theoretical": {
+    "max_displacement": 5e-4,
+    "max_stress": 50000000,
+    "max_temperature": 420,
+    "formula": "R = rho_e * L / A; I = V / R; Q_joule = I^2 * R = V^2 / R; dT/dt = Q / (rho * c_p * V) - h*A_s*(T-T_amb)/(rho*c_p*V); T_max = T_0 + Q*t/(rho*c_p*Vol) for adiabatic case",
+    "reference": "Luo & Chung, Volumetric Heating of Carbon Fiber Composites by Joule Heating, Carbon, 1999; Fitzer & Frohs, Optimization of CFRP for Electrical Heating Applications"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "through_thickness_resistivity",
+        "value": 1e-5,
+        "unit": "ohm*m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "in_plane_resistivity",
+        "value": 1e-6,
+        "unit": "ohm*m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "applied_voltage",
+        "value": 10,
+        "unit": "V",
+        "tolerance": 1.0
+      },
+      {
+        "name": "contact_resistance",
+        "value": 0.01,
+        "unit": "ohm",
+        "tolerance": 20.0
+      },
+      {
+        "name": "effective_current",
+        "value": 1000,
+        "unit": "A",
+        "tolerance": 20.0
+      },
+      {
+        "name": "joule_heat_power",
+        "value": 10000,
+        "unit": "W",
+        "tolerance": 15.0
+      },
+      {
+        "name": "through_thickness_conductivity",
+        "value": 0.5,
+        "unit": "W/(m*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "max_temperature_30s",
+        "value": 420,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "temperature_non_uniformity",
+        "value": 35,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 50000000,
+        "unit": "Pa",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

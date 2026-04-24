@@ -1,0 +1,86 @@
+{
+  "id": "EM-01",
+  "name": "载流铜排电-热耦合",
+  "nameEn": "Busbar Joule Heating",
+  "description": "载流铜排电-热耦合分析。铜排尺寸：L=0.3m，W=0.01m，H=0.005m，截面积A=5e-5m²。铜材料参数：E=117GPa，ν=0.34，ρ=8960kg/m³，电导率σ_e=5.96e7S/m，μ_r=1.0。直流电流I=1000A。电阻R=ρ_e×L/A=1.68e-8×0.3/5e-5=1.008e-4Ω。焦耳热功率Q=I²R=1000²×1.008e-4=100.8W。对流换热系数h=10W/(m²·K)，散热面积A_s=2×(0.3×0.01+0.3×0.005+0.01×0.005)=0.0091m²。简化稳态温升ΔT=Q/(h×A_s)=100.8/(10×0.0091)=1108K（简化模型，实际需考虑辐射和端部接触）。验证温度场分布及热应力。",
+  "category": "electromagnetic",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["busbar", "Joule heating", "electro-thermal coupling", "copper", "convection"],
+  "geometry": {
+    "type": "busbar",
+    "length": 0.3,
+    "width": 0.01,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 8,
+    "z_div": 4,
+    "element_type": "SOLID97"
+  },
+  "material": {
+    "name": "Copper (C11000)",
+    "elastic_modulus": 117000000000,
+    "poisson_ratio": 0.34,
+    "density": 8960,
+    "electrical_conductivity": 59600000,
+    "relative_permeability": 1.0
+  },
+  "electromagnetic_bc": {
+    "current": 1000,
+    "voltage": 0.1008,
+    "frequency_hz": 0,
+    "magnetic_flux_density": 0
+  },
+  "boundaryConditions": {
+    "fixed_face": "end_faces",
+    "load_type": "thermal",
+    "load_magnitude": 100.8
+  },
+  "solver": {
+    "type": "coupled_em_thermal_structural",
+    "max_iterations": 150,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_stress": 50000000,
+    "magnetic_force": 0,
+    "temperature_rise": 1108,
+    "formula": "R = ρ_eL/A, Q = I²R, ΔT = Q/(hA_s)",
+    "reference": "IEC 61439-1 Low-voltage switchgear; Holman, Heat Transfer"
+  },
+  "acceptance": {
+    "force_error_limit": 5,
+    "temperature_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "电阻",
+        "value": 1.008e-4,
+        "unit": "Ω",
+        "tolerance": 5
+      },
+      {
+        "name": "焦耳热功率",
+        "value": 100.8,
+        "unit": "W",
+        "tolerance": 5
+      },
+      {
+        "name": "稳态温升",
+        "value": 1108,
+        "unit": "K",
+        "tolerance": 15
+      },
+      {
+        "name": "热应力",
+        "value": 50000000,
+        "unit": "Pa",
+        "tolerance": 15
+      }
+    ]
+  }
+}

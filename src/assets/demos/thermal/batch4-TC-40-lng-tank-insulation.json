@@ -1,0 +1,134 @@
+{
+  "id": "TC-40",
+  "name": "LNG船舱绝热分析",
+  "nameEn": "LNG Carrier Tank Insulation Analysis - Perlite + Vacuum Multilayer",
+  "description": "LNG运输船液货舱绝热系统热分析。LNG储存温度T_LNG=112K(-161°C)，环境温度T_env=300K(27°C)，温差ΔT=188K。采用珍珠岩填充+真空多层绝热(M LI)复合结构。目标蒸发率BOG<0.1%/day，对应热漏Q<5W/m²。绝热层结构：内层不锈钢壁(0.01m，k=15W/(m·K))，珍珠岩层(0.3m，k=0.03W/(m·K))，外层船体钢(0.02m，k=50W/(m·K))。总热阻R_total=δ₁/k₁+δ₂/k₂+δ₃/k₃=0.01/15+0.3/0.03+0.02/50=0.000667+10+0.0004=10.001m²·K/W。热流密度q=ΔT/R_total=188/10.001=18.8W/m²(需优化)。增加绝热层厚度至0.6m：R_total≈20m²·K/W，q≈9.4W/m²。进一步优化至δ₂=1.2m：q≈4.7W/m²，满足Q<5W/m²要求。验证绝热厚度与BOG率关系。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["LNG", "insulation", "perlite", "multilayer_insulation", "BOG", "cryogenic", "ship_tank", "heat_leak"],
+  "geometry": {
+    "type": "block",
+    "length": 2.0,
+    "width": 2.0,
+    "height": 1.5,
+    "radius": null,
+    "thickness": 1.23,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 30,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Perlite Insulation (Cryogenic Grade)",
+    "elastic_modulus": 50000000,
+    "poisson_ratio": 0.25,
+    "density": 80,
+    "yield_stress": 500000,
+    "thermal_expansion": 8.0e-6,
+    "thermal_conductivity": 0.03,
+    "specific_heat": 800
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "outer_surface",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": 300,
+      "T_ambient": 300,
+      "heat_flux": 0,
+      "convection_coeff": 10,
+      "heat_source": 0,
+      "emissivity": 0.05
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-10,
+    "time_step": 1,
+    "total_time": 1
+  },
+  "theoretical": {
+    "max_displacement": 5e-3,
+    "max_stress": 100000000,
+    "max_temperature": 300,
+    "formula": "q = Delta_T / R_total; R_total = sum(delta_i / k_i); BOG_rate = q * A / (rho_LNG * LHV * V_tank); LHV_LNG = 510 kJ/kg; rho_LNG = 450 kg/m^3; Target: q < 5 W/m^2 for BOG < 0.1%/day",
+    "reference": "IGC Code, International Code for the Construction and Equipment of Ships Carrying Liquefied Gases in Bulk; Haselden, Cryogenic Engineering, Academic Press, 1971; Barron, Cryogenic Heat Transfer"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "LNG_temperature",
+        "value": 112,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "ambient_temperature",
+        "value": 300,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "temperature_difference",
+        "value": 188,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "perlite_thermal_conductivity",
+        "value": 0.03,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "perlite_insulation_thickness",
+        "value": 1.2,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "heat_leak_flux",
+        "value": 4.7,
+        "unit": "W/m^2",
+        "tolerance": 5.0
+      },
+      {
+        "name": "total_thermal_resistance",
+        "value": 40,
+        "unit": "m^2*K/W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "BOG_rate",
+        "value": 0.08,
+        "unit": "%/day",
+        "tolerance": 10.0
+      },
+      {
+        "name": "LNG_density",
+        "value": 450,
+        "unit": "kg/m^3",
+        "tolerance": 3.0
+      },
+      {
+        "name": "LHV_LNG",
+        "value": 510000,
+        "unit": "J/kg",
+        "tolerance": 3.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "id": "SS-13",
+  "name": "两块体接触分析",
+  "nameEn": "Two Block Contact Analysis",
+  "description": "两个相同钢块(0.1m×0.1m×0.1m)的法向接触分析。初始间隙0.5mm，随后施加过盈量0.1mm。接触面摩擦系数μ=0.3。验证接触压力分布、接触面积和法向接触力。接触问题属于高度非线性问题，涉及接触状态的不断切换和摩擦效应。该算例用于验证有限元程序的接触算法和罚函数法实现。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": [
+    "接触",
+    "过盈配合",
+    "摩擦",
+    "非线性"
+  ],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.2,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 20,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "z_min",
+    "load_type": "uniform",
+    "load_face": "z_max",
+    "load_magnitude": 1000000.0,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-06
+  },
+  "theoretical": {
+    "max_displacement": 0.0001,
+    "max_stress": 100000000.0,
+    "formula": "接触压力p≈E·δ/(2L)=100MPa, F=p·A=1MN, δ=0.1mm过盈量",
+    "reference": "Johnson, Contact Mechanics, Ch. 4-5"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "接触压力",
+        "value": 100000000.0,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "法向接触力",
+        "value": 1000000.0,
+        "unit": "N",
+        "tolerance": 10.0
+      },
+      {
+        "name": "过盈量",
+        "value": 0.0001,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "接触面积",
+        "value": 0.01,
+        "unit": "m²",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

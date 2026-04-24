@@ -1,0 +1,86 @@
+{
+  "id": "AM-06",
+  "name": "多激光选区熔化",
+  "nameEn": "Multi-Laser Selective Laser Melting",
+  "description": "多激光SLM系统搭接区微观组织与性能分析。4激光系统，每激光功率P=500W，扫描速度v=1000mm/s，光斑直径d=0.1mm。激光间搭接区宽度w_overlap=0.5mm。Ti-6Al-4V材料：E=110GPa，ν=0.33，ρ=4430kg/m³，σ_y=880MPa，k=6.7W/(m·K)。搭接区经历多次热循环（相邻激光扫描时预热+重熔），冷却速率差异导致晶粒尺寸和取向不同。单激光区：柱状晶沿构建方向生长，晶粒宽度约50-100μm，显微硬度HV≈360。搭接区：等轴晶/细小柱状晶混合，晶粒宽度约20-50μm，显微硬度HV≈380（由于多次热处理效应）。试样尺寸：20mm×20mm×5mm，包含4个激光分区。验证搭接区与单激光区硬度差异<10%。",
+  "category": "additive_manufacturing",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["multi-laser", "SLM", "overlap zone", "grain structure", "microhardness", "Ti-6Al-4V"],
+  "geometry": {
+    "type": "block",
+    "length": 0.02,
+    "width": 0.02,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 10,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V (Multi-laser SLM)",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "substrate_bottom",
+    "load_type": "thermal",
+    "load_face": "top_surface",
+    "load_magnitude": 500
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_displacement": 1e-4,
+    "max_stress": 880000000,
+    "formula": "HV = 0.3 × σ_y (Tabor relation), ΔHV/HV < 10% (quality criterion)",
+    "reference": "Bertoli et al., Materials & Design, 2017; Liu et al., Additive Manufacturing, 2019"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "单激光区显微硬度",
+        "value": 360,
+        "unit": "HV",
+        "tolerance": 10
+      },
+      {
+        "name": "搭接区显微硬度",
+        "value": 380,
+        "unit": "HV",
+        "tolerance": 10
+      },
+      {
+        "name": "硬度差异比",
+        "value": 5.6,
+        "unit": "%",
+        "tolerance": 15
+      },
+      {
+        "name": "搭接区残余应力",
+        "value": 500000000,
+        "unit": "Pa",
+        "tolerance": 25
+      },
+      {
+        "name": "单激光区残余应力",
+        "value": 400000000,
+        "unit": "Pa",
+        "tolerance": 25
+      }
+    ]
+  }
+}

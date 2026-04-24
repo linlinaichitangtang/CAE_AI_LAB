@@ -1,0 +1,56 @@
+{
+  "id": "PP-27",
+  "name": "设计点检表自动生成",
+  "nameEn": "Automated Design Checklist - ASME VIII Pressure Vessel",
+  "description": "演示压力容器按ASME VIII第1分册规范进行自动设计点检的完整流程。以卧式储罐为例，内径Di=1200mm，设计压力P=1.6MPa，设计温度T=200°C，材料SA-516 Gr.70(S_m=138MPa)，腐蚀裕量C=2mm。后处理模块自动提取有限元计算结果，逐项校核：(1)薄膜应力P_m < S_m=138MPa；(2)薄膜+弯曲应力P_m+P_b < 1.5S_m=207MPa；(3)一次+二次应力P_m+P_b+Q < 3S_m=414MPa。校核结果以绿(通过)/红(不通过)色标直接标注在三维模型对应位置，并自动生成包含所有校核项的设计点检表。支持一键导出符合ASME规范的校核报告。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["设计点检", "ASME VIII", "压力容器", "应力分类", "自动校核", "合规评估"],
+  "visualization": {
+    "type": "design_check",
+    "field": "stress",
+    "color_map": "cool",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 56000,
+    "elements": 48500,
+    "results_file": "results/postprocess/pressure_vessel_design_check.dat"
+  },
+  "display_settings": {
+    "title": "卧式储罐 - ASME VIII设计点检自动校核",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 250,
+      "label": "应力强度 (MPa)",
+      "n_levels": 10
+    },
+    "camera": {
+      "position": { "x": 1.5, "y": 0.8, "z": 1.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "筒体薄膜应力P_m", "value": 112, "unit": "MPa", "tolerance": 5 },
+      { "name": "许用应力S_m", "value": 138, "unit": "MPa", "tolerance": 0 },
+      { "name": "薄膜应力校核通过率", "value": 100, "unit": "%", "tolerance": 0 },
+      { "name": "封头连接处P_m+P_b", "value": 178, "unit": "MPa", "tolerance": 5 },
+      { "name": "1.5S_m限值", "value": 207, "unit": "MPa", "tolerance": 0 },
+      { "name": "弯曲+薄膜校核通过率", "value": 98.5, "unit": "%", "tolerance": 2 },
+      { "name": "接管根部最大应力", "value": 225, "unit": "MPa", "tolerance": 5 },
+      { "name": "总校核项数", "value": 48, "unit": "项", "tolerance": 0 },
+      { "name": "不通过项数", "value": 1, "unit": "项", "tolerance": 0 }
+    ]
+  }
+}

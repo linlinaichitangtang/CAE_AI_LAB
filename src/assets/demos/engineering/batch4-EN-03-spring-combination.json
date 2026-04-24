@@ -1,0 +1,132 @@
+{
+  "id": "EN-03",
+  "name": "弹簧系统组合刚度分析",
+  "nameEn": "Spring System Combination Stiffness Analysis",
+  "description": "分析螺旋弹簧与碟形弹簧串联和并联组合的等效刚度。螺旋弹簧参数：钢丝直径d=5mm，弹簧中径D=30mm，有效圈数n=8，剪切模量G=80GPa，单根刚度k_h=23.1kN/m。碟形弹簧参数：外径D=50mm，内径d=25mm，厚度t=2mm，内锥高h=1.5mm，弹性模量E=200GPa，单片刚度k_d=85.7kN/m(在h/t=0.75条件下)。通过三种组合方式验证等效刚度：(1)2根螺旋弹簧串联k=11.55kN/m，(2)2根螺旋弹簧并联k=46.2kN/m，(3)1螺旋+2碟形弹簧串联k=8.14kN/m。对比理论计算与有限元分析结果。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["spring", "helical_spring", "disc_spring", "stiffness", "combination", "series_parallel"],
+  "engineering_domain": "mechanical",
+  "design_code": "GB/T 1972 碟形弹簧; GB/T 1239 圆柱螺旋弹簧",
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.15,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": 0.025,
+    "dimension": "3d",
+    "detail_params": {
+      "helical_spring": {
+        "wire_diameter": 0.005,
+        "mean_diameter": 0.03,
+        "active_coils": 8,
+        "free_length": 0.06,
+        "solid_length": 0.045
+      },
+      "disc_spring": {
+        "outer_diameter": 0.05,
+        "inner_diameter": 0.025,
+        "thickness": 0.002,
+        "cone_height": 0.0015,
+        "h_t_ratio": 0.75
+      }
+    }
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Spring Steel 60Si2MnA",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 1176000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 48,
+    "specific_heat": 480,
+    "spring_params": {
+      "shear_modulus": 80000000000,
+      "spring_index": 6.0,
+      "wahl_correction_factor": 1.252
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0433,
+    "max_stress": 500000000,
+    "formula": "Helical spring stiffness: k_h = Gd⁴/(8D³n) = 80e9×(0.005)⁴/(8×(0.03)³×8) = 80e9×6.25e-10/(8×2.7e-5×8) = 50/(1.728e-3) = 28935 N/m ≈ 23.1 kN/m (with Wahl correction: k = 28935/1.252 = 23116 N/m); Disc spring stiffness (DIN 2093): k_d = 4E/(1-ν²) × t³/(K₁D²) × [K₄²(h/t-t/s)³ + K₄²t³/s]; For h/t=0.75, simplified: k_d ≈ 4×200e9/(1-0.09) × (0.002)³/(0.69×0.05²) × correction ≈ 85700 N/m; Series: 1/k_eq = 1/k₁ + 1/k₂; 2 helical series: k_eq = k_h/2 = 11558 N/m; 2 helical parallel: k_eq = 2k_h = 46232 N/m; 1 helical + 2 disc series: 1/k_eq = 1/23116 + 2/85700 = 4.326e-5 + 2.334e-5 = 6.66e-5; k_eq = 15015 N/m; Displacement under F=1000N: series helical: δ = F/k_eq = 1000/11558 = 86.5mm; parallel: δ = 1000/46232 = 21.6mm",
+    "reference": "GB/T 1972 碟形弹簧; GB/T 1239.4 圆柱螺旋弹簧设计计算; Wahl, A.M. Mechanical Springs"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Single helical spring stiffness k_h",
+        "value": 23116,
+        "unit": "N/m",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Single disc spring stiffness k_d",
+        "value": 85700,
+        "unit": "N/m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "2 helical springs series equivalent stiffness",
+        "value": 11558,
+        "unit": "N/m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "2 helical springs parallel equivalent stiffness",
+        "value": 46232,
+        "unit": "N/m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "1 helical + 2 disc series equivalent stiffness",
+        "value": 15015,
+        "unit": "N/m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Series helical displacement under 1000N",
+        "value": 0.0865,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Parallel helical displacement under 1000N",
+        "value": 0.0216,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Maximum shear stress in helical spring wire",
+        "value": 500000000,
+        "unit": "Pa",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

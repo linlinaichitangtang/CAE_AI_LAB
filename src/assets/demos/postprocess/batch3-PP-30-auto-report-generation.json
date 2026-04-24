@@ -1,0 +1,56 @@
+{
+  "id": "PP-30",
+  "name": "仿真报告自动生成",
+  "nameEn": "Automated Simulation Report Generation",
+  "description": "演示基于有限元分析结果自动生成标准化仿真报告的完整流程。以汽车控制臂结构分析为例，包含静力强度分析和模态分析两部分。静力分析工况为制动载荷F=15kN，提取Von Mises应力云图、位移变形图和安全系数分布；模态分析提取前6阶固有频率和振型。报告自动生成模块从结果数据库中提取关键数据，按预设模板自动排版，内容包括：封面信息、分析参数汇总、网格质量统计、边界条件说明、应力/位移云图、力-位移曲线、模态频率表格、结论与建议。支持Word(.docx)和PDF两种输出格式，一键生成耗时<10秒。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["自动报告", "模板生成", "Word导出", "PDF导出", "数据汇总", "一键生成"],
+  "visualization": {
+    "type": "report",
+    "field": "von_mises",
+    "color_map": "jet",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 78000,
+    "elements": 68500,
+    "results_file": "results/postprocess/control_arm_report_data.dat"
+  },
+  "display_settings": {
+    "title": "汽车控制臂 - 仿真报告自动生成",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 450,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 0.18, "y": 0.12, "z": 0.20 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -28, "yaw": 42 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "报告总页数", "value": 18, "unit": "页", "tolerance": 10 },
+      { "name": "云图数量", "value": 6, "unit": "张", "tolerance": 0 },
+      { "name": "数据表格数量", "value": 4, "unit": "个", "tolerance": 0 },
+      { "name": "力-位移曲线数量", "value": 2, "unit": "条", "tolerance": 0 },
+      { "name": "Word文件大小", "value": 8.5, "unit": "MB", "tolerance": 20 },
+      { "name": "PDF文件大小", "value": 3.2, "unit": "MB", "tolerance": 20 },
+      { "name": "报告生成耗时", "value": 8, "unit": "s", "tolerance": 25 },
+      { "name": "最大Von Mises应力", "value": 385, "unit": "MPa", "tolerance": 5 },
+      { "name": "一阶固有频率", "value": 245, "unit": "Hz", "tolerance": 5 }
+    ]
+  }
+}

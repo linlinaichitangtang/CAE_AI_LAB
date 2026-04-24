@@ -1,0 +1,95 @@
+{
+  "id": "SS-18",
+  "name": "厚壁圆筒Lamé分析",
+  "nameEn": "Thick-Walled Cylinder Lamé Analysis",
+  "description": "承受内压的厚壁圆筒弹性应力分析。内半径R_i=0.05m，外半径R_o=0.1m，内压p_i=50MPa，外压p_o=0。基于Lamé方程：径向应力σ_r和环向应力σ_θ沿壁厚分布。内壁面σ_θ_max=p_i·R_i²/(R_o²-R_i²)·(1+R_o²/R_i²)=83.3MPa，σ_r=-50MPa。该算例验证厚壁压力容器经典弹性解和应力梯度捕捉能力。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": [
+    "厚壁圆筒",
+    "Lamé方程",
+    "压力容器",
+    "弹性应力"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.2,
+    "radius": 0.1,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 4,
+    "y_div": 24,
+    "z_div": 24,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q345 Steel",
+    "elastic_modulus": 206000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 345000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 50000000.0,
+    "load_direction": "radial",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 3.65e-05,
+    "max_stress": 83300000.0,
+    "formula": "Lamé: σ_r=p_i·R_i²/(R_o²-R_i²)·(1-R_o²/r²), σ_θ=p_i·R_i²/(R_o²-R_i²)·(1+R_o²/r²), R_i=0.05m, R_o=0.1m",
+    "reference": "Timoshenko, Theory of Elasticity, Sec. 116; Lamé, 1852"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "内壁最大环向应力",
+        "value": 83300000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "内壁径向应力",
+        "value": -50000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "外壁环向应力",
+        "value": 33300000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "外壁径向应力",
+        "value": 0.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "内壁径向位移",
+        "value": 3.65e-05,
+        "unit": "m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

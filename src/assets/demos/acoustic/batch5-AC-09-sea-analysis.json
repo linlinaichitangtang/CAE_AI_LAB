@@ -1,0 +1,100 @@
+{
+  "id": "AC-09",
+  "name": "统计能量分析SEA",
+  "nameEn": "Statistical Energy Analysis (SEA)",
+  "description": "三子系统SEA模型的高频声学分析。模型包含声源室、隔墙和接收室三个子系统，分析频段500-4000Hz（1/3倍频程）。通过能量平衡方程计算各子系统模态能量和声压级，验证隔墙的传输损失TL。SEA适用于高频分析，要求每个子系统在每个频带内具有足够的模态密度N>5。",
+  "category": "acoustic",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["SEA", "statistical-energy-analysis", "high-frequency", "power-balance", "transmission-loss", "modal-density"],
+  "geometry": {
+    "type": "block",
+    "length": 3.0,
+    "width": 4.0,
+    "height": 2.5,
+    "radius": null,
+    "thickness": 0.15,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 10,
+    "element_type": "FLUID30"
+  },
+  "material": {
+    "name": "Air (STP) / Concrete Wall",
+    "elastic_modulus": 1.42e5,
+    "poisson_ratio": 0.0,
+    "density": 1.225,
+    "yield_stress": null,
+    "speed_of_sound": 343,
+    "bulk_modulus": 1.42e5
+  },
+  "boundaryConditions": {
+    "fixed_face": "room_boundaries_rigid",
+    "load_type": "pressure",
+    "load_face": "source_room",
+    "load_magnitude": 0.2,
+    "load_direction": "omnidirectional",
+    "frequency_hz": 1000,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "modal",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [500, 4000]
+  },
+  "theoretical": {
+    "max_displacement": null,
+    "max_stress": null,
+    "natural_frequency": 1000,
+    "formula": "P_in = P_diss_1 + P_12; E_i * omega * eta_i = P_in_i + sum_j(n_j*eta_ji*E_j - n_i*eta_ij*E_i); TL = 10*log10(W_in/W_trans)",
+    "reference": "Lyon & DeJong, Theory and Application of Statistical Energy Analysis, 2nd Ed."
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "TL_at_500Hz",
+        "value": 42,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "TL_at_1000Hz",
+        "value": 48,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "TL_at_2000Hz",
+        "value": 54,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "TL_at_4000Hz",
+        "value": 60,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "source_room_SPL",
+        "value": 90,
+        "unit": "dB",
+        "tolerance": 3
+      },
+      {
+        "name": "receiving_room_SPL",
+        "value": 42,
+        "unit": "dB",
+        "tolerance": 5
+      }
+    ]
+  }
+}

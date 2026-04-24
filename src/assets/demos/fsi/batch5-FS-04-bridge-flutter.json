@@ -1,0 +1,59 @@
+{
+  "id": "FS-04",
+  "name": "桥梁颤振",
+  "nameEn": "Bridge Flutter Analysis",
+  "description": "模拟悬索桥桥面在风荷载作用下的颤振失稳分析。通过二维颤振导数识别和三维全桥气弹模型分析，确定颤振临界风速V_cr。验证原型桥梁颤振临界风速V_cr≈60m/s。桥面采用闭口箱梁截面，结构阻尼比ζ=1%。分析包括静风稳定性（扭转发散）和动态颤振稳定性两个层面。采用分区耦合方法，气动载荷通过风洞试验获取的颤振导数计算。",
+  "category": "fsi",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["flutter", "bridge", "aeroelasticity", "critical-wind-speed", "suspension-bridge"],
+  "fluid_domain": {
+    "type": "external",
+    "density": 1.225,
+    "viscosity": 1.81e-5,
+    "velocity": 60.0,
+    "pressure": 101325.0
+  },
+  "structure_domain": {
+    "type": "plate",
+    "length": 30.0,
+    "width": 4.5,
+    "thickness": 0.012,
+    "elastic_modulus": 210000000000.0,
+    "density": 7850.0
+  },
+  "coupling": {
+    "method": "partitioned",
+    "interface": "wet_surface",
+    "time_step": 0.05,
+    "total_time": 300.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "颤振临界风速",
+        "value": 60.0,
+        "unit": "m/s",
+        "tolerance": 10
+      },
+      {
+        "name": "颤振频率",
+        "value": 0.25,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "竖弯固有频率",
+        "value": 0.15,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "扭转固有频率",
+        "value": 0.35,
+        "unit": "Hz",
+        "tolerance": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "TO-08",
+  "name": "动态拓扑优化",
+  "nameEn": "Dynamic Topology Optimization",
+  "description": "动态载荷下的拓扑优化问题。在0-500Hz频率范围内，考虑简谐激励下的频率响应，通过SIMP方法寻找使频率响应幅值最小化的材料分布。结构受到基础激励（谐波位移输入），优化目标为最小化指定频段内的最大动态响应幅值。采用模态叠加法计算频率响应函数（FRF），使用P-norm函数聚合频域内的响应峰值。阻尼比取0.02。优化过程中需处理动态刚度矩阵的频率依赖性问题，采用多频率点采样策略确保频带内响应的均匀抑制。优化后结构应在关注频段内呈现良好的减振特性。",
+  "category": "topology_optimization",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["SIMP", "动态优化", "频率响应", "谐振", "减振", "FRF"],
+  "design_domain": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.15,
+    "height": 0.01,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 120,
+    "y_div": 60,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 206000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.35,
+    "penalization": 3,
+    "filter_radius": 0.006,
+    "max_iterations": 200,
+    "convergence_tolerance": 0.005
+  },
+  "boundaryConditions": {
+    "fixed_face": "left_face",
+    "load_type": "point",
+    "load_face": "right_end_center",
+    "load_magnitude": 1000,
+    "load_direction": "Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.35,
+      "unit": "ratio"
+    },
+    {
+      "type": "frequency",
+      "value": 500,
+      "unit": "Hz"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_frequency_response_reduction",
+        "value": 40,
+        "unit": "percent",
+        "tolerance": 20
+      },
+      {
+        "name": "peak_response_amplitude_optimized",
+        "value": 0.012,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "peak_response_amplitude_initial",
+        "value": 0.020,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "frequency_points_sampled",
+        "value": 50,
+        "unit": "points",
+        "tolerance": 5
+      }
+    ]
+  }
+}

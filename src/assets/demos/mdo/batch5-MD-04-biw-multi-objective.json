@@ -1,0 +1,161 @@
+{
+  "id": "MD-04",
+  "name": "汽车白车身",
+  "nameEn": "BIW Multi-Objective Optimization",
+  "description": "模拟汽车白车身（BIW）的多目标多学科优化设计。同时考虑NVH性能（一阶扭转频率和一阶弯曲频率）、静态刚度（扭转刚度和弯曲刚度）和轻量化（总质量）3个优化目标。设计变量为15个关键板件的厚度参数。采用NSGA-II算法求解三目标Pareto前沿，验证优化后NVH性能提升和重量减轻的综合效果。",
+  "category": "mdo",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["BIW", "NVH", "lightweight", "multi-objective", "automotive"],
+  "design_variables": [
+    {
+      "name": "前纵梁厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.003,
+      "initial": 0.002
+    },
+    {
+      "name": "A柱内板厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0015
+    },
+    {
+      "name": "B柱内板厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.003,
+      "initial": 0.002
+    },
+    {
+      "name": "C柱内板厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0015
+    },
+    {
+      "name": "车顶板厚度",
+      "lower_bound": 0.0006,
+      "upper_bound": 0.001,
+      "initial": 0.0008
+    },
+    {
+      "name": "地板面板厚度",
+      "lower_bound": 0.0008,
+      "upper_bound": 0.0015,
+      "initial": 0.001
+    },
+    {
+      "name": "前地板纵梁厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0018
+    },
+    {
+      "name": "后地板纵梁厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0018
+    },
+    {
+      "name": "门槛梁内板厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.003,
+      "initial": 0.002
+    },
+    {
+      "name": "前围板厚度",
+      "lower_bound": 0.0008,
+      "upper_bound": 0.0015,
+      "initial": 0.001
+    },
+    {
+      "name": "后围板厚度",
+      "lower_bound": 0.0008,
+      "upper_bound": 0.0015,
+      "initial": 0.001
+    },
+    {
+      "name": "前翼子板厚度",
+      "lower_bound": 0.0006,
+      "upper_bound": 0.001,
+      "initial": 0.0008
+    },
+    {
+      "name": "后轮罩厚度",
+      "lower_bound": 0.0008,
+      "upper_bound": 0.0015,
+      "initial": 0.001
+    },
+    {
+      "name": "前横梁厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0018
+    },
+    {
+      "name": "后横梁厚度",
+      "lower_bound": 0.001,
+      "upper_bound": 0.0025,
+      "initial": 0.0018
+    }
+  ],
+  "objectives": [
+    {
+      "name": "白车身总质量",
+      "type": "minimize"
+    },
+    {
+      "name": "一阶扭转频率",
+      "type": "maximize"
+    },
+    {
+      "name": "静态扭转刚度",
+      "type": "maximize"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "一阶弯曲频率",
+      "type": "inequality",
+      "limit": 40.0
+    },
+    {
+      "name": "静态弯曲刚度",
+      "type": "inequality",
+      "limit": 12000.0
+    }
+  ],
+  "optimization_method": {
+    "type": "nsga2",
+    "population": 120,
+    "generations": 200
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "重量减轻比例",
+        "value": 8.0,
+        "unit": "%",
+        "tolerance": 20
+      },
+      {
+        "name": "一阶扭转频率提升",
+        "value": 5.0,
+        "unit": "%",
+        "tolerance": 20
+      },
+      {
+        "name": "Pareto前沿解数量",
+        "value": 80,
+        "unit": "-",
+        "tolerance": 25
+      },
+      {
+        "name": "优化后白车身质量",
+        "value": 310.0,
+        "unit": "kg",
+        "tolerance": 10
+      }
+    ]
+  }
+}

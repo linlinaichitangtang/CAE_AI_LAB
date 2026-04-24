@@ -1,0 +1,88 @@
+{
+  "id": "AC-04",
+  "name": "汽车消音器传递损失分析",
+  "nameEn": "Automotive Exhaust Muffler Transmission Loss",
+  "description": "膨胀腔式消音器的声学性能分析。消音器由入口管、膨胀腔和出口管组成，利用截面突变产生声反射实现消声。在500Hz频率下计算传递损失TL，验证四分之一波长频率处TL峰值特性。膨胀比m=(D_chamber/D_pipe)^2=16，最大TL=20log10(m)=24.1dB。",
+  "category": "acoustic",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["muffler", "transmission-loss", "expansion-chamber", "exhaust", "automotive"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.3,
+    "width": null,
+    "height": null,
+    "radius": 0.1,
+    "thickness": 0.002,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 20,
+    "element_type": "FLUID30"
+  },
+  "material": {
+    "name": "Hot Exhaust Gas (400C)",
+    "elastic_modulus": 2.0e5,
+    "poisson_ratio": 0.0,
+    "density": 0.525,
+    "yield_stress": null,
+    "speed_of_sound": 517,
+    "bulk_modulus": 1.4e5
+  },
+  "boundaryConditions": {
+    "fixed_face": "muffler_walls_rigid",
+    "load_type": "pressure",
+    "load_face": "inlet_pipe",
+    "load_magnitude": 100,
+    "load_direction": "X",
+    "frequency_hz": 500,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "harmonic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [50, 2000]
+  },
+  "theoretical": {
+    "max_displacement": null,
+    "max_stress": null,
+    "natural_frequency": 500,
+    "formula": "TL = 10*log10(1 + 0.25*(m - 1/m)^2 * sin^2(kL)), m = S2/S1 = (D2/D1)^2",
+    "reference": "Munjal, Acoustics of Ducts and Mufflers, 2nd Ed., Ch.3"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_transmission_loss",
+        "value": 24.1,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "transmission_loss_at_500Hz",
+        "value": 8.5,
+        "unit": "dB",
+        "tolerance": 10
+      },
+      {
+        "name": "first_quarter_wave_peak_frequency",
+        "value": 431,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "expansion_ratio_m",
+        "value": 16,
+        "unit": "dimensionless",
+        "tolerance": 1
+      }
+    ]
+  }
+}

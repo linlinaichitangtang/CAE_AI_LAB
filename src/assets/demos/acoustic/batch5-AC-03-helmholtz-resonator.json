@@ -1,0 +1,88 @@
+{
+  "id": "AC-03",
+  "name": "Helmholtz共振器",
+  "nameEn": "Helmholtz Resonator",
+  "description": "经典Helmholtz共振器的声学特性分析。共振器由刚性腔体和短颈组成，通过颈部空气质量与腔体空气弹性之间的谐振产生低频共振。理论共振频率f_H=c₀√(A/(VL))≈171.5Hz。分析颈部空气的声阻抗特性，验证共振频率及品质因数Q值。",
+  "category": "acoustic",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["helmholtz", "resonator", "acoustic-impedance", "resonance", "cavity"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.1,
+    "radius": null,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 15,
+    "y_div": 15,
+    "z_div": 15,
+    "element_type": "FLUID30"
+  },
+  "material": {
+    "name": "Air (STP)",
+    "elastic_modulus": 1.42e5,
+    "poisson_ratio": 0.0,
+    "density": 1.225,
+    "yield_stress": null,
+    "speed_of_sound": 343,
+    "bulk_modulus": 1.42e5
+  },
+  "boundaryConditions": {
+    "fixed_face": "cavity_walls_rigid",
+    "load_type": "velocity",
+    "load_face": "neck_opening",
+    "load_magnitude": 0.01,
+    "load_direction": "Y",
+    "frequency_hz": 171.5,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "harmonic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [50, 500]
+  },
+  "theoretical": {
+    "max_displacement": 0.01,
+    "max_stress": null,
+    "natural_frequency": 171.5,
+    "formula": "f_H = (c_0 / (2*pi)) * sqrt(A / (V * L_eff)), L_eff = L + 1.7*r_neck (end correction)",
+    "reference": "Kinsler et al., Fundamentals of Acoustics, 4th Ed., Ch.7"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "helmholtz_resonance_frequency",
+        "value": 171.5,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "neck_volume_displacement_amplitude",
+        "value": 5.0e-7,
+        "unit": "m^3",
+        "tolerance": 10
+      },
+      {
+        "name": "pressure_amplitude_in_cavity",
+        "value": 1.2,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "quality_factor_Q",
+        "value": 15,
+        "unit": "dimensionless",
+        "tolerance": 15
+      }
+    ]
+  }
+}

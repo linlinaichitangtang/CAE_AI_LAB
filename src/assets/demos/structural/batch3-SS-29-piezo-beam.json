@@ -1,0 +1,80 @@
+{
+  "id": "SS-29",
+  "name": "压电智能梁传感分析",
+  "nameEn": "Piezoelectric Smart Beam Sensing Analysis",
+  "description": "压电智能梁由钢基体(0.2m×0.02m×0.002m)和PZT-5A压电层(0.2m×0.02m×0.001m)组成。在自由端集中载荷作用下，利用压电正效应(d31=-171e-12 C/N)计算传感电压V=d31·σ·t/E_piezo。本案例展示了压电材料的机电耦合特性及其在结构健康监测中的应用，适用于智能结构、自适应系统和振动控制领域的学习。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["压电", "PZT-5A", "智能结构", "传感", "机电耦合", "d31"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.2,
+    "width": 0.02,
+    "height": 0.003,
+    "radius": 0,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 4,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Steel substrate + PZT-5A piezoelectric layer",
+    "elastic_modulus": 63000000000,
+    "poisson_ratio": 0.3,
+    "density": 7500,
+    "yield_stress": 500000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 100,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 2.38e-4,
+    "max_stress": 50000000,
+    "formula": "V = d31 × σ × t_piezo / E_piezo, σ = M·y/I, M = F·L",
+    "reference": "Crawley EF, de Luis J. Use of piezoelectric actuators as elements of intelligent structures. AIAA Journal, 1987."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "自由端最大挠度",
+        "value": 2.38e-4,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "压电层最大应力",
+        "value": 50000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "传感电压",
+        "value": 0.1357,
+        "unit": "V",
+        "tolerance": 5
+      }
+    ]
+  }
+}

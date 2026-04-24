@@ -1,0 +1,53 @@
+{
+  "id": "PP-15",
+  "name": "安全因子云图",
+  "nameEn": "Safety Factor Contour - Complex Bracket Under Combined Loading",
+  "description": "展示复杂支架在组合载荷作用下的安全因子分布云图。支架材料为Q235钢(σ_yield=235MPa)，同时承受轴向力、弯矩和扭矩的组合载荷。安全因子FOS=σ_yield/σ_eqv，其中σ_eqv为Von Mises等效应力。云图中标注FOS=1.0等值线(屈服边界)和FOS=1.5等值线(设计限值)，FOS<1.0区域为塑性失效区(红色)，1.0<FOS<1.5为安全裕度不足区(黄色)，FOS>1.5为安全区(绿色)。通过此案例学习安全因子云图的判读方法，掌握结构安全评估的基本流程。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["安全因子", "FOS", "组合载荷", "屈服边界", "结构安全评估", "Von Mises"],
+  "visualization": {
+    "type": "contour",
+    "field": "safety_factor",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 18500,
+    "elements": 15200,
+    "results_file": "results/postprocess/bracket_safety_factor.dat"
+  },
+  "display_settings": {
+    "title": "支架安全因子云图 - FOS=σ_y/σ_eqv (Q235钢)",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0.5,
+      "max": 3.0,
+      "label": "安全因子 FOS",
+      "n_levels": 18
+    },
+    "camera": {
+      "position": { "x": 0.15, "y": 0.12, "z": 0.18 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -30, "yaw": 45 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "材料屈服强度σ_y", "value": 235, "unit": "MPa", "tolerance": 0 },
+      { "name": "最小安全因子FOS_min", "value": 0.85, "unit": "", "tolerance": 5 },
+      { "name": "最大等效应力σ_eqv_max", "value": 276, "unit": "MPa", "tolerance": 5 },
+      { "name": "FOS=1.0屈服边界面积比", "value": 8, "unit": "%", "tolerance": 15 },
+      { "name": "FOS=1.5设计限值面积比", "value": 35, "unit": "%", "tolerance": 10 },
+      { "name": "平均安全因子", "value": 2.1, "unit": "", "tolerance": 10 }
+    ]
+  }
+}

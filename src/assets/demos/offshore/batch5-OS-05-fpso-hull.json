@@ -1,0 +1,62 @@
+{
+  "id": "OS-05",
+  "name": "FPSO船体",
+  "nameEn": "FPSO Hull Motion Analysis",
+  "description": "模拟FPSO（浮式生产储卸油装置）船体在不规则波浪中的运动响应分析。船体主尺度300m×60m×30m，采用12点系泊系统定位。在频域内进行RAO（响应幅值算子）分析，计算船体在纵荡、横荡、垂荡、横摇、纵摇和首摇六个自由度上的运动响应。采用JONSWAP谱模拟不规则海况，验证百年一遇海况下的最大运动幅值和系泊缆张力。按API RP 2SK规范校核系泊系统。",
+  "category": "offshore",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["FPSO", "RAO", "motion-response", "mooring", "frequency-domain", "JONSWAP"],
+  "geometry": {
+    "type": "ship_hull",
+    "length": 300.0,
+    "beam": 60.0,
+    "depth": 30.0,
+    "draft": 20.0,
+    "displacement": 250000.0,
+    "mooring_points": 12
+  },
+  "material": {
+    "name": "AH36 Ship Steel",
+    "elastic_modulus": 210000000000.0,
+    "yield_strength": 355000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "significant_wave_height": 12.0,
+    "peak_period": 14.0,
+    "wave_spectrum": "JONSWAP",
+    "peak_enhancement_factor": 3.3,
+    "wind_speed": 50.0,
+    "current_speed": 1.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "纵荡最大幅值",
+        "value": 15.0,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "横摇最大幅值",
+        "value": 8.0,
+        "unit": "deg",
+        "tolerance": 15
+      },
+      {
+        "name": "最大系泊缆张力",
+        "value": 8500.0,
+        "unit": "kN",
+        "tolerance": 15
+      },
+      {
+        "name": "垂荡RAO峰值周期",
+        "value": 18.0,
+        "unit": "s",
+        "tolerance": 10
+      }
+    ]
+  }
+}

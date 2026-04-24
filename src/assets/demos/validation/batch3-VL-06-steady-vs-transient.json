@@ -1,0 +1,136 @@
+{
+  "id": "VL-06",
+  "name": "稳态vs瞬态分析",
+  "nameEn": "Steady-State vs Transient Thermal Analysis",
+  "description": "验证瞬态热分析随时间收敛至稳态解的正确性。对钢杆(L=0.5m)施加左端T_left=373K、右端T_right=293K的温度边界条件。对比稳态线性温度分布与瞬态分析在t=100s、500s、2000s时刻的温度分布，验证瞬态解随时间逐步逼近稳态解。热扩散率α=1.172e-5 m²/s，特征时间t_c=L²/α≈21360s。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 3,
+  "tags": ["thermal", "transient", "steady_state", "convergence", "heat_conduction"],
+  "validation_type": "temporal",
+  "test_config": {
+    "baseline": {
+      "description": "稳态热分析，线性温度分布T(x)=T_left-(T_left-T_right)·x/L",
+      "bc_type": "fixed_temperature_both_ends",
+      "material_type": "steel_thermal",
+      "mesh_density": 20
+    },
+    "variants": [
+      {
+        "description": "瞬态分析t=100s，温度分布偏离稳态较大",
+        "bc_type": "fixed_temperature_both_ends",
+        "material_type": "steel_thermal",
+        "mesh_density": 20
+      },
+      {
+        "description": "瞬态分析t=500s，温度分布部分接近稳态",
+        "bc_type": "fixed_temperature_both_ends",
+        "material_type": "steel_thermal",
+        "mesh_density": 20
+      },
+      {
+        "description": "瞬态分析t=2000s，温度分布接近稳态",
+        "bc_type": "fixed_temperature_both_ends",
+        "material_type": "steel_thermal",
+        "mesh_density": 20
+      }
+    ],
+    "comparison_metrics": ["temperature_distribution", "midpoint_temperature", "heat_flux", "convergence_to_steady_state"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 0.5,
+    "width": 0.02,
+    "height": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Carbon Steel",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "point",
+    "load_face": "",
+    "load_magnitude": 0,
+    "load_direction": "Y",
+    "temperature_bc": {
+      "T_left": 373,
+      "T_right": 293,
+      "initial_temperature": 293
+    }
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "formula": "Steady-state: T(x) = T_L - (T_L-T_R)·x/L = 373 - 80·x/0.5; T_mid = 333K; Transient: T(x,t) = T_R + (T_L-T_R)·x/L + Σ(n=1,∞) [2(T_L-T_R)/(nπ)]·sin(nπx/L)·exp(-n²π²αt/L²); α = k/(ρ·c) = 50/(7850×490) = 1.172e-5 m²/s; t_c = L²/α = 0.25/1.172e-5 = 21331s; T_mid(100s)≈293.5K, T_mid(500s)≈300.2K, T_mid(2000s)≈321.8K",
+    "reference": "Incropera, F.P. Fundamentals of Heat and Mass Transfer; Carslaw, H.S. Conduction of Heat in Solids"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Steady-state midpoint temperature",
+        "value": 333,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "Steady-state heat flux q = k·dT/dx",
+        "value": 8000,
+        "unit": "W/m²",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Transient midpoint temperature at t=100s",
+        "value": 293.5,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Transient midpoint temperature at t=500s",
+        "value": 300.2,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Transient midpoint temperature at t=2000s",
+        "value": 321.8,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Convergence ratio T_mid(2000s)/T_steady",
+        "value": 0.966,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Thermal diffusivity α",
+        "value": 1.172e-5,
+        "unit": "m²/s",
+        "tolerance": 0.1
+      }
+    ]
+  }
+}

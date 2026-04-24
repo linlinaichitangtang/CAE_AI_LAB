@@ -1,0 +1,134 @@
+{
+  "id": "TC-32",
+  "name": "超高速摩擦升温分析",
+  "nameEn": "Ultra-High-Speed Friction Heating Analysis - Carbon/Carbon Brake",
+  "description": "碳/碳复合材料制动盘超高速摩擦热-力耦合分析。摩擦系数μ=0.3，滑动速度v=100m/s，接触压力p=2MPa。摩擦热流密度q=μ·p·v=0.3×2×10⁶×100=6×10⁷W/m²。C/C复合材料物性：k=40W/(m·K)，ρ=1800kg/m³，c_p=1200J/(kg·K)，α=1.0×10⁻⁶/K，E=80GPa。表面温升速率dT/dt=q/(ρ·c_p·δ)=6e7/(1800×1200×0.01)=2778K/s，考虑热集中效应约6000K/s。热扩散系数α_th=k/(ρ·c_p)=40/(1800×1200)=1.85×10⁻⁵m²/s。热渗透深度δ_th≈√(α_th·t)，1s后δ_th≈4.3mm。瞬态分析需考虑材料高温氧化和热应力开裂。最大热应力σ_th=E·α·ΔT/(1-ν)。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 5,
+  "tags": ["ultra_high_speed", "friction_heating", "carbon_carbon", "brake_disc", "thermal_stress", "transient_coupled", "sliding_contact", "wear"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.01,
+    "radius": null,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 20,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Carbon/Carbon Composite (C/C)",
+    "elastic_modulus": 80000000000,
+    "poisson_ratio": 0.2,
+    "density": 1800,
+    "yield_stress": 150000000,
+    "thermal_expansion": 1.0e-6,
+    "thermal_conductivity": 40,
+    "specific_heat": 1200
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "friction_surface",
+    "load_magnitude": 6e7,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 6e7,
+      "convection_coeff": 100,
+      "heat_source": 0,
+      "emissivity": 0.8
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 1e-3,
+    "total_time": 5
+  },
+  "theoretical": {
+    "max_displacement": 2e-4,
+    "max_stress": 200000000,
+    "max_temperature": 2500,
+    "formula": "q = mu * p * v = 0.3 * 2e6 * 100 = 6e7 W/m^2; dT/dt = q / (rho * c_p * delta) ~ 6000 K/s; alpha_th = k/(rho*c_p) = 1.85e-5 m^2/s; delta_th = sqrt(alpha_th * t); sigma_th = E*alpha*DeltaT/(1-nu)",
+    "reference": "Maurice et al., Thermal and Mechanical Aspects of Carbon/Carbon Brakes, Wear, 1991; Yevtushenko et al., Friction Heating in Brakes, J. Friction Wear, 2016"
+  },
+  "acceptance": {
+    "displacement_error_limit": 25.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "friction_coefficient",
+        "value": 0.3,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "sliding_velocity",
+        "value": 100,
+        "unit": "m/s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "contact_pressure",
+        "value": 2e6,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "friction_heat_flux",
+        "value": 6e7,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "surface_temperature_rise_rate",
+        "value": 6000,
+        "unit": "K/s",
+        "tolerance": 20.0
+      },
+      {
+        "name": "thermal_diffusivity",
+        "value": 1.85e-5,
+        "unit": "m^2/s",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_penetration_depth_1s",
+        "value": 0.0043,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "max_surface_temperature",
+        "value": 2500,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 25.0
+      },
+      {
+        "name": "C_C_thermal_conductivity",
+        "value": 40,
+        "unit": "W/(m*K)",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "id": "TC-12",
+  "name": "热疲劳Coffin-Manson寿命预测",
+  "nameEn": "Thermal Fatigue Life Prediction - Coffin-Manson Law",
+  "description": "钢制试件热疲劳寿命预测验证。试件在293K(20°C)和693K(420°C)之间循环温度加载，温度幅值ΔT=400°C。材料为耐热钢AISI 304不锈钢，弹性模量E=193GPa，热膨胀系数α=17.3×10⁻⁶/K。完全约束条件下热应变幅Δε_th=α·ΔT=17.3×10⁻⁶×400=6.92×10⁻³。弹性应变幅Δε_e=Δσ/E，塑性应变幅Δε_p=Δε_th-Δε_e。Coffin-Manson公式：Δε_p/2 = C_f·(N_f)^(-c)，其中C_f≈0.3-0.5(延性材料)，c≈0.5-0.6。取C_f=0.4，c=0.55，估算N_f≈(C_f/(Δε_p/2))^(1/c)。考虑弹性应变修正的Basquin方程：σ_a=σ_f'·(2N_f)^(-b)，σ_f'≈900MPa，b≈-0.12。总应变法(SWT参数)预测N_f≈1000次循环。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["thermal_fatigue", "Coffin_Manson", "Basquin", "strain_life", "cyclic_loading", "AISI_304"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.05,
+    "width": 0.01,
+    "height": 0.01,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Stainless Steel AISI 304",
+    "elastic_modulus": 193000000000,
+    "poisson_ratio": 0.29,
+    "density": 8000,
+    "yield_stress": 215000000,
+    "thermal_expansion": 17.3e-6,
+    "thermal_conductivity": 16.2,
+    "specific_heat": 500
+  },
+  "boundaryConditions": {
+    "fixed_face": "both_ends",
+    "load_type": "thermal",
+    "load_face": "entire_body",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": null,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 5,
+    "total_time": 200
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 1336000000,
+    "max_temperature": 693,
+    "formula": "Δε_th = α·ΔT; Δε_p/2 = C_f·(N_f)^(-c); σ_a = E·Δε_e/2; N_f = (C_f/(Δε_p/2))^(1/c)",
+    "reference": "Suresh, Fatigue of Materials, Ch.4 - Cyclic Deformation and Fatigue Crack Initiation"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 10.0,
+    "temperature_error_limit": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "thermal_strain_range",
+        "value": 0.00692,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "max_thermal_stress",
+        "value": 1336000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "predicted_fatigue_life",
+        "value": 1000,
+        "unit": "cycles",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Coffin_Manson_coefficient_Cf",
+        "value": 0.4,
+        "unit": "",
+        "tolerance": 25.0
+      },
+      {
+        "name": "Coffin_Manson_exponent_c",
+        "value": 0.55,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "temperature_range",
+        "value": 400,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "cyclic_temperature_period",
+        "value": 200,
+        "unit": "s",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

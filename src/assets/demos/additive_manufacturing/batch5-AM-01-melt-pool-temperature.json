@@ -1,0 +1,80 @@
+{
+  "id": "AM-01",
+  "name": "熔池温度场",
+  "nameEn": "Melt Pool Temperature Field",
+  "description": "SLM选区激光熔化Ti-6Al-4V熔池温度场分析。工艺参数：激光功率P=200W，扫描速度v=800mm/s，光斑半径r=0.1mm，波长λ=1070nm。Ti-6Al-4V材料参数：E=110GPa，ν=0.33，ρ=4430kg/m³，熔点T_m=1941K，沸点T_b=3560K，热导率k=6.7W/(m·K)，比热c_p=526J/(kg·K)，吸收率η=0.35。Rosenthal解析解：T-T₀=(Pη)/(2πkr)×exp(-vξ/(2α))，其中α=k/(ρc_p)=2.88e-6m²/s。理论峰值温度T_max≈3500K（接近沸点，存在匙孔效应风险）。熔池深度d≈√(2Pr/(πevT_m))≈0.1mm。熔池宽度w≈2r=0.2mm。验证温度场分布与Rosenthal解对比。",
+  "category": "additive_manufacturing",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["SLM", "melt pool", "Ti-6Al-4V", "Rosenthal", "laser", "temperature field"],
+  "geometry": {
+    "type": "block",
+    "length": 0.01,
+    "width": 0.005,
+    "height": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 12,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "substrate_bottom",
+    "load_type": "thermal",
+    "load_face": "top_surface",
+    "load_magnitude": 200
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "formula": "T-T₀ = (Pη)/(2πkr) × exp(-vξ/(2α)), d ≈ √(2Pr/(πevT_m))",
+    "reference": "Rosenthal, Welding Journal, 1941; King et al., Acta Materialia, 2015"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "峰值温度",
+        "value": 3500,
+        "unit": "K",
+        "tolerance": 15
+      },
+      {
+        "name": "熔池深度",
+        "value": 1e-4,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "熔池宽度",
+        "value": 2e-4,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "冷却速率",
+        "value": 1000000,
+        "unit": "K/s",
+        "tolerance": 25
+      }
+    ]
+  }
+}

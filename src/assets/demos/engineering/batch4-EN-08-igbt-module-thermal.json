@@ -1,0 +1,149 @@
+{
+  "id": "EN-08",
+  "name": "IGBT模块热分析",
+  "nameEn": "IGBT Module Thermal Analysis",
+  "description": "分析SiC IGBT功率模块在稳态和循环热载荷下的温度场分布和热阻特性。SiC芯片尺寸12mm×12mm，热耗散Q=200W。模块层叠结构：SiC芯片(导热系数k=120W/m·K)→焊料层(Ag-Sn, k=58W/m·K, 厚0.1mm)→AlN陶瓷基板(k=170W/m·K, 厚0.635mm)→铜底板(k=385W/m·K, 厚3mm)→散热器。分析稳态热阻R_th(j-c)=0.12K/W，结温T_j=T_c+Q×R_th。循环热载荷下评估热阻退化：ΔR_th/R_th<10%每1000次循环(功率循环-40°C~175°C)。通过有限元分析验证各层温度分布、热应力集中和焊料层疲劳寿命。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["igbt", "sic", "thermal_analysis", "thermal_resistance", "power_module", "thermal_cycling", "electronics"],
+  "engineering_domain": "electronics",
+  "design_code": "IEC 60747-9 半导体器件-功率模块; AQG 324 功率循环测试标准",
+  "geometry": {
+    "type": "block",
+    "length": 0.06,
+    "width": 0.04,
+    "height": 0.004,
+    "dimension": "3d",
+    "detail_params": {
+      "sic_chip_size": 0.012,
+      "sic_chip_thickness": 0.00035,
+      "solder_thickness": 0.0001,
+      "aln_substrate_size": 0.032,
+      "aln_substrate_thickness": 0.000635,
+      "copper_baseplate_size": 0.06,
+      "copper_baseplate_thickness": 0.003,
+      "copper_top_thickness": 0.0003,
+      "copper_bottom_thickness": 0.0003,
+      "dtc_interface_thickness": 0.00005
+    }
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 20,
+    "z_div": 16,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "SiC IGBT Module Stack",
+    "elastic_modulus": 410000000000,
+    "poisson_ratio": 0.19,
+    "density": 3210,
+    "yield_stress": 0,
+    "thermal_expansion": 4.0e-6,
+    "thermal_conductivity": 120,
+    "specific_heat": 750,
+    "thermal_params": {
+      "sic_chip": { "k": 120, "CTE": 4.0e-6, "E": 410e9, "thickness": 0.00035 },
+      "solder_ag_sn": { "k": 58, "CTE": 22e-6, "E": 40e9, "thickness": 0.0001 },
+      "aln_ceramic": { "k": 170, "CTE": 4.6e-6, "E": 310e9, "thickness": 0.000635 },
+      "copper": { "k": 385, "CTE": 17e-6, "E": 117e9, "thickness": 0.003 },
+      "dtc": { "k": 1.5, "CTE": 0.5e-6, "thickness": 0.00005 },
+      "heatsink": { "k": 200, "h_conv": 5000 },
+      "coolant_temperature": 338,
+      "junction_max_temperature": 448
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "heatsink_bottom",
+    "load_type": "thermal",
+    "load_face": "sic_chip_top",
+    "load_magnitude": 200,
+    "load_direction": "none",
+    "temperature_bc": {
+      "type": "heat_source_convection",
+      "heat_source_power": 200,
+      "coolant_temperature": 338,
+      "convection_coefficient": 5000,
+      "thermal_cycling": {
+        "min_temperature": 233,
+        "max_temperature": 448,
+        "dwell_time": 30,
+        "ramp_rate": 10
+      }
+    }
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0001,
+    "max_stress": 0,
+    "formula": "Steady-state thermal resistance (layer stack): R_th = Σ(t_i/k_i/A_i); SiC chip: R1 = 0.00035/(120×0.012²) = 0.00035/0.01728 = 0.0203 K/W; Solder: R2 = 0.0001/(58×0.012²) = 0.0001/0.008352 = 0.0120 K/W; AlN: R3 = 0.000635/(170×0.032²) = 0.000635/0.17408 = 0.00365 K/W; Cu top: R4 = 0.0003/(385×0.032²) = 0.0003/0.39424 = 0.000761 K/W; Cu base: R5 = 0.003/(385×0.06²) = 0.003/1.386 = 0.00216 K/W; DTC: R6 = 0.00005/(1.5×0.06²) = 0.00005/0.0054 = 0.00926 K/W; Heatsink: R7 = 1/(h×A) = 1/(5000×0.06×0.04) = 0.0833 K/W; R_th(j-c) = R1+R2+R3+R4 = 0.0367 K/W; R_th(c-s) = R5+R6 = 0.0114 K/W; R_th(s-a) = R7 = 0.0833 K/W; R_th(j-a) = 0.1314 K/W; Junction temperature: T_j = T_coolant + Q × R_th(j-a) = 338 + 200 × 0.1314 = 364.3 K (91.3°C); At max power 500W: T_j = 338 + 500 × 0.1314 = 403.7 K (130.7°C); Thermal cycling degradation: ΔR_th/R_th < 10% per 1000 cycles per AQG 324",
+    "reference": "IEC 60747-9 Semiconductor devices - Power modules; AQG 324 Qualification of Power Modules for Use in Power Electronics Converter Units"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Junction-to-case thermal resistance R_th(j-c)",
+        "value": 0.0367,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Junction-to-ambient thermal resistance R_th(j-a)",
+        "value": 0.1314,
+        "unit": "K/W",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Junction temperature at 200W",
+        "value": 364.3,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Junction temperature at 500W",
+        "value": 403.7,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Temperature drop across solder layer",
+        "value": 2.4,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Temperature drop across AlN substrate",
+        "value": 0.73,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Maximum thermal stress at solder-chip interface",
+        "value": 120000000,
+        "unit": "Pa",
+        "tolerance": 20.0
+      },
+      {
+        "name": "Thermal resistance degradation per 1000 cycles",
+        "value": 5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "Solder layer CTE mismatch stress (SiC-Cu)",
+        "value": 95000000,
+        "unit": "Pa",
+        "tolerance": 25.0
+      }
+    ]
+  }
+}

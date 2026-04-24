@@ -1,0 +1,369 @@
+{
+  "id": "MS-29",
+  "name": "机器学习力场耦合",
+  "nameEn": "Machine Learning Force Field Coupling",
+  "description": "基于高斯过程势(Gaussian Process Potential, GPP)的机器学习力场与多尺度模拟耦合验证。以FCC Al为模型体系，使用DFT生成训练数据集(能量、力、virial)，训练GPP力场；在相同测试条件下对比GPP-MD与EAM-MD的模拟精度(力MAE、能量MAE、声子谱)；通过相场模型验证GPP预测的弹性常数和缺陷性质；FE模型验证宏观力学性能的一致性。关键指标：GPP力MAE<0.05eV/A，能量MAE<1meV/atom，计算加速比>10x vs DFT。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["machine learning", "Gaussian Process Potential", "force field", "DFT training", "phonon spectrum", "accuracy benchmark", "GPP", "EAM comparison"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "FCC Aluminum (Al)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT训练数据集生成",
+      "description": "生成GPP训练所需的DFT参考数据集，包括不同构型的能量、原子力和virial张量",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "training_configurations": {
+          "bulk": 200,
+          "surface": 150,
+          "vacancy": 100,
+          "interstitial": 80,
+          "liquid": 120,
+          "strained": 200,
+          "dislocation": 100,
+          "grain_boundary": 80
+        },
+        "total_training_structures": 1030,
+        "supercell_sizes": ["2x2x2", "3x3x3", "4x4x4", "5x5x5"],
+        "temperature_range": [0, 1500],
+        "temperature_unit": "K",
+        "strain_range": [-0.1, 0.1]
+      },
+      "output": {
+        "training_dataset": "al_gpp_training.db",
+        "total_configurations": 1030,
+        "total_atoms": 185400,
+        "energy_range": [-3.74, -3.20],
+        "energy_range_unit": "eV/atom",
+        "force_components": 556200,
+        "force_range": [-5.0, 5.0],
+        "force_range_unit": "eV/Angstrom",
+        "virial_components": 30900,
+        "energy_distribution": "energy_hist.dat",
+        "force_distribution": "force_hist.dat",
+        "configuration_diversity_index": 0.92
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Al",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": "Gamma_only_for_large_cells",
+        "k_points_bulk": [12, 12, 12],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "ibrion": -1,
+        "isif": 2,
+        "nsw": 0,
+        " NSW_for_MD": 5000,
+        "potim": 1.0,
+        "potim_unit": "fs"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT training dataset (energies, forces, virials) to Gaussian Process Potential fitting via SOAP descriptors",
+        "data_transferred": [
+          "training_dataset",
+          "total_configurations",
+          "energy_range",
+          "force_range",
+          "configuration_diversity_index"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "GPP-MD vs EAM-MD精度对比",
+      "description": "在相同测试条件下对比GPP-MD与EAM-MD的模拟精度，评估力MAE、能量MAE和声子谱一致性",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "test_systems": {
+          "bulk_equilibrium": {"atoms": 256, "temperature": 300, "unit": "K"},
+          "liquid": {"atoms": 512, "temperature": 1200, "unit": "K"},
+          "vacancy_migration": {"atoms": 255, "temperature_range": [300, 900], "unit": "K"},
+          "surface_reconstruction": {"atoms": 480, "surface": "Al(111)"},
+          "phonon_calculation": {"atoms": 108, "supercell": "3x3x3"}
+        },
+        "GPP_model": "Gaussian_Process_Potential_with_SOAP_descriptors",
+        "EAM_reference": "Mishin_Al_EAM",
+        "DFT_reference": "VASP_PBE",
+        "timestep": 1.0,
+        "timestep_unit": "fs"
+      },
+      "output": {
+        "GPP_force_MAE": 0.038,
+        "force_MAE_unit": "eV/Angstrom",
+        "GPP_force_RMSE": 0.052,
+        "force_RMSE_unit": "eV/Angstrom",
+        "GPP_energy_MAE": 0.8,
+        "energy_MAE_unit": "meV/atom",
+        "GPP_energy_RMSE": 1.1,
+        "energy_RMSE_unit": "meV/atom",
+        "EAM_force_MAE": 0.085,
+        "EAM_force_MAE_unit": "eV/Angstrom",
+        "EAM_energy_MAE": 3.5,
+        "EAM_energy_MAE_unit": "meV/atom",
+        "phonon_spectrum_GPP": "phonon_GPP.dat",
+        "phonon_spectrum_EAM": "phonon_EAM.dat",
+        "phonon_spectrum_DFT": "phonon_DFT.dat",
+        "phonon_GPP_RMSE": 0.15,
+        "phonon_RMSE_unit": "THz",
+        "phonon_EAM_RMSE": 0.42,
+        "phonon_EAM_RMSE_unit": "THz",
+        "GPP_speedup_vs_DFT": 850,
+        "speedup_unit": "x",
+        "EAM_speedup_vs_DFT": 15000,
+        "EAM_speedup_unit": "x",
+        "vacancy_migration_GPP": 0.62,
+        "vacancy_migration_unit": "eV",
+        "vacancy_migration_EAM": 0.63,
+        "vacancy_migration_DFT": 0.61,
+        "vacancy_migration_unit": "eV"
+      },
+      "parameters": {
+        "GPP_settings": {
+          "descriptor": "SOAP",
+          "soap_cutoff": 6.0,
+          "soap_cutoff_unit": "Angstrom",
+          "soap_l_max": 8,
+          "soap_n_max": 8,
+          "soap_sigma": 0.5,
+          "kernel": "RBF",
+          "kernel_hyperparameters": "optimized_by_ML",
+          "sparse_method": "FPS",
+          "sparse_points": 2000
+        },
+        "EAM_potential": "Mishin_Al_EAM",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nose-Hoover",
+        "cutoff_radius": 6.0,
+        "cutoff_radius_unit": "Angstrom",
+        "total_steps": 100000,
+        "dump_interval": 100,
+        "phonon_supercell": "3x3x3",
+        "phonon_displacement": 0.01,
+        "phonon_displacement_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "GPP-predicted elastic constants and defect properties to phase field model parameters",
+        "data_transferred": [
+          "GPP_force_MAE",
+          "GPP_energy_MAE",
+          "phonon_spectrum_GPP",
+          "vacancy_migration_GPP",
+          "GPP_speedup_vs_DFT"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场弹性常数与缺陷验证",
+      "description": "基于GPP预测的弹性常数和缺陷性质，通过相场模型验证多尺度一致性",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 100,
+          "Lz": 100,
+          "unit": "Angstrom"
+        },
+        "grid_spacing": 1.0,
+        "grid_spacing_unit": "Angstrom",
+        "grid_points": "100x100x100",
+        "elastic_constants_source": "GPP_MS-29 Step 2",
+        "elastic_constants": {
+          "C11_GPP": 114,
+          "C12_GPP": 62,
+          "C44_GPP": 32,
+          "unit": "GPa"
+        },
+        "elastic_constants_EAM": {
+          "C11": 114,
+          "C12": 62,
+          "C44": 32,
+          "unit": "GPa"
+        },
+        "elastic_constants_DFT": {
+          "C11": 118,
+          "C12": 63,
+          "C44": 34,
+          "unit": "GPa"
+        },
+        "defect_type": "vacancy_and_dislocation",
+        "vacancy_formation_energy_GPP": 0.68,
+        "vacancy_formation_unit": "eV"
+      },
+      "output": {
+        "elastic_constants_GPP_PF": "elastic_GPP.dat",
+        "elastic_constants_EAM_PF": "elastic_EAM.dat",
+        "C11_error_GPP_vs_DFT": 3.4,
+        "C11_error_unit": "percent",
+        "C44_error_GPP_vs_DFT": 5.9,
+        "C44_error_unit": "percent",
+        "C11_error_EAM_vs_DFT": 3.4,
+        "C11_error_unit": "percent",
+        "C44_error_EAM_vs_DFT": 5.9,
+        "C44_error_unit": "percent",
+        "vacancy_strain_field_GPP": "vacancy_GPP.vtk",
+        "vacancy_strain_field_DFT": "vacancy_DFT.vtk",
+        "strain_field_agreement": 96.2,
+        "agreement_unit": "percent",
+        "dislocation_core_comparison": "core_comparison.dat",
+        "GPP_advantage_cases": ["high_strain", "defect_core", "surface"]
+      },
+      "parameters": {
+        "model": "phase_field_elastic_defect",
+        "order_parameter": "strain_field_epsilon",
+        "elastic_solver": "FFT_based",
+        "grid_size": "100x100x100",
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 500,
+        "vacancy_relaxation": true,
+        "dislocation_core_model": "Peierls-Nabarro"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field elastic constants and defect properties to FE continuum model validation",
+        "data_transferred": [
+          "elastic_constants_GPP_PF",
+          "C11_error_GPP_vs_DFT",
+          "C44_error_GPP_vs_DFT",
+          "strain_field_agreement",
+          "GPP_advantage_cases"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE宏观力学性能一致性验证",
+      "description": "基于有限元方法验证GPP力场预测的宏观力学性能与DFT/EAM参考的一致性",
+      "input": {
+        "domain_size": {
+          "Lx": 10,
+          "Ly": 10,
+          "Lz": 10,
+          "unit": "mm"
+        },
+        "mesh": "50x50x50",
+        "element_type": "C3D8",
+        "elastic_constants_GPP": {
+          "C11": 114,
+          "C12": 62,
+          "C44": 32,
+          "unit": "GPa"
+        },
+        "elastic_constants_EAM": {
+          "C11": 114,
+          "C12": 62,
+          "C44": 32,
+          "unit": "GPa"
+        },
+        "elastic_constants_DFT": {
+          "C11": 118,
+          "C12": 63,
+          "C44": 34,
+          "unit": "GPa"
+        },
+        "loading": "uniaxial_tension",
+        "max_strain": 0.05,
+        "temperature": 300,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "stress_strain_GPP": "ss_GPP.dat",
+        "stress_strain_EAM": "ss_EAM.dat",
+        "stress_strain_DFT": "ss_DFT.dat",
+        "youngs_modulus_GPP": 70.5,
+        "youngs_modulus_unit": "GPa",
+        "youngs_modulus_EAM": 70.5,
+        "youngs_modulus_DFT": 73.2,
+        "youngs_modulus_unit": "GPa",
+        "GPP_vs_DFT_modulus_error": 3.7,
+        "modulus_error_unit": "percent",
+        "EAM_vs_DFT_modulus_error": 3.7,
+        "modulus_error_unit": "percent",
+        "poisson_ratio_GPP": 0.35,
+        "poisson_ratio_EAM": 0.35,
+        "poisson_ratio_DFT": 0.34,
+        "shear_modulus_GPP": 26.0,
+        "shear_modulus_unit": "GPa",
+        "anisotropy_ratio_GPP": 1.22,
+        "overall_GPP_accuracy": 96.0,
+        "accuracy_unit": "percent",
+        "computational_cost_summary": "cost_summary.dat"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "anisotropic_linear_elastic",
+        "boundary_condition": "displacement_controlled_uniaxial",
+        "strain_increment": 0.001,
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 500,
+        "geometric_nonlinearity": false,
+        "benchmark_comparison": ["GPP", "EAM", "DFT"]
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE mechanical properties benchmark summary and GPP vs EAM accuracy assessment",
+        "data_transferred": [
+          "youngs_modulus_GPP",
+          "GPP_vs_DFT_modulus_error",
+          "overall_GPP_accuracy",
+          "computational_cost_summary"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.87.184115",
+    "authors": "Bartok AP, Payne MC, Kondor R, Csanyi G",
+    "year": 2013,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "GPP force MAE",
+        "value": 0.038,
+        "unit": "eV/Angstrom",
+        "tolerance": 30
+      },
+      {
+        "name": "GPP energy MAE",
+        "value": 0.8,
+        "unit": "meV/atom",
+        "tolerance": 30
+      },
+      {
+        "name": "GPP speedup vs DFT",
+        "value": 850,
+        "unit": "x",
+        "tolerance": 40
+      },
+      {
+        "name": "Phonon RMSE GPP vs DFT",
+        "value": 0.15,
+        "unit": "THz",
+        "tolerance": 30
+      },
+      {
+        "name": "Overall GPP accuracy",
+        "value": 96.0,
+        "unit": "percent",
+        "tolerance": 5
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "FS-06",
+  "name": "风扇叶片碰磨",
+  "nameEn": "Fan Blade-Casing Rub",
+  "description": "模拟航空发动机风扇叶片与机匣之间的碰磨现象。叶片叶尖间隙为1mm，在转子不平衡或热变形等因素作用下叶片与机匣发生接触摩擦。摩擦系数μ=0.3，分析碰磨引起的自激振动响应、接触力时程以及叶片和机匣的应力分布。验证碰磨发生时的振动特征频率和幅值放大效应。采用分区耦合方法，结构域包含叶片和机匣两个弹性体。",
+  "category": "fsi",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["blade-rub", "contact", "self-excited-vibration", "rotor-dynamics", "friction"],
+  "fluid_domain": {
+    "type": "external",
+    "density": 1.225,
+    "viscosity": 1.81e-5,
+    "velocity": 200.0,
+    "pressure": 101325.0
+  },
+  "structure_domain": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.08,
+    "thickness": 0.003,
+    "elastic_modulus": 120000000000.0,
+    "density": 4430.0
+  },
+  "coupling": {
+    "method": "partitioned",
+    "interface": "wet_surface",
+    "time_step": 0.0001,
+    "total_time": 0.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "碰磨接触力峰值",
+        "value": 5000.0,
+        "unit": "N",
+        "tolerance": 25
+      },
+      {
+        "name": "自激振动频率",
+        "value": 850.0,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "叶片最大等效应力",
+        "value": 450.0,
+        "unit": "MPa",
+        "tolerance": 20
+      },
+      {
+        "name": "机匣最大径向变形",
+        "value": 0.5,
+        "unit": "mm",
+        "tolerance": 25
+      }
+    ]
+  }
+}

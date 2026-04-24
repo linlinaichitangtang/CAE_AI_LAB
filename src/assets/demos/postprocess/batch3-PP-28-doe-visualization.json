@@ -1,0 +1,55 @@
+{
+  "id": "PP-28",
+  "name": "DOE结果可视化",
+  "nameEn": "DOE Result Visualization - Beam Parameter Sweep",
+  "description": "展示实验设计(DOE)参数扫描结果的全方位可视化分析。以悬臂梁为研究对象，设计变量为梁厚度t(5-20mm)和材料类型(钢E=200GPa/铝E=69GPa/钛E=116GPa)，采用全因子设计3x4=12组实验。响应指标为最大位移δ_max和最大应力σ_max。后处理包含三种可视化：(1)响应面图(RSM)展示δ_max随t和E的变化曲面；(2)灵敏度龙卷风图量化各参数对响应的影响程度；(3)Pareto前沿展示位移-质量多目标优化下的最优解集。通过交互式参数滑块实时更新响应面，支持设计空间探索和最优方案筛选。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["DOE", "参数扫描", "响应面", "灵敏度分析", "Pareto前沿", "多目标优化"],
+  "visualization": {
+    "type": "doe",
+    "field": "displacement",
+    "color_map": "plasma",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 3200,
+    "elements": 2800,
+    "results_file": "results/postprocess/beam_doe_parameter_sweep.dat"
+  },
+  "display_settings": {
+    "title": "悬臂梁DOE分析 - 响应面与灵敏度可视化",
+    "axis_labels": ["厚度 t (mm)", "弹性模量 E (GPa)", "最大位移 δ (mm)"],
+    "color_bar": {
+      "min": 0.05,
+      "max": 12.5,
+      "label": "最大位移 (mm)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 0.25, "y": 0.20, "z": 0.30 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -35, "yaw": 40 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "DOE实验组数", "value": 12, "unit": "组", "tolerance": 0 },
+      { "name": "钢梁(t=20mm)最大位移", "value": 0.15, "unit": "mm", "tolerance": 5 },
+      { "name": "铝梁(t=5mm)最大位移", "value": 12.3, "unit": "mm", "tolerance": 5 },
+      { "name": "钛梁(t=10mm)最大位移", "value": 2.85, "unit": "mm", "tolerance": 5 },
+      { "name": "厚度灵敏度(归一化)", "value": 0.72, "unit": "", "tolerance": 10 },
+      { "name": "材料灵敏度(归一化)", "value": 0.28, "unit": "", "tolerance": 10 },
+      { "name": "Pareto前沿解个数", "value": 5, "unit": "个", "tolerance": 20 },
+      { "name": "R²拟合优度", "value": 0.985, "unit": "", "tolerance": 2 }
+    ]
+  }
+}

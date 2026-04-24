@@ -1,0 +1,350 @@
+{
+  "id": "MS-33",
+  "name": "电化学沉积",
+  "nameEn": "Electrochemical Deposition Multiscale Simulation",
+  "description": "铜电化学沉积过程从离子吸附到宏观残余应力的全链条多尺度模拟。首先通过DFT计算Cu(111)表面Cu²⁺离子的吸附能和脱附势垒，确定电沉积的热力学驱动力；然后通过MD模拟电双层结构(EDL)，包括溶剂化离子分布和界面电场效应；相场模型基于Butler-Volmer动力学方程描述金属沉积的形貌演化，捕捉枝晶生长和竞争生长机制；FE模型预测沉积层的残余应力分布和界面结合强度。该案例为电镀工艺优化和先进互连技术提供多尺度理论指导。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["electrochemical deposition", "copper", "Butler-Volmer", "electric double layer", "dendrite growth", "residual stress", "Cu interconnect", "electroplating"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Cu Electrochemical Deposition (CuSO4 + H2SO4 electrolyte on Cu(111))",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "离子表面吸附能计算",
+      "description": "DFT计算Cu(111)表面Cu²⁺离子的吸附能、脱附势垒和电荷转移量，确定电沉积热力学驱动力",
+      "input": {
+        "surface": "Cu(111)",
+        "slab_layers": 6,
+        "supercell": "4x4",
+        "vacuum_gap": 25,
+        "vacuum_gap_unit": "Angstrom",
+        "adsorbate": "Cu2+_with_solvation_shell",
+        "solvation_model": "explicit_6_H2O_molecules",
+        "adsorption_sites": ["fcc_hollow", "hcp_hollow", "top", "bridge"],
+        "applied_potential_range": [-0.5, 0.5],
+        "applied_potential_unit": "V_vs_SHE",
+        "NEB_images": 5
+      },
+      "output": {
+        "adsorption_energy_fcc": -2.35,
+        "adsorption_energy_unit": "eV",
+        "adsorption_energy_bridge": -1.85,
+        "adsorption_energy_unit": "eV",
+        "optimal_site": "fcc_hollow",
+        "desorption_barrier": 0.72,
+        "desorption_barrier_unit": "eV",
+        "charge_transfer": 0.85,
+        "charge_transfer_unit": "e",
+        "Cu-Cu_bond_length": 2.48,
+        "bond_length_unit": "Angstrom",
+        "surface_relaxation": 0.025,
+        "relaxation_unit": "Angstrom",
+        "adsorption_energy_vs_potential": "E_ads_vs_V.dat",
+        "charge_density": "delta_rho.cube"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Cu",
+        "energy_cutoff": 450,
+        "energy_cutoff_unit": "eV",
+        "k_points": [4, 4, 1],
+        "dipole_correction": true,
+        "vdW_correction": "DFT-D3",
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "ibrion": 2,
+        "isif": 2,
+        "ediffg": -0.01,
+        "ediffg_unit": "eV/Angstrom",
+        "solvent_correction": "VASPsol",
+        "implicit_solvent": "H2O_dielectric_78.4"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT adsorption energy and desorption barrier to MD force field (ClayFF for electrolyte + EAM for Cu) and Butler-Volmer exchange current density",
+        "data_transferred": [
+          "adsorption_energy_fcc",
+          "desorption_barrier",
+          "charge_transfer",
+          "optimal_site",
+          "Cu-Cu_bond_length"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "电双层结构与离子传输模拟",
+      "description": "MD模拟Cu(111)-电解液界面的电双层(EDL)结构，包括溶剂化离子分布和界面电场效应",
+      "input": {
+        "electrolyte": "0.5M_CuSO4_0.5M_H2SO4",
+        "cations": ["Cu2+", "H3O+"],
+        "anions": ["SO4(2-)", "HSO4(-)"],
+        "solvent": "SPC_E_water",
+        "electrode": "Cu(111)_slab",
+        "electrode_layers": 4,
+        "electrode_area": "3x3",
+        "electrode_area_unit": "nm^2",
+        "electrolyte_thickness": 5,
+        "electrolyte_thickness_unit": "nm",
+        "total_atoms": 18000,
+        "applied_potential": -0.3,
+        "applied_potential_unit": "V_vs_SHE",
+        "electric_field": 1e9,
+        "electric_field_unit": "V/m",
+        "temperature": 298,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "EDL_thickness": 0.65,
+        "EDL_thickness_unit": "nm",
+        "inner_Helmholtz_plane": 0.28,
+        "IHP_unit": "nm",
+        "outer_Helmholtz_plane": 0.52,
+        "OHP_unit": "nm",
+        "ion_density_profile": "rho_ion.dat",
+        "water_orientation_profile": "water_orient.dat",
+        "Cu2+_concentration_at_surface": 3.2,
+        "concentration_unit": "mol/L",
+        "diffusion_coefficient_Cu2+": 5.8e-10,
+        "diffusion_unit": "m^2/s",
+        "zeta_potential": -45,
+        "zeta_potential_unit": "mV",
+        "potential_drop_profile": "phi_z.dat"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "water_model": "SPC_E",
+        "ion_model": "ClayFF",
+        "Cu_potential": "EAM_Mishin",
+        "Cu_water_cross": "LJ_12-6",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nose-Hoover",
+        "temperature": 298,
+        "temperature_unit": "K",
+        "electrostatic": "PPPM",
+        "PPPM_accuracy": 1e-4,
+        "applied_field": "constant_electric_field_z",
+        "equilibration_steps": 1000000,
+        "production_steps": 5000000,
+        "dump_interval": 5000,
+        "constraint": "fixed_Cu_electrode_atoms"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD EDL structure, ion concentration profiles and diffusion coefficients to phase field Butler-Volmer kinetics parameters",
+        "data_transferred": [
+          "EDL_thickness",
+          "Cu2+_concentration_at_surface",
+          "diffusion_coefficient_Cu2+",
+          "zeta_potential",
+          "potential_drop_profile"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "金属电沉积形貌演化模拟",
+      "description": "基于Butler-Volmer动力学方程的相场模型，模拟Cu电沉积的形貌演化，包括枝晶生长和竞争生长",
+      "input": {
+        "domain_size": {
+          "Lx": 10,
+          "Ly": 50,
+          "Lz": 10,
+          "unit": "um"
+        },
+        "grid_spacing": 0.05,
+        "grid_spacing_unit": "um",
+        "grid_points": "200x1000x200",
+        "initial_substrate": "Cu_seed_layer",
+        "seed_roughness": 50,
+        "seed_roughness_unit": "nm",
+        "Butler_Volmer_parameters": {
+          "exchange_current_density_i0": 10,
+          "i0_unit": "A/m^2",
+          "transfer_coefficient_alpha": 0.5,
+          "overpotential_eta": -0.3,
+          "eta_unit": "V",
+          "n_electrons": 2,
+          "T": 298,
+          "T_unit": "K"
+        },
+        "ion_concentration_bulk": 0.5,
+        "concentration_unit": "mol/L",
+        "diffusion_coefficient": 5.8e-10,
+        "diffusion_unit": "m^2/s",
+        "EDL_thickness": 0.65,
+        "EDL_thickness_unit": "nm",
+        "surface_energy_gamma": 1.79,
+        "surface_energy_unit": "J/m^2"
+      },
+      "output": {
+        "deposition_rate": 2.5,
+        "deposition_rate_unit": "um/min",
+        "deposit_morphology": "compact_with_mild_roughening",
+        "surface_roughness_Ra": 0.35,
+        "roughness_unit": "um",
+        "dendrite_density": 0.08,
+        "dendrite_density_unit": "per_um^2",
+        "current_density_distribution": "j_dist.vtk",
+        "concentration_field": "conc.vtk",
+        "morphology_evolution": "morph_evo.vtk",
+        "throwing_power": 0.82,
+        "throwing_power_unit": "dimensionless",
+        "deposit_thickness_profile": "thickness.dat"
+      },
+      "parameters": {
+        "code": "custom_phase_field_electrodeposition",
+        "model": "phase_field_Butler_Volmer",
+        "order_parameter": "phi_deposit",
+        "auxiliary_field": "ion_concentration_c",
+        "interface_width": 0.15,
+        "interface_width_unit": "um",
+        "mobility": 1e-12,
+        "mobility_unit": "m^2/(V·s)",
+        "time_integration": "implicit_backward_Euler",
+        "time_step": 0.01,
+        "time_step_unit": "s",
+        "total_time": 600,
+        "total_time_unit": "s",
+        "anistropy": "cubic_4fold",
+        "anisotropy_strength": 0.05,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 300
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field deposit morphology, thickness profile and residual stress field to FE macro stress analysis",
+        "data_transferred": [
+          "deposit_morphology",
+          "surface_roughness_Ra",
+          "deposit_thickness_profile",
+          "throwing_power",
+          "current_density_distribution"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "沉积层残余应力预测",
+      "description": "基于相场沉积形貌，FE模型预测Cu沉积层的残余应力分布和界面结合强度",
+      "input": {
+        "substrate": "Si_wafer_with_TaN_barrier",
+        "barrier_thickness": 0.05,
+        "barrier_thickness_unit": "um",
+        "deposit_thickness": 2.0,
+        "deposit_thickness_unit": "um",
+        "domain_size": {"Lx": 1, "Ly": 1, "unit": "mm"},
+        "mesh": "graded_refined_at_interface",
+        "element_type": "C3D8R",
+        "element_size_min": 0.01,
+        "element_size_min_unit": "um",
+        "Cu_properties": {
+          "E": 120,
+          "nu": 0.34,
+          "sigma_yield": 200,
+          "CTE": 17,
+          "unit_GPa": "GPa",
+          "unit_MPa": "MPa",
+          "unit_CTE": "1e-6/K"
+        },
+        "deposit_profile": "from_phase_field_MS-33_Step3",
+        "surface_roughness": 0.35,
+        "roughness_unit": "um",
+        "temperature_change": -175,
+        "temperature_change_unit": "K"
+      },
+      "output": {
+        "max_residual_stress": 320,
+        "stress_unit": "MPa",
+        "stress_type": "tensile_at_surface",
+        "interface_shear_stress": 85,
+        "interface_stress_unit": "MPa",
+        "stress_distribution": "stress.vtk",
+        "wafer_bowing": 2.8,
+        "bowing_unit": "um",
+        "stress_gradient": 45,
+        "gradient_unit": "MPa/um",
+        "delamination_risk": "low",
+        "critical_stress_for_delamination": 450,
+        "critical_stress_unit": "MPa",
+        "safety_factor": 1.41,
+        "stress_relaxation": 12,
+        "relaxation_unit": "percent"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "element_type": "C3D8R",
+        "material_model": "elastic_plastic_with_kinematic_hardening",
+        "hardening": "isotropic_power_law",
+        "hardening_exponent": 0.3,
+        "loading": "thermal_cooling_from_deposition_temp",
+        "step_type": "static_general",
+        "nlgeom": true,
+        "increment_size": 0.01,
+        "max_increment": 1000,
+        "convergence_tolerance": 1e-8,
+        "contact": "surface_to_surface_tie",
+        "initial_stress": "from_phase_field",
+        "output_requests": ["S", "E", "U", "RF"]
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE residual stress prediction and delamination risk assessment for electroplating process optimization",
+        "data_transferred": [
+          "max_residual_stress",
+          "interface_shear_stress",
+          "wafer_bowing",
+          "delamination_risk",
+          "safety_factor"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1149/2.0251915jes",
+    "authors": "Moffat TP, Wheeler D, Josell D",
+    "year": 2019,
+    "journal": "Journal of The Electrochemical Society"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Cu2+ adsorption energy on Cu(111)",
+        "value": -2.35,
+        "unit": "eV",
+        "tolerance": 10
+      },
+      {
+        "name": "EDL thickness",
+        "value": 0.65,
+        "unit": "nm",
+        "tolerance": 10
+      },
+      {
+        "name": "Deposition rate",
+        "value": 2.5,
+        "unit": "um/min",
+        "tolerance": 15
+      },
+      {
+        "name": "Max residual stress",
+        "value": 320,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "Wafer bowing",
+        "value": 2.8,
+        "unit": "um",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

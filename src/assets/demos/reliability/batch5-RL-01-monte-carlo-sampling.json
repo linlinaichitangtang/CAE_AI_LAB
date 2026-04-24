@@ -1,0 +1,58 @@
+{
+  "id": "RL-01",
+  "name": "蒙特卡洛抽样可靠度分析",
+  "nameEn": "Monte Carlo Sampling Reliability Analysis",
+  "description": "基于蒙特卡洛模拟（MCS）的基本可靠度分析问题。抗力R服从正态分布N(300,30)MPa，载荷效应S服从正态分布N(200,40)MPa，极限状态函数g=R-S。采用100000次随机抽样估计失效概率Pf和可靠度指标beta。根据3-sigma规则和正态分布理论，当R和S均为正态分布时，失效概率Pf=Phi(-beta)，其中beta=(mu_R-mu_S)/sqrt(sigma_R^2+sigma_S^2)=100/sqrt(900+1600)=100/50=2.0，对应Pf=Phi(-2.0)约等于0.0228。通过大量抽样验证理论值，展示蒙特卡洛方法的基本原理和收敛特性。",
+  "category": "reliability",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["蒙特卡洛", "MCS", "正态分布", "失效概率", "3-sigma规则"],
+  "random_variables": [
+    {
+      "name": "R",
+      "distribution": "normal",
+      "mean": 300000000,
+      "stddev": 30000000,
+      "cov": 0.1
+    },
+    {
+      "name": "S",
+      "distribution": "normal",
+      "mean": 200000000,
+      "stddev": 40000000,
+      "cov": 0.2
+    }
+  ],
+  "limit_state": {
+    "type": "explicit",
+    "g_function": "R - S",
+    "description": "抗力R与载荷效应S之差，g>0为安全状态，g<0为失效状态"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 100000,
+    "target_reliability_index": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "failure_probability",
+        "value": 0.0228,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "reliability_index",
+        "value": 2.0,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "coefficient_of_variation_Pf",
+        "value": 0.0066,
+        "unit": "",
+        "tolerance": 15
+      }
+    ]
+  }
+}

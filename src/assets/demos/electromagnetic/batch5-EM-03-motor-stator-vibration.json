@@ -1,0 +1,87 @@
+{
+  "id": "EM-03",
+  "name": "电机定子振动",
+  "nameEn": "Motor Stator Vibration",
+  "description": "4极交流电机定子电磁振动分析。定子外径D_o=0.2m，内径D_i=0.12m，铁芯长度L=0.15m。硅钢片材料：E=200GPa，ν=0.3，ρ=7850kg/m³，μ_r=5000。电气参数：50Hz供电频率，4极结构，电磁力空间分布120°对称。电磁力频率f_em=2×f_electrical=100Hz（2倍电频率），产生径向电磁力波。电磁力密度F_r≈B²/(2μ₀)×cos(2pθ-2ωt)，峰值约5e4N/m²。定子固有频率f_n=(n²/(2πR²))×√(EI/(ρA))，验证2阶模态频率是否避开100Hz电磁力频率（需>1.2倍或<0.8倍）。",
+  "category": "electromagnetic",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["motor", "stator vibration", "electromagnetic force", "modal analysis", "resonance"],
+  "geometry": {
+    "type": "motor",
+    "length": 0.15,
+    "width": 0.2,
+    "height": 0.04,
+    "radius": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 32,
+    "y_div": 32,
+    "z_div": 8,
+    "element_type": "SOLID97"
+  },
+  "material": {
+    "name": "Silicon Steel (M350-50A)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "electrical_conductivity": 2000000,
+    "relative_permeability": 5000
+  },
+  "electromagnetic_bc": {
+    "current": 10,
+    "voltage": 380,
+    "frequency_hz": 50,
+    "magnetic_flux_density": 1.5
+  },
+  "boundaryConditions": {
+    "fixed_face": "stator_outer_mounting",
+    "load_type": "electromagnetic_force",
+    "load_magnitude": 50000
+  },
+  "solver": {
+    "type": "harmonic_em",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_stress": 15000000,
+    "magnetic_force": 50000,
+    "temperature_rise": 45,
+    "formula": "f_em = 2 × f_electrical, F_r = B²/(2μ₀) × cos(2pθ - 2ωt)",
+    "reference": "Yang, Low-Noise Electrical Motors; NEMA MG1-2016"
+  },
+  "acceptance": {
+    "force_error_limit": 10,
+    "temperature_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "电磁力频率",
+        "value": 100,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "定子2阶固有频率",
+        "value": 850,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "径向振动幅值",
+        "value": 5e-6,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "铁芯温升",
+        "value": 45,
+        "unit": "K",
+        "tolerance": 15
+      }
+    ]
+  }
+}

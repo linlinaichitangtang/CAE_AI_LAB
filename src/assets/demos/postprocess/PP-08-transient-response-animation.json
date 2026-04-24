@@ -1,0 +1,52 @@
+{
+  "id": "PP-08",
+  "name": "瞬态响应动画",
+  "nameEn": "Transient Response Animation - Impact Loading",
+  "description": "展示钢梁在冲击载荷作用下的瞬态动力学响应动画。梁长0.5m，截面10mm x 20mm，材料为钢(E=200GPa, ρ=7850kg/m³)。在梁中点施加半正弦冲击脉冲，峰值力5kN，持续时间500μs。动画共200帧，展示应力波从冲击点向两端传播、反射及叠加的完整过程。通过此案例学习瞬态分析的后处理方法，包括时间步选取、应力波传播可视化及动态响应特征提取。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["瞬态响应", "冲击载荷", "应力波传播", "时间历程", "动力学"],
+  "visualization": {
+    "type": "animation",
+    "field": "stress",
+    "color_map": "rainbow",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 200,
+      "fps": 30,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "transient",
+    "nodes": 6200,
+    "elements": 4800,
+    "results_file": "results/postprocess/beam_impact_transient.dat"
+  },
+  "display_settings": {
+    "title": "冲击载荷瞬态响应 - 应力波传播 (500μs)",
+    "axis_labels": ["X (m)", "Y (m)", "时间 (μs)"],
+    "color_bar": {
+      "min": 0,
+      "max": 500,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 0.5, "y": 0.4, "z": 0.3 },
+      "target": { "x": 0.25, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": -15 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "冲击持续时间", "value": 500, "unit": "μs", "tolerance": 0 },
+      { "name": "应力波速", "value": 5048, "unit": "m/s", "tolerance": 3 },
+      { "name": "最大动态应力", "value": 450, "unit": "MPa", "tolerance": 10 },
+      { "name": "动画总时长", "value": 6.67, "unit": "s", "tolerance": 1 },
+      { "name": "总帧数", "value": 200, "unit": "frames", "tolerance": 0 }
+    ]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "id": "TC-27",
+  "name": "燃气轮机高温部件寿命评估",
+  "nameEn": "Gas Turbine Hot Section Component Life Assessment - Inconel 738 Creep-Fatigue",
+  "description": "燃气轮机Inconel 738叶片蠕变-疲劳交互作用寿命评估。工作条件：燃气温度T_gas=1423K(1150°C)，冷却空气温度T_coolant=923K(650°C)，热梯度ΔT≈500K。材料物性：E=201GPa(923K)，α=12×10⁻⁶/K，屈服强度σ_y=620MPa(923K)。热应变范围Δε_th=α·ΔT=12e-6×500=6.0×10⁻³。采用延性耗竭法(ductility exhaustion)评估蠕变损伤：D_c=∫(dε_c/ε_f)，其中蠕变延性ε_f与温度和应力相关。疲劳损伤采用Manson-Coffin公式：Δε_f/2=σ_f'(2N_f)^b+ε_f'(2N_f)^c。蠕变-疲劳交互因子F_int≈1.5。热机械疲劳寿命N_f≈5000次循环。分析叶片前缘温度梯度和应力分布。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["gas_turbine", "Inconel_738", "creep_fatigue", "TMF", "ductility_exhaustion", "Manson_Coffin", "life_assessment", "thermal_gradient"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.02,
+    "width": 0.005,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 10,
+    "z_div": 15,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Inconel 738 (Nickel Superalloy)",
+    "elastic_modulus": 201000000000,
+    "poisson_ratio": 0.3,
+    "density": 8110,
+    "yield_stress": 620000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 17.5,
+    "specific_heat": 540
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "hot_gas_side",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 923,
+      "T_boundary": 1423,
+      "T_ambient": 923,
+      "heat_flux": 0,
+      "convection_coeff": 2000,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-7,
+    "time_step": 60,
+    "total_time": 7200
+  },
+  "theoretical": {
+    "max_displacement": 0.001,
+    "max_stress": 850000000,
+    "max_temperature": 1423,
+    "formula": "Delta_epsilon_th = alpha * Delta_T = 12e-6 * 500 = 6.0e-3; D_c = integral(d_epsilon_c / epsilon_f); D_f = N/N_f; D_total = D_c + D_f + D_int; sigma_thermal = E*alpha*DeltaT/(1-nu)",
+    "reference": "Holdsworth et al., Developments in the Assessment of Creep-Fatigue Interaction, ECCC Recommendations, 2014"
+  },
+  "acceptance": {
+    "displacement_error_limit": 25.0,
+    "stress_error_limit": 20.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "gas_temperature",
+        "value": 1423,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "coolant_temperature",
+        "value": 923,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "thermal_gradient",
+        "value": 500,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_strain_range",
+        "value": 6e-3,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 850000000,
+        "unit": "Pa",
+        "tolerance": 20.0
+      },
+      {
+        "name": "elastic_modulus_at_923K",
+        "value": 201000000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "TMF_life_cycles",
+        "value": 5000,
+        "unit": "cycles",
+        "tolerance": 30.0
+      },
+      {
+        "name": "creep_fatigue_interaction_factor",
+        "value": 1.5,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "thermal_gradient_per_mm",
+        "value": 200,
+        "unit": "K/mm",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

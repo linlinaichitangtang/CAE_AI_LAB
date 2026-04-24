@@ -1,0 +1,121 @@
+{
+  "id": "TC-16",
+  "name": "接触热阻",
+  "nameEn": "Contact Thermal Resistance Between Steel Blocks",
+  "description": "两块不锈钢块间接触热阻分析。两块不锈钢块尺寸均为0.05m×0.05m×0.05m，接触界面处有Kapton胶带作为间隙填充材料。Kapton胶带厚度t=0.1mm=1×10⁻⁴m，导热系数k_gap=0.12W/(m·K)。左端面温度T_left=373K(100°C)，右端面温度T_right=293K(20°C)。接触热阻R_contact=t/k_gap=1e-4/0.12=8.33×10⁻⁴K·m²/W。每块不锈钢导热热阻R_steel=L/(k·A)=0.05/(16.2×0.0025)=1.235K·m²/W。总热阻R_total=2×1.235+8.33e-4=2.471K·m²/W。稳态热流密度q=ΔT/R_total=80/2.471=32.4W/m²。该案例用于验证接触热阻模型的正确实现。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["contact_resistance", "thermal_interface", "Kapton", "stainless_steel", "series_resistance"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 6,
+    "z_div": 6,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Stainless Steel AISI 304",
+    "elastic_modulus": 193000000000,
+    "poisson_ratio": 0.29,
+    "density": 8000,
+    "yield_stress": 215000000,
+    "thermal_expansion": 17.3e-6,
+    "thermal_conductivity": 16.2,
+    "specific_heat": 500
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 333,
+      "T_boundary": 373,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 373,
+    "formula": "R_contact = t_gap / k_gap; R_total = 2*R_steel + R_contact; q = DeltaT / R_total; DeltaT_interface = q * R_contact",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.3 - Extended Surfaces and Contact Resistance"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "contact_thermal_resistance",
+        "value": 8.33e-4,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "steel_block_thermal_resistance",
+        "value": 1.235,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "total_thermal_resistance",
+        "value": 2.471,
+        "unit": "K*m^2/W",
+        "tolerance": 2.0
+      },
+      {
+        "name": "heat_flux",
+        "value": 32.4,
+        "unit": "W/m^2",
+        "tolerance": 3.0
+      },
+      {
+        "name": "temperature_drop_across_interface",
+        "value": 0.027,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "hot_face_temperature",
+        "value": 373,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "cold_face_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "interface_temperature",
+        "value": 332.99,
+        "unit": "K",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "id": "VL-02",
+  "name": "对称vs反对称边界条件",
+  "nameEn": "Symmetric vs Antisymmetric Boundary Conditions",
+  "description": "验证对称边界条件的正确实现。对简支梁施加中心集中载荷，分别建立全梁模型和半梁对称模型（中面施加u_y=0、θ_z=0约束）。对比两种模型的位移场和应力场是否完全一致。同时测试反对称边界条件（u_x=0、θ_y=0），验证反对称变形模式下的求解精度。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 3,
+  "tags": ["symmetry", "boundary_condition", "beam_bending", "model_reduction"],
+  "validation_type": "boundary_condition",
+  "test_config": {
+    "baseline": {
+      "description": "全梁模型，两端铰支，中心点载荷F=2000N",
+      "bc_type": "pinned-pinned_full",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 20
+    },
+    "variants": [
+      {
+        "description": "半梁对称模型，左端铰支，中面对称BC(u_y=0, θ_z=0)",
+        "bc_type": "pinned-symmetric",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "半梁反对称模型，左端铰支，中面反对称BC(u_x=0, θ_y=0)",
+        "bc_type": "pinned-antisymmetric",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["max_displacement", "max_stress", "midspan_displacement", "reaction_force"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 2.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "point",
+    "load_face": "x_mid",
+    "load_magnitude": 2000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 3.333e-4,
+    "max_stress": 12000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; δ_mid = FL³/(48EI) = 2000*8/(48*200e9*8.333e-6) = 3.333e-4 m; σ_max = FL/(4A) + FLc/(4I) = 12 MPa (bending dominant); Reaction R_A = R_B = F/2 = 1000N",
+    "reference": "Timoshenko, S.P. Mechanics of Materials; Cook, R.D. Concepts and Applications of Finite Element Analysis"
+  },
+  "acceptance": {
+    "displacement_error_limit": 1.0,
+    "stress_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Full beam midspan displacement",
+        "value": 3.333e-4,
+        "unit": "m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Half beam symmetric tip displacement",
+        "value": 3.333e-4,
+        "unit": "m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Full beam max bending stress",
+        "value": 12000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Half beam symmetric max bending stress",
+        "value": 12000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Symmetry model displacement ratio (half/full)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 0.5
+      },
+      {
+        "name": "Symmetry model stress ratio (half/full)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 0.5
+      },
+      {
+        "name": "Reaction force at each support",
+        "value": 1000,
+        "unit": "N",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

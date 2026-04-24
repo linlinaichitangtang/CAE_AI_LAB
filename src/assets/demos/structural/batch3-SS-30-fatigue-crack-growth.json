@@ -1,0 +1,80 @@
+{
+  "id": "SS-30",
+  "name": "Paris定律疲劳裂纹扩展分析",
+  "nameEn": "Paris Law Fatigue Crack Growth Analysis",
+  "description": "基于Paris定律(da/dN=C·ΔK^m)的CT(紧凑拉伸)试样疲劳裂纹扩展分析。试样尺寸W=50mm, B=12.5mm，材料为结构钢(KIC=50MPa√m, C=2e-12 m/cycle, m=3.0)。应力强度因子范围ΔK从10MPa√m增加到40MPa√m，模拟裂纹从初始尺寸扩展至断裂的过程。本案例适用于疲劳寿命预测、损伤容限设计和断裂力学教学。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["Paris定律", "疲劳", "裂纹扩展", "CT试样", "断裂力学", "寿命预测"],
+  "geometry": {
+    "type": "ct_specimen",
+    "length": 0.06,
+    "width": 0.05,
+    "height": 0.0125,
+    "radius": 0,
+    "thickness": 0.0125,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 25,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel (fatigue crack growth)",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 350000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "left_pin",
+    "load_type": "point",
+    "load_face": "right_pin",
+    "load_magnitude": 15000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0005,
+    "max_stress": 350000000,
+    "formula": "da/dN = C·ΔK^m, ΔK = Δσ·√(πa)·F(a/W), KIC = 50 MPa√m",
+    "reference": "Paris PC, Erdogan F. A critical analysis of crack propagation laws. Transactions of ASME, 1963."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "裂纹扩展速率(da/dN at ΔK=20MPa√m)",
+        "value": 1.6e-8,
+        "unit": "m/cycle",
+        "tolerance": 5
+      },
+      {
+        "name": "临界裂纹尺寸",
+        "value": 0.0254,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "疲劳寿命(循环次数)",
+        "value": 125000,
+        "unit": "cycles",
+        "tolerance": 10
+      }
+    ]
+  }
+}

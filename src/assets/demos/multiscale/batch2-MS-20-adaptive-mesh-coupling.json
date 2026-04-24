@@ -1,0 +1,335 @@
+{
+  "id": "MS-20",
+  "name": "自适应网格尺度耦合",
+  "nameEn": "Adaptive Mesh Scale Coupling",
+  "description": "基于物理量梯度驱动的自适应分辨率调整方法，实现DFT→MD→PF→FE四个尺度的自动网格耦合。在缺陷附近使用DFT精细区，过渡区采用MD自适应区域，远场使用PF粗化区域，宏观边界使用FE区域。通过误差指示器η=||σ_h-σ_2h||/||σ_h||控制网格细化，确保跨尺度界面的物理量连续性。该案例为多尺度自适应模拟提供通用的网格耦合框架。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["adaptive mesh refinement", "AMR", "scale bridging", "error indicator", "concurrent multiscale", "defect", "overlap coupling"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Al FCC with edge dislocation",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT精细区缺陷核心计算",
+      "description": "在位错核心区域使用DFT进行高精度计算，作为自适应多尺度模型的最精细尺度基准",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "defect_type": "1/2<110>_edge_dislocation",
+        "burgers_vector": 2.86,
+        "burgers_vector_unit": "Angstrom",
+        "dft_core_region": {
+          "radius": 8,
+          "radius_unit": "Angstrom",
+          "atom_count": 256
+        },
+        "boundary_conditions": "displacement_field_from_continuum",
+        "k_point_adaptation": true
+      },
+      "output": {
+        "core_energy": 1.52,
+        "core_energy_unit": "eV/Angstrom",
+        "core_width": 5.2,
+        "core_width_unit": "Angstrom",
+        "stress_field_core": "stress_core.vtk",
+        "displacement_field_core": "displacement_core.vtk",
+        "electron_density_core": "electron_density.dat",
+        "stacking_fault_energy": 0.166,
+        "sfe_unit": "J/m^2",
+        "peierls_stress": 0.85,
+        "peierls_stress_unit": "MPa",
+        "error_indicator_core": 0.02,
+        "error_indicator_unit": "dimensionless"
+      },
+      "parameters": {
+        "k_points": [20, 20, 1],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Al",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-10,
+        "scf_convergence_unit": "eV",
+        "dipole_correction": true,
+        "ibrion": 2,
+        "isif": 2,
+        "nsw": 200,
+        "adaptive_kpoints": true,
+        "kpoint_refinement_criterion": "stress_gradient"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT core displacement and stress to MD boundary conditions via pad atoms",
+        "data_transferred": [
+          "core_displacement_field",
+          "core_stress_field",
+          "core_width",
+          "stacking_fault_energy",
+          "error_indicator_core"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD自适应区域位错动力学模拟",
+      "description": "在DFT核心区外围建立MD自适应区域，根据误差指示器动态调整MD区域边界",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "md_adaptive_region": {
+          "inner_radius": 8,
+          "outer_radius": 50,
+          "radius_unit": "Angstrom",
+          "atom_count": 180000
+        },
+        "dft_core_source": "DFT MS-20 Step 1",
+        "pad_atoms": 3,
+        "pad_atoms_unit": "layers",
+        "applied_shear_stress": 50,
+        "applied_stress_unit": "MPa",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "error_indicator_threshold": 0.05
+      },
+      "output": {
+        "dislocation_dynamics": "dislocation_motion.vtk",
+        "stress_field_MD": "stress_MD.vtk",
+        "displacement_field_MD": "displacement_MD.vtk",
+        "md_region_boundary_adaptation": "region_history.dat",
+        "final_md_region_radius": 42,
+        "region_radius_unit": "Angstrom",
+        "error_indicator_MD": 0.035,
+        "error_indicator_unit": "dimensionless",
+        "dislocation_velocity": 85,
+        "dislocation_velocity_unit": "m/s",
+        "phonon_spectrum_boundary": "phonon_boundary.dat",
+        "energy_handshake_error": 0.003,
+        "handshake_error_unit": "eV/atom"
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVE_with_damping_boundary",
+        "damping_width": 10,
+        "damping_width_unit": "Angstrom",
+        "damping_coefficient": 0.1,
+        "damping_coefficient_unit": "ps^-1",
+        "cutoff_radius": 6.5,
+        "cutoff_radius_unit": "Angstrom",
+        "total_steps": 100000,
+        "dump_interval": 1000,
+        "neighbor_skin": 2.0,
+        "neighbor_skin_unit": "Angstrom",
+        "adaptive_region_update_interval": 5000,
+        "adaptation_criterion": "gradient_based_error_indicator",
+        "max_region_expansion_rate": 2.0,
+        "max_expansion_rate_unit": "Angstrom/ps"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD displacement and stress to PF coarse-grained order parameter field via spatial averaging",
+        "data_transferred": [
+          "displacement_field_MD_boundary",
+          "stress_field_MD_boundary",
+          "dislocation_position",
+          "error_indicator_MD",
+          "md_region_geometry"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "PF粗化区域缺陷场模拟",
+      "description": "在MD区域外围建立相场粗化区域，使用连续阶参量描述缺陷场，根据误差指示器调整PF网格分辨率",
+      "input": {
+        "domain_size": {
+          "Lx": 200,
+          "Ly": 200,
+          "Lz": 200,
+          "unit": "Angstrom"
+        },
+        "grid_points": "100x100x100",
+        "initial_condition_source": "MD MS-20 Step 2",
+        "md_region_geometry_source": "MD MS-20 Step 2",
+        "order_parameter": "dislocation_density_tensor_alpha_ij",
+        "error_indicator_threshold": 0.05,
+        "fe_boundary_source": "FE_continuum_solution"
+      },
+      "output": {
+        "dislocation_density_field": "alpha_field.vtk",
+        "stress_field_PF": "stress_PF.vtk",
+        "strain_field_PF": "strain_PF.vtk",
+        "pf_grid_adaptation": "grid_adaptation.dat",
+        "adapted_grid_points": "120x120x120",
+        "error_indicator_PF": 0.042,
+        "error_indicator_unit": "dimensionless",
+        "interface_MD_PF_width": 15,
+        "interface_width_unit": "Angstrom",
+        "energy_conservation_error": 0.8,
+        "energy_error_unit": "percent",
+        "dislocation_line_tension": 1.8e-9,
+        "line_tension_unit": "N"
+      },
+      "parameters": {
+        "model": "phase_field_dislocation_dynamics",
+        "order_parameter": "alpha_ij (Nye tensor)",
+        "interface_width": 5.0,
+        "interface_width_unit": "Angstrom",
+        "gradient_energy_coefficient": 1e-10,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility": 1e-13,
+        "mobility_unit": "m^3/(J*s)",
+        "elastic_coupling": true,
+        "youngs_modulus": 70,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.35,
+        "time_step": 0.1,
+        "time_step_unit": "ps",
+        "total_time": 100,
+        "total_time_unit": "ps",
+        "adaptive_refinement": true,
+        "refinement_ratio": 2,
+        "coarsening_ratio": 0.5,
+        "max_refinement_levels": 3
+      },
+      "bridge_to_next": {
+        "mapping_method": "PF stress and displacement to FE boundary conditions via homogenization",
+        "data_transferred": [
+          "stress_field_PF_boundary",
+          "displacement_field_PF_boundary",
+          "dislocation_density_distribution",
+          "error_indicator_PF",
+          "pf_region_geometry"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE宏观区域与全局误差评估",
+      "description": "建立FE宏观区域，接收PF边界条件，计算全局误差指示器η=||σ_h-σ_2h||/||σ_h||，验证自适应耦合精度",
+      "input": {
+        "domain_size": {
+          "Lx": 1000,
+          "Ly": 1000,
+          "Lz": 1000,
+          "unit": "Angstrom"
+        },
+        "initial_mesh": "50x50x50",
+        "boundary_condition_source": "PF MS-20 Step 3",
+        "applied_loading": {
+          "type": "remote_shear",
+          "shear_stress": 50,
+          "shear_stress_unit": "MPa"
+        },
+        "material_properties": {
+          "youngs_modulus": 70,
+          "youngs_modulus_unit": "GPa",
+          "poisson_ratio": 0.35
+        },
+        "error_indicator_target": 0.05,
+        "max_refinement_levels": 4
+      },
+      "output": {
+        "fe_stress_field": "stress_FE.vtk",
+        "fe_displacement_field": "displacement_FE.vtk",
+        "error_indicator_field": "error_indicator.vtk",
+        "global_error_indicator_eta": 0.038,
+        "eta_unit": "dimensionless",
+        "eta_target_met": true,
+        "adapted_mesh": "80x80x80_with_local_refinement",
+        "interface_continuity_error": {
+          "displacement_jump": 0.002,
+          "stress_jump": 1.5,
+          "stress_jump_unit": "MPa"
+        },
+        "energy_balance_error": 1.2,
+        "energy_balance_error_unit": "percent",
+        "convergence_study": "eta_vs_dof.dat",
+        "scale_coupling_summary": "coupling_report.dat",
+        "total_dof": 850000,
+        "computational_cost_breakdown": {
+          "DFT": 45,
+          "MD": 30,
+          "PF": 15,
+          "FE": 10,
+          "unit": "percent_of_total_time"
+        }
+      },
+      "parameters": {
+        "element_type": "C3D8",
+        "mesh_density": "adaptive_starting_50x50x50",
+        "mesh_refinement": "gradient_based_AMR",
+        "boundary_condition": "PF_displacement_BC_on_inner_surface_remote_stress_on_outer",
+        "solver_type": "static_implicit",
+        "material_model": "anisotropic_linear_elastic",
+        "geometric_nonlinearity": false,
+        "error_indicator_type": "Zienkiewicz_Zhu_stress_recovery",
+        "refinement_criterion": "eta_element > 0.5*eta_global",
+        "coarsening_criterion": "eta_element < 0.1*eta_global",
+        "max_iterations": 500,
+        "convergence_tolerance": 1e-10,
+        "amr_cycles": 5,
+        "parallel_processes": 64
+      },
+      "bridge_to_next": {
+        "mapping_method": "Global error indicator η verification and scale coupling quality assessment",
+        "data_transferred": [
+          "global_error_indicator_eta",
+          "interface_continuity_errors",
+          "energy_balance_error",
+          "adapted_mesh_statistics",
+          "computational_cost_breakdown"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.cma.2016.05.035",
+    "authors": "Xiao SP, Belytschko T",
+    "year": 2004,
+    "journal": "Computer Methods in Applied Mechanics and Engineering"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Global error indicator eta",
+        "value": 0.038,
+        "unit": "dimensionless",
+        "tolerance": 30
+      },
+      {
+        "name": "DFT core energy",
+        "value": 1.52,
+        "unit": "eV/Angstrom",
+        "tolerance": 10
+      },
+      {
+        "name": "Interface displacement jump",
+        "value": 0.002,
+        "unit": "dimensionless",
+        "tolerance": 50
+      },
+      {
+        "name": "Energy balance error",
+        "value": 1.2,
+        "unit": "percent",
+        "tolerance": 40
+      },
+      {
+        "name": "Error indicator < 5% target",
+        "value": 0.038,
+        "unit": "dimensionless",
+        "tolerance": 5
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

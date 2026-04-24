@@ -1,0 +1,55 @@
+{
+  "id": "PP-17",
+  "name": "拓扑优化迭代动画",
+  "nameEn": "Topology Optimization Iteration Animation - Cantilever Beam",
+  "description": "展示悬臂梁拓扑优化的完整迭代过程动画。设计域尺寸L=0.5m x W=0.1m x H=0.1m，固定端左侧，右下角施加F=5kN集中力，体积分数约束为30%。采用SIMP(Solid Isotropic Material with Penalization)方法，惩罚因子p=3，过滤半径r_min=0.008m，共进行50次优化迭代。动画展示材料密度场从初始均匀分布(ρ=1.0)逐步演化为最优拓扑的过程：初期(1-10步)密度均匀下降，中期(10-30步)拓扑形态逐渐清晰，后期(30-50步)收敛至最优构型。通过此案例学习拓扑优化的迭代收敛过程和密度场可视化方法。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["拓扑优化", "SIMP方法", "迭代动画", "密度场", "优化收敛", "材料分布"],
+  "visualization": {
+    "type": "topology",
+    "field": "displacement",
+    "color_map": "viridis",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 50,
+      "fps": 30,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 11000,
+    "elements": 10000,
+    "results_file": "results/postprocess/topology_optimization_iterations.dat"
+  },
+  "display_settings": {
+    "title": "悬臂梁拓扑优化迭代 - SIMP方法 50步 (体积分数30%)",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0.0,
+      "max": 1.0,
+      "label": "相对密度 ρ",
+      "n_levels": 10
+    },
+    "camera": {
+      "position": { "x": 0.6, "y": 0.4, "z": 0.3 },
+      "target": { "x": 0.25, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": -25 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "初始体积分数", "value": 100, "unit": "%", "tolerance": 0 },
+      { "name": "目标体积分数", "value": 30, "unit": "%", "tolerance": 0 },
+      { "name": "优化迭代次数", "value": 50, "unit": "步", "tolerance": 0 },
+      { "name": "初始柔顺度", "value": 42.5, "unit": "N·m", "tolerance": 5 },
+      { "name": "最终柔顺度", "value": 28.3, "unit": "N·m", "tolerance": 5 },
+      { "name": "柔顺度改善率", "value": 33, "unit": "%", "tolerance": 10 },
+      { "name": "收敛判定阈值", "value": 0.01, "unit": "", "tolerance": 0 },
+      { "name": "SIMP惩罚因子p", "value": 3, "unit": "", "tolerance": 0 }
+    ]
+  }
+}

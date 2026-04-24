@@ -1,0 +1,81 @@
+{
+  "id": "EP-05",
+  "name": "板级跌落冲击",
+  "nameEn": "Board-Level Drop Impact",
+  "description": "PCB板级跌落冲击焊点可靠性分析。PCB尺寸：200mm×150mm×1.6mm，FR-4材料（E=22GPa，ν=0.28，ρ=1850kg/m³）。BGA封装位于板中心，焊球直径0.5mm，焊球高度0.3mm，间距0.8mm，I/O数量=324。跌落高度H=1.5m，跌落方向：自由落体+地面碰撞。峰值加速度：a_peak≈1500g×3ms半正弦脉冲。焊点材料：SAC305，σ_y=30MPa，应变率效应：σ_y_dynamic=σ_y×(1+(ε_dot/ε_0)^m)，m=0.05。焊点最大应变ε_max≈0.15（超过断裂应变ε_f=0.3的50%安全裕度）。参考标准：IPC-JEDEC JESD22-B111。验证焊点动态应变响应及失效判据。",
+  "category": "electronics_pkg",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["drop test", "BGA", "solder joint", "impact", "dynamic", "JESD22-B111", "strain rate"],
+  "geometry": {
+    "type": "block",
+    "length": 0.2,
+    "width": 0.15,
+    "height": 0.0016,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 30,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "FR-4 PCB + SAC305 Solder",
+    "elastic_modulus": 22000000000,
+    "poisson_ratio": 0.28,
+    "density": 1850,
+    "yield_stress": 30000000,
+    "ultimate_stress": 45000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "screw_mounting_holes",
+    "load_type": "distributed",
+    "load_face": "pcb_bottom",
+    "load_magnitude": 14715,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 45000000,
+    "formula": "v_impact = √(2gH), a_peak = 1500g, ε_dot = v/h_solder",
+    "reference": "IPC-JEDEC JESD22-B111; Tee et al., Proc. ECTC, 2003"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "冲击速度",
+        "value": 5.42,
+        "unit": "m/s",
+        "tolerance": 5
+      },
+      {
+        "name": "PCB最大动态挠度",
+        "value": 0.005,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "角部焊点最大应变",
+        "value": 0.15,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "焊点应变率",
+        "value": 500,
+        "unit": "1/s",
+        "tolerance": 25
+      }
+    ]
+  }
+}

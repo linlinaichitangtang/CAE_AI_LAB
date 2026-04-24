@@ -1,0 +1,109 @@
+{
+  "id": "TC-10",
+  "name": "各向异性导热系数验证",
+  "nameEn": "Anisotropic Thermal Conductivity Verification",
+  "description": "CFRP碳纤维复合材料各向异性导热验证。试件尺寸0.1m×0.1m×0.02m，纤维沿x方向排列。导热系数：k_x=50W/(m·K)(纤维方向)，k_y=5W/(m·K)(横向)，k_z=1W/(m·K)(厚度方向)。x方向施加ΔT=100°C温差(左端400K，右端300K)，验证各向异性导热矩阵[K]的对角占优特性。x方向热流q_x=k_x·A·ΔT/L=50×(0.1×0.02)×100/0.1=100W。y方向和z方向无温差时应无热流。导热系数矩阵K=diag(50,5,1) W/(m·K)，对角占优条件满足：K_ii > ΣK_ij(j≠i)。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["anisotropic", "CFRP", "composite", "conductivity_matrix", "diagonal_dominance"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.02,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 10,
+    "z_div": 4,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "CFRP Composite (Unidirectional)",
+    "elastic_modulus": 140000000000,
+    "poisson_ratio": 0.28,
+    "density": 1600,
+    "yield_stress": 600000000,
+    "thermal_expansion": 2e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 800
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": 400,
+      "T_ambient": 300,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 400,
+    "formula": "K_matrix = diag(k_x, k_y, k_z); q_x = -k_x · dT/dx; diagonal dominance: k_x > k_y + k_z",
+    "reference": "Daniel, Ishai, Engineering Mechanics of Composite Materials, Ch.5 - Thermal Properties"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "x_direction_heat_flow",
+        "value": 100,
+        "unit": "W",
+        "tolerance": 2.0
+      },
+      {
+        "name": "y_direction_heat_flow",
+        "value": 0,
+        "unit": "W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "z_direction_heat_flow",
+        "value": 0,
+        "unit": "W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "conductivity_ratio_x_to_y",
+        "value": 10,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "conductivity_ratio_x_to_z",
+        "value": 50,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "diagonal_dominance_verified",
+        "value": 1,
+        "unit": "boolean",
+        "tolerance": 0.0
+      }
+    ]
+  }
+}

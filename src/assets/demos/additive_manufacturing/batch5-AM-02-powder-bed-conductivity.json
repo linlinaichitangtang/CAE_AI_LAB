@@ -1,0 +1,80 @@
+{
+  "id": "AM-02",
+  "name": "粉末床有效热导率",
+  "nameEn": "Powder Bed Effective Thermal Conductivity",
+  "description": "SLM粉末床有效热导率分析。Ti-6Al-4V粉末参数：固相热导率k_s=20W/(m·K)，气体（氩气）热导率k_g=0.025W/(m·K)，粉末孔隙率ε=0.4，粉末粒径d_p=30μm。平行模型：k_eff_parallel=k_s(1-ε)+k_g×ε=20×0.6+0.025×0.4=12.01W/(m·K)。串联模型：k_eff_series=1/((1-ε)/k_s+ε/k_g)=1/(0.6/20+0.4/0.025)=1/(0.03+16)=0.0625W/(m·K)。实际有效热导率介于两者之间，采用Zehner-Schlunder模型：k_eff≈k_g×(1-√(1-ε))×(k_s/k_g)^0.3≈0.025×(1-√0.6)×(800)^0.3≈0.025×0.225×9.57≈0.054W/(m·K)（松散粉末）。目标验证值k_eff≈12W/(m·K)为烧结后粉末床近似值。材料参数：E=110GPa，ν=0.33，ρ=4430×(1-0.4)=2658kg/m³（粉末床表观密度）。",
+  "category": "additive_manufacturing",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["powder bed", "effective conductivity", "porosity", "parallel model", "Ti-6Al-4V"],
+  "geometry": {
+    "type": "block",
+    "length": 0.01,
+    "width": 0.01,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 10,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V Powder Bed",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 2658,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "substrate_bottom",
+    "load_type": "thermal",
+    "load_face": "top_surface",
+    "load_magnitude": 50
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "formula": "k_eff = k_s(1-ε) + k_g·ε (parallel), k_eff = 1/((1-ε)/k_s + ε/k_g) (series)",
+    "reference": "Sih & Barlow, Int. J. Heat Mass Transfer, 1995; Zehner & Schlunder, Chem. Ing. Tech., 1970"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "平行模型有效热导率",
+        "value": 12.01,
+        "unit": "W/(m·K)",
+        "tolerance": 5
+      },
+      {
+        "name": "串联模型有效热导率",
+        "value": 0.0625,
+        "unit": "W/(m·K)",
+        "tolerance": 10
+      },
+      {
+        "name": "粉末床表观密度",
+        "value": 2658,
+        "unit": "kg/m³",
+        "tolerance": 5
+      },
+      {
+        "name": "温度梯度",
+        "value": 416667,
+        "unit": "K/m",
+        "tolerance": 15
+      }
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "PP-32",
+  "name": "多人协同标注",
+  "nameEn": "Collaborative Annotation - Multi-User Result Review",
+  "description": "演示多人实时协同标注同一有限元分析结果模型的能力。以某桥梁结构分析结果为基础，3位工程师(结构工程师A、材料工程师B、检测工程师C)同时在线查看Von Mises应力云图，分别标注各自关注的问题区域：工程师A标注跨中应力集中区域(红色标记#1)，工程师B标注支座处潜在疲劳裂纹位置(橙色标记#2)，工程师C标注温度梯度引起的热应力热点(黄色标记#3)。系统基于WebSocket实现实时同步，标注操作延迟<200ms。验证功能包括：(1)多人标注实时同步显示；(2)标注数据持久化存储(断线重连后恢复)；(3)标注冲突自动检测与合并策略(同时标注同一区域时提示)；(4)标注导出为JSON/PDF格式。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["协同标注", "实时同步", "WebSocket", "多人协作", "冲突解决", "持久化存储"],
+  "visualization": {
+    "type": "collaborative",
+    "field": "von_mises",
+    "color_map": "rainbow",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 125000,
+    "elements": 108000,
+    "results_file": "results/postprocess/bridge_collaborative_annotation.dat"
+  },
+  "display_settings": {
+    "title": "桥梁结构分析 - 多人协同标注",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 280,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 14
+    },
+    "camera": {
+      "position": { "x": 15.0, "y": 8.0, "z": 12.0 },
+      "target": { "x": 0.0, "y": 2.0, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 35 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "协同用户数", "value": 3, "unit": "人", "tolerance": 0 },
+      { "name": "标注同步延迟", "value": 150, "unit": "ms", "tolerance": 30 },
+      { "name": "标注总数", "value": 8, "unit": "个", "tolerance": 25 },
+      { "name": "冲突检测次数", "value": 2, "unit": "次", "tolerance": 50 },
+      { "name": "断线重连恢复成功率", "value": 100, "unit": "%", "tolerance": 0 },
+      { "name": "标注持久化恢复时间", "value": 1.2, "unit": "s", "tolerance": 30 },
+      { "name": "JSON导出文件大小", "value": 45, "unit": "KB", "tolerance": 20 },
+      { "name": "PDF标注报告页数", "value": 4, "unit": "页", "tolerance": 25 },
+      { "name": "最大并发标注延迟", "value": 200, "unit": "ms", "tolerance": 20 }
+    ]
+  }
+}

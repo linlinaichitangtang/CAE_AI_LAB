@@ -1,0 +1,53 @@
+{
+  "id": "PP-09",
+  "name": "大模型渲染",
+  "nameEn": "Large Model Rendering Performance Test",
+  "description": "测试CAELab后处理模块对大规模有限元模型的渲染性能。模型包含500,000个节点和380,000个六面体单元，模拟汽车白车身结构。测试目标：渲染帧率不低于30fps，显存占用不超过2GB。此测试案例用于评估WebGL渲染引擎在大规模数据下的性能表现，包括LOD(层次细节)切换、视锥体裁剪、八叉树空间索引等优化策略的有效性验证。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["性能测试", "大规模模型", "渲染优化", "LOD", "帧率", "内存管理"],
+  "visualization": {
+    "type": "contour",
+    "field": "von_mises",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 300,
+      "fps": 30,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 500000,
+    "elements": 380000,
+    "results_file": "results/postprocess/large_model_biw.dat"
+  },
+  "display_settings": {
+    "title": "大规模模型渲染性能测试 - 500K节点",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 400,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 3.0, "y": 2.0, "z": 2.5 },
+      "target": { "x": 0.0, "y": 0.5, "z": 0.0 },
+      "rotation": { "pitch": -20, "yaw": 30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "节点数", "value": 500000, "unit": "个", "tolerance": 0 },
+      { "name": "单元数", "value": 380000, "unit": "个", "tolerance": 0 },
+      { "name": "目标帧率", "value": 30, "unit": "fps", "tolerance": 0 },
+      { "name": "内存上限", "value": 2.0, "unit": "GB", "tolerance": 0 },
+      { "name": "模型加载时间", "value": 5.0, "unit": "s", "tolerance": 20 },
+      { "name": "首次渲染延迟", "value": 2.0, "unit": "s", "tolerance": 20 }
+    ]
+  }
+}

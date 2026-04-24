@@ -1,0 +1,153 @@
+{
+  "id": "MS-01",
+  "name": "原子振动到连续体频率",
+  "nameEn": "Atom Vibration to Continuum Frequency",
+  "description": "从单个铝原子振动频率出发，通过德拜模型建立原子尺度振动与宏观悬臂梁一阶固有频率之间的跨尺度联系。展示如何将微观原子振动参数（德拜频率、原子质量、晶格常数）映射为连续介质力学参数（弹性模量、密度），并验证两者在特征频率上的一致性。该案例涵盖DFT声子计算获取力常数、德拜模型外推、以及Euler-Bernoulli梁理论三个尺度层级。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["phonon", "Debye model", "cantilever", "Euler-Bernoulli", "frequency", "Al FCC"],
+  "scales": ["dft", "fe"],
+  "material_system": "Al FCC",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT声子计算",
+      "description": "使用密度泛函理论计算Al FCC晶格的声子色散关系和力常数矩阵，提取德拜频率",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "atomic_number": 13,
+        "supercell": "2x2x2",
+        "atom_count": 32
+      },
+      "output": {
+        "phonon_dispersion": "phonon_bandstructure.dat",
+        "force_constants": "FORCE_CONSTANTS",
+        "debye_temperature": 428,
+        "debye_temperature_unit": "K",
+        "debye_frequency_THz": 8.91,
+        "elastic_constants": {
+          "C11": 108,
+          "C12": 62,
+          "C44": 28,
+          "unit": "GPa"
+        },
+        "bulk_modulus": 77.3,
+        "bulk_modulus_unit": "GPa"
+      },
+      "parameters": {
+        "k_points": [12, 12, 12],
+        "energy_cutoff": 350,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Al",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "phonon_displacement": 0.01,
+        "phonon_displacement_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Debye model homogenization",
+        "data_transferred": [
+          "debye_frequency",
+          "elastic_constants_C11_C12_C44",
+          "atomic_mass",
+          "lattice_constant"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "悬臂梁一阶频率计算",
+      "description": "基于DFT得到的弹性常数构建宏观悬臂梁有限元模型，计算Euler-Bernoulli一阶固有频率并与德拜频率进行跨尺度对比",
+      "input": {
+        "beam_length": 100,
+        "beam_length_unit": "nm",
+        "beam_width": 10,
+        "beam_width_unit": "nm",
+        "beam_height": 5,
+        "beam_height_unit": "nm",
+        "elastic_modulus": 70,
+        "elastic_modulus_unit": "GPa",
+        "density": 2700,
+        "density_unit": "kg/m^3",
+        "poisson_ratio": 0.35,
+        "source": "DFT homogenization from MS-01 Step 1"
+      },
+      "output": {
+        "first_natural_frequency_MHz": 411,
+        "mode_shape": "first_bending_mode.vtk",
+        "max_displacement_nm": 0.85,
+        "strain_energy_density_max": 1.24e4,
+        "strain_energy_density_max_unit": "J/m^3"
+      },
+      "parameters": {
+        "element_type": "BEAM188",
+        "mesh_density": 50,
+        "mesh_density_unit": "elements_along_length",
+        "boundary_condition": "fixed_left_free_right",
+        "solver_type": "modal_analysis",
+        "modal_extraction_method": "Block Lanczos",
+        "number_of_modes": 5,
+        "integration_points": 3,
+        "geometric_nonlinearity": false
+      },
+      "bridge_to_next": {
+        "mapping_method": "frequency_scale_comparison",
+        "data_transferred": [
+          "first_natural_frequency",
+          "debye_frequency",
+          "frequency_ratio"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.commatsci.2014.07.050",
+    "authors": "Kresse G, Furthmuller J",
+    "year": 1996,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Debye frequency",
+        "value": 8.91,
+        "unit": "THz",
+        "tolerance": 5
+      },
+      {
+        "name": "Debye temperature",
+        "value": 428,
+        "unit": "K",
+        "tolerance": 5
+      },
+      {
+        "name": "Elastic modulus E (Voigt average)",
+        "value": 70,
+        "unit": "GPa",
+        "tolerance": 8
+      },
+      {
+        "name": "Cantilever 1st natural frequency",
+        "value": 411,
+        "unit": "MHz",
+        "tolerance": 10
+      },
+      {
+        "name": "Frequency scale ratio (Debye/cantilever)",
+        "value": 21678,
+        "unit": "dimensionless",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

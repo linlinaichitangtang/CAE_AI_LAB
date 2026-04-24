@@ -1,0 +1,80 @@
+{
+  "id": "EP-06",
+  "name": "3D-IC TSV热机械",
+  "nameEn": "3D-IC TSV Thermo-Mechanical Analysis",
+  "description": "3D集成电路硅通孔（TSV）热机械应力分析。TSV参数：直径d=10μm，高度h=100μm，Cu填充。硅芯片厚度50μm。CTE不匹配：Cu(17ppm/K) vs Si(2.6ppm/K)，Δα=14.4ppm/K。工艺温度变化ΔT=250K（从退火温度275°C降至室温25°C）。热应力σ_thermal=E_Cu×Δα×ΔT/(1-ν)=117e9×14.4e-6×250/(1-0.34)=117e9×3.6e-3/0.66=638MPa。考虑塑性松弛后σ≈200MPa。TSV间距p=50μm（5:1纵横比），验证keep-out zone（KOZ）尺寸。KOZ≈d×(σ_thermal/σ_allowable)=10×(200/50)=40μm。材料参数：Cu E=117GPa ν=0.34 ρ=8960，Si E=130GPa ν=0.28 ρ=2330。",
+  "category": "electronics_pkg",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["3D-IC", "TSV", "CTE mismatch", "thermal stress", "keep-out zone", "Cu", "Si"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.0001,
+    "radius": 5e-6,
+    "height": 0.0001,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 16,
+    "y_div": 16,
+    "z_div": 20,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Cu TSV + Si Die",
+    "elastic_modulus": 117000000000,
+    "poisson_ratio": 0.34,
+    "density": 8960,
+    "yield_stress": 70000000,
+    "ultimate_stress": 210000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "wafer_bottom",
+    "load_type": "thermal",
+    "load_face": "tsv_volume",
+    "load_magnitude": 250
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 3.6e-7,
+    "max_stress": 200000000,
+    "formula": "σ_thermal = E_Cu × Δα × ΔT / (1-ν), KOZ ≈ d × (σ/σ_allow)",
+    "reference": "Lu et al., IEEE TED, 2012; IEEE 3D-IC Integration Standard"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "TSV热应力（塑性松弛后）",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "Keep-out zone半径",
+        "value": 4e-5,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "TSV顶部径向位移",
+        "value": 3.6e-7,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "硅衬底应力",
+        "value": 80000000,
+        "unit": "Pa",
+        "tolerance": 25
+      }
+    ]
+  }
+}

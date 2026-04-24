@@ -1,0 +1,57 @@
+{
+  "id": "PP-37",
+  "name": "动画时程控制",
+  "nameEn": "Animation Playback Control - Transient Impact Simulation",
+  "description": "演示瞬态冲击仿真结果的动画时程回放控制功能。以落锤冲击金属板为研究对象，仿真总时长50ms，输出500帧结果数据。后处理动画控制面板提供完整的播放功能：(1)播放/暂停按钮控制动画运行状态；(2)逐帧前进/后退(±1帧)精确定位关键时刻；(3)播放速度调节支持0.5x/1x/2x/4x四档切换；(4)时间轴光标支持拖拽跳转至任意时刻；(5)关键帧标记功能：自动标注最大位移时刻(t=12.3ms)、最大应力时刻(t=8.7ms)和回弹时刻(t=35.2ms)，点击标记直接跳转。动画以位移场云图+时间曲线联动方式呈现，上部为3D云图动画，下部为冲击力-时间历程曲线，光标同步移动。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["动画控制", "时程回放", "瞬态分析", "冲击仿真", "关键帧标记", "播放速度"],
+  "visualization": {
+    "type": "animation_control",
+    "field": "displacement",
+    "color_map": "rainbow",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 500,
+      "fps": 30,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "transient",
+    "nodes": 35000,
+    "elements": 30000,
+    "results_file": "results/postprocess/impact_transient_animation.dat"
+  },
+  "display_settings": {
+    "title": "落锤冲击瞬态仿真 - 动画时程回放控制",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 15.0,
+      "label": "位移 (mm)",
+      "n_levels": 12
+    },
+    "camera": {
+      "position": { "x": 200.0, "y": 150.0, "z": 180.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -30, "yaw": 40 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "仿真总时长", "value": 50, "unit": "ms", "tolerance": 0 },
+      { "name": "输出总帧数", "value": 500, "unit": "帧", "tolerance": 0 },
+      { "name": "时间步长", "value": 0.1, "unit": "ms", "tolerance": 0 },
+      { "name": "最大位移时刻", "value": 12.3, "unit": "ms", "tolerance": 5 },
+      { "name": "最大位移值", "value": 14.2, "unit": "mm", "tolerance": 5 },
+      { "name": "最大应力时刻", "value": 8.7, "unit": "ms", "tolerance": 5 },
+      { "name": "回弹时刻", "value": 35.2, "unit": "ms", "tolerance": 5 },
+      { "name": "关键帧标记数量", "value": 3, "unit": "个", "tolerance": 0 },
+      { "name": "播放速度档位数", "value": 4, "unit": "档", "tolerance": 0 },
+      { "name": "默认播放帧率", "value": 30, "unit": "fps", "tolerance": 0 }
+    ]
+  }
+}

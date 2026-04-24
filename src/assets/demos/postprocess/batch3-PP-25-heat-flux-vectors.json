@@ -1,0 +1,54 @@
+{
+  "id": "PP-25",
+  "name": "热流矢量图",
+  "nameEn": "Heat Flux Vector Field - Electronic Component Board",
+  "description": "展示电子元件PCB板上热流矢量场与温度场的叠加可视化。PCB板尺寸150mm x 100mm x 1.6mm，基板材料FR-4(k=0.3W/m·K)，板上布置3个发热元件：主芯片(功耗5W)、稳压器(功耗2W)和存储器(功耗1W)。通过稳态热分析得到温度场分布，再由傅里叶定律q=-k∇T计算热流密度矢量。矢量箭头长度与热流密度幅值|q|成正比，箭头方向沿负温度梯度方向。温度场以等高线背景显示(蓝冷红热)，热流矢量以白色箭头叠加。验证热流从高温区向低温区扩散的物理规律，直观理解电子设备热管理中的传热路径。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["热流矢量", "傅里叶定律", "电子散热", "PCB热分析", "矢量可视化", "温度梯度"],
+  "visualization": {
+    "type": "vector",
+    "field": "heat_flux",
+    "color_map": "hot",
+    "view_mode": "2d_section",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "thermal",
+    "nodes": 12500,
+    "elements": 11200,
+    "results_file": "results/postprocess/pcb_heat_flux_vector.dat"
+  },
+  "display_settings": {
+    "title": "PCB板热流矢量场 - 傅里叶定律验证",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 25,
+      "max": 95,
+      "label": "温度 (°C)",
+      "n_levels": 14
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 0.20 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "主芯片最高温度", "value": 88.5, "unit": "°C", "tolerance": 5 },
+      { "name": "稳压器最高温度", "value": 72.3, "unit": "°C", "tolerance": 5 },
+      { "name": "存储器最高温度", "value": 58.1, "unit": "°C", "tolerance": 5 },
+      { "name": "最大热流密度|q|_max", "value": 18500, "unit": "W/m²", "tolerance": 10 },
+      { "name": "PCB基板导热系数k", "value": 0.3, "unit": "W/m·K", "tolerance": 0 },
+      { "name": "总功耗", "value": 8, "unit": "W", "tolerance": 0 },
+      { "name": "环境温度", "value": 25, "unit": "°C", "tolerance": 0 }
+    ]
+  }
+}

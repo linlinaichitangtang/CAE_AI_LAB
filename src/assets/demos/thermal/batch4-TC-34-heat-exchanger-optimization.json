@@ -1,0 +1,134 @@
+{
+  "id": "TC-34",
+  "name": "换热器壳程场协同优化",
+  "nameEn": "Shell-and-Tube Heat Exchanger Shell-Side Field Synergy Optimization",
+  "description": "管壳式换热器壳程场协同原理分析与优化。壳程热油进口T_h_in=373K，出口T_h_out=333K；管程冷却水进口T_c_in=293K，出口T_c_out=323K。基于场协同原理，优化折流板间距使温度梯度与速度场夹角最小化，提高换热效率。换热器效能ε=0.75。壳程流体为导热油(k=0.12W/(m·K),ρ=850kg/m³,c_p=2200J/(kg·K))，管程为水(k=0.6W/(m·K),ρ=998kg/m³,c_p=4182J/(kg·K))。壳体材料为碳钢(k=50W/(m·K))。通过改变折流板间距(0.1m→0.2m)分析场协同数Fc=∫U·∇T dV/(|U|·|∇T|·V)的变化，验证最优间距下温度场与速度场的协同程度。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["heat_exchanger", "shell_and_tube", "field_synergy", "baffle_optimization", "effectiveness", "convection", "thermal_hydraulic", "optimization"],
+  "geometry": {
+    "type": "block",
+    "length": 1.0,
+    "width": 0.3,
+    "height": 0.3,
+    "radius": null,
+    "thickness": 0.006,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 60,
+    "y_div": 30,
+    "z_div": 30,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Carbon Steel (Shell)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 250000000,
+    "thermal_expansion": 12.0e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "shell_outer_surface",
+    "load_magnitude": 500,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 313,
+      "T_boundary": 373,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 500,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-8,
+    "time_step": 1,
+    "total_time": 1
+  },
+  "theoretical": {
+    "max_displacement": 1e-4,
+    "max_stress": 80000000,
+    "max_temperature": 373,
+    "formula": "epsilon = Q / Q_max = (C_h*(T_h_in - T_h_out)) / (C_min*(T_h_in - T_c_in)); NTU = -ln(1-epsilon)/(1+Cr); Fc = integral(U . gradT dV) / (|U| * |gradT| * V); Q = U * A * LMTD",
+    "reference": "Guo et al., A Novel Concept for Heat Transfer Enhancement - Field Synergy Principle, Int. J. Heat Mass Transfer, 1998; Kays & London, Compact Heat Exchangers"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "heat_exchanger_effectiveness",
+        "value": 0.75,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "hot_fluid_inlet_temperature",
+        "value": 373,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "hot_fluid_outlet_temperature",
+        "value": 333,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "cold_fluid_inlet_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "cold_fluid_outlet_temperature",
+        "value": 323,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "log_mean_temperature_difference",
+        "value": 45,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "optimal_baffle_spacing",
+        "value": 0.15,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "field_synergy_number",
+        "value": 0.65,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "shell_side_convection_coeff",
+        "value": 500,
+        "unit": "W/(m^2*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "heat_transfer_rate",
+        "value": 74880,
+        "unit": "W",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

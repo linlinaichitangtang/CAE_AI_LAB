@@ -1,0 +1,105 @@
+{
+  "id": "FD-04",
+  "name": "汽车控制臂随机载荷疲劳分析",
+  "nameEn": "Automotive Control Arm Random Load Fatigue Analysis",
+  "description": "汽车悬挂系统锻造钢控制臂在随机道路载荷谱下的疲劳寿命预测。载荷谱包含1000个载荷块，模拟城市道路、高速公路和颠簸路面三种工况。采用Palmgren-Miner线性累积损伤法则D=Σ(n_i/N_i)≤1.0进行寿命评估。控制臂几何为A型臂结构，球头连接处为关键疲劳部位。通过名义应力法结合S-N曲线计算各级载荷下的损伤贡献，累积得到总损伤度D，进而预测疲劳寿命(载荷块数)。本案例适用于汽车零部件耐久性工程、载荷谱编制和累积损伤理论的教学演示。",
+  "category": "fatigue",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["Palmgren-Miner", "累积损伤", "随机载荷", "控制臂", "汽车耐久性", "载荷谱"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.35,
+    "width": 0.06,
+    "height": 0.04,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 12,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Forged 42CrMo4 Steel",
+    "elastic_modulus": 212000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 750000000,
+    "ultimate_stress": 980000000,
+    "fatigue_strength_coefficient": 1100000000,
+    "fatigue_strength_exponent": -0.095,
+    "endurance_limit": 380000000
+  },
+  "loading": {
+    "type": "spectrum",
+    "mean_stress": 0,
+    "stress_amplitude": 0,
+    "stress_ratio": -0.3,
+    "frequency_hz": 5,
+    "temperature_K": 293,
+    "spectrum_blocks": [
+      { "block_id": 1, "name": "城市道路", "cycles": 500000, "stress_amplitude": 180000000, "mean_stress": 50000000 },
+      { "block_id": 2, "name": "高速公路", "cycles": 300000, "stress_amplitude": 120000000, "mean_stress": 30000000 },
+      { "block_id": 3, "name": "颠簸路面", "cycles": 100000, "stress_amplitude": 280000000, "mean_stress": 80000000 },
+      { "block_id": 4, "name": "制动工况", "cycles": 50000, "stress_amplitude": 350000000, "mean_stress": 100000000 },
+      { "block_id": 5, "name": "转向工况", "cycles": 80000, "stress_amplitude": 220000000, "mean_stress": 60000000 },
+      { "block_id": 6, "name": "坑洼冲击", "cycles": 20000, "stress_amplitude": 420000000, "mean_stress": 120000000 },
+      { "block_id": 7, "name": "共振工况", "cycles": 10000, "stress_amplitude": 300000000, "mean_stress": 90000000 },
+      { "block_id": 8, "name": "轻微振动", "cycles": 800000, "stress_amplitude": 80000000, "mean_stress": 20000000 }
+    ]
+  },
+  "fatigue_model": {
+    "type": "miner",
+    "parameters": {
+      "sigma_f_prime": 1100000000,
+      "b": -0.095,
+      "damage_limit": 1.0,
+      "safety_factor": 1.3,
+      "mean_stress_correction": "goodman"
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 1000,
+    "formula": "D = Σ(n_i / N_i) ≤ 1.0; N_i = 0.5·(σ_ai / σ'_f)^(1/b); Life_blocks = 1/D_per_block",
+    "reference": "Palmgren A. Die Lebensdauer von Kugellagern. Zeitschrift des Vereins Deutscher Ingenieure, 1924; Miner MA. Cumulative damage in fatigue. Journal of Applied Mechanics, 1945."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "每载荷块累积损伤D",
+        "value": 0.00085,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "最大损伤贡献工况",
+        "value": 0.00035,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "疲劳寿命(载荷块数)",
+        "value": 1180,
+        "unit": "blocks",
+        "tolerance": 20
+      },
+      {
+        "name": "等效应力幅(损伤等效)",
+        "value": 215000000,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "安全寿命(含安全系数1.3)",
+        "value": 908,
+        "unit": "blocks",
+        "tolerance": 20
+      }
+    ]
+  }
+}

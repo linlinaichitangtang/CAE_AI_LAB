@@ -1,0 +1,89 @@
+{
+  "id": "SS-36",
+  "name": "Cr-Mo钢长期蠕变分析",
+  "nameEn": "Cr-Mo Steel Long-Term Creep Analysis",
+  "description": "1.25Cr-0.5Mo耐热钢在813K(540°C)和100MPa应力下22000小时长期蠕变分析。基于Norton幂律蠕变模型和Larson-Miller参数法预测蠕变应变-时间曲线和蠕变断裂寿命。分析包括初始蠕变、稳态蠕变和加速蠕变三个阶段。本案例适用于高温结构设计、蠕变寿命评估和火力发电设备完整性分析。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["蠕变", "Cr-Mo钢", "Larson-Miller", "长期", "高温", "Norton幂律"],
+  "geometry": {
+    "type": "bar",
+    "length": 0.1,
+    "width": 0.01,
+    "height": 0.01,
+    "radius": 0,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "1.25Cr-0.5Mo Steel (ASTM A387 Gr.11)",
+    "elastic_modulus": 170000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 207000000,
+    "thermal_expansion": 1.3e-5,
+    "thermal_conductivity": 35,
+    "specific_heat": 550
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 10000,
+    "load_direction": "X",
+    "temperature_bc": {
+      "type": "uniform",
+      "value": 813
+    }
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 100000000,
+    "formula": "ε_creep = A·σ^n·t^m (Norton-Bailey), LMP = T(C+log·t_r), C≈20 for Cr-Mo steel",
+    "reference": "ASM Handbook Vol.8: Mechanical Testing and Evaluation. ASM International, 2000."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "稳态蠕变应变速率",
+        "value": 2.5e-10,
+        "unit": "1/s",
+        "tolerance": 10
+      },
+      {
+        "name": "22000h总蠕变应变",
+        "value": 0.02,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "Larson-Miller参数",
+        "value": 37500,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "蠕变断裂寿命",
+        "value": 100000,
+        "unit": "h",
+        "tolerance": 15
+      }
+    ]
+  }
+}

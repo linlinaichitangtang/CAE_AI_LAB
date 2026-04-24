@@ -1,0 +1,128 @@
+{
+  "id": "TC-30",
+  "name": "烧蚀防热材料热分析",
+  "nameEn": "Ablation Heat Shield Thermal Analysis - Carbon/Phenolic Composite",
+  "description": "碳/酚醛烧蚀防热材料再入热环境分析。再入热流密度q=5×10⁶W/m²，表面温度T_surface≈3000K。材料物性：密度ρ=1440kg/m³，比热c_p=1260J/(kg·K)，热导率k=1.0W/(m·K)，烧蚀潜热h_ab=1.5×10⁶J/kg。烧蚀率计算：ṁ=q/(c_p·ΔT+h_ab)=5e6/(1260×2700+1.5e6)=5e6/(3.402e6+1.5e6)=5e6/4.902e6=1.02kg/(m²·s)。线烧蚀率v_abl=ṁ/ρ=1.02/1440=7.08×10⁻⁴m/s=0.708mm/s。考虑辐射散热q_rad=ε·σ·T⁴=0.85×5.67e-8×3000⁴=3.91×10⁶W/m²，净热流q_net=q-q_rad=1.09×10⁶W/m²，修正烧蚀率v_abl≈0.15mm/s。瞬态耦合分析烧蚀退行与温度场演化。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 5,
+  "tags": ["ablation", "heat_shield", "carbon_phenolic", "reentry", "recession_rate", "thermal_protection", "radiation_cooling", "hypersonic"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.02,
+    "radius": null,
+    "thickness": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 30,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Carbon/Phenolic Ablator",
+    "elastic_modulus": 15000000000,
+    "poisson_ratio": 0.25,
+    "density": 1440,
+    "yield_stress": 80000000,
+    "thermal_expansion": 4.0e-6,
+    "thermal_conductivity": 1.0,
+    "specific_heat": 1260
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "aerothermal_surface",
+    "load_magnitude": 5e6,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 5e6,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.85
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.001,
+    "total_time": 30
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 100000000,
+    "max_temperature": 3000,
+    "formula": "m_dot = q_net / (c_p * Delta_T + h_ab); v_abl = m_dot / rho; q_rad = epsilon * sigma * T^4; q_net = q_aero - q_rad; sigma = 5.67e-8 W/(m^2*K^4)",
+    "reference": "Poteet, Chen, Thermal Protection System Design, AIAA Progress in Astronautics and Aeronautics, 2002"
+  },
+  "acceptance": {
+    "displacement_error_limit": 25.0,
+    "stress_error_limit": 30.0,
+    "temperature_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "aerothermal_heat_flux",
+        "value": 5e6,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "surface_temperature",
+        "value": 3000,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "radiation_heat_flux",
+        "value": 3.91e6,
+        "unit": "W/m^2",
+        "tolerance": 5.0
+      },
+      {
+        "name": "net_heat_flux",
+        "value": 1.09e6,
+        "unit": "W/m^2",
+        "tolerance": 10.0
+      },
+      {
+        "name": "mass_ablation_rate",
+        "value": 1.02,
+        "unit": "kg/(m^2*s)",
+        "tolerance": 15.0
+      },
+      {
+        "name": "linear_recession_rate",
+        "value": 1.5e-4,
+        "unit": "m/s",
+        "tolerance": 20.0
+      },
+      {
+        "name": "ablation_latent_heat",
+        "value": 1.5e6,
+        "unit": "J/kg",
+        "tolerance": 5.0
+      },
+      {
+        "name": "surface_emissivity",
+        "value": 0.85,
+        "unit": "",
+        "tolerance": 0.5
+      },
+      {
+        "name": "material_density",
+        "value": 1440,
+        "unit": "kg/m^3",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

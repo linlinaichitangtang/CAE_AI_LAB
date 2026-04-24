@@ -1,0 +1,86 @@
+{
+  "id": "EP-04",
+  "name": "埋入式平面变压器",
+  "nameEn": "Planar Transformer (Embedded)",
+  "description": "PCB埋入式平面变压器电磁-热耦合分析。变压器参数：匝数比N_p:N_s=4:1，工作频率范围50-500kHz，额定功率100W。磁芯材料：MnZn铁氧体（PC40），μ_r=2300，B_sat=0.45T，ρ=4800kg/m³。铁芯损耗Steinmetz公式：P_core=C_m×f^α×B^β，其中C_m=25，α=1.3，β=2.5（单位mW/cm³）。绕组铜损：AC电阻R_ac=R_dc×(1+ΔR_skin+ΔR_proximity)，趋肤深度δ=√(2ρ/(ωμ))=√(2×1.68e-8/(2π×100e3×4π×1e-7))=0.207mm@100kHz。PCB铜层厚35μm，需考虑趋肤效应和邻近效应。验证50-500kHz效率曲线，目标效率>95%@100kHz。",
+  "category": "electronics_pkg",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["planar transformer", "PCB embedded", "core loss", "skin effect", "proximity effect", "efficiency"],
+  "geometry": {
+    "type": "block",
+    "length": 0.03,
+    "width": 0.02,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 16,
+    "z_div": 12,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "MnZn Ferrite (PC40) + Cu PCB",
+    "elastic_modulus": 120000000000,
+    "poisson_ratio": 0.25,
+    "density": 4800,
+    "yield_stress": 80000000,
+    "ultimate_stress": 120000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "pcb_mounting",
+    "load_type": "thermal",
+    "load_face": "core_surface",
+    "load_magnitude": 5
+  },
+  "solver": {
+    "type": "coupled_em_thermal_structural",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 5e-6,
+    "max_stress": 20000000,
+    "formula": "P_core = C_m × f^α × B^β, δ_skin = √(2ρ/(ωμ)), R_ac = R_dc × (1 + F_skin + F_prox)",
+    "reference": "Steinmetz, IEEE Trans., 1891; Van den Bossche, Inductor and Transformer Design"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "100kHz效率",
+        "value": 96,
+        "unit": "%",
+        "tolerance": 3
+      },
+      {
+        "name": "500kHz效率",
+        "value": 93,
+        "unit": "%",
+        "tolerance": 5
+      },
+      {
+        "name": "铁芯损耗@100kHz",
+        "value": 0.8,
+        "unit": "W",
+        "tolerance": 15
+      },
+      {
+        "name": "绕组AC损耗@100kHz",
+        "value": 1.5,
+        "unit": "W",
+        "tolerance": 15
+      },
+      {
+        "name": "温升",
+        "value": 35,
+        "unit": "K",
+        "tolerance": 15
+      }
+    ]
+  }
+}

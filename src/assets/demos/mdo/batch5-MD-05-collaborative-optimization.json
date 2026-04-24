@@ -1,0 +1,98 @@
+{
+  "id": "MD-05",
+  "name": "协同优化",
+  "nameEn": "Collaborative Optimization (CO)",
+  "description": "采用协同优化（CO）方法求解多学科设计优化问题。基于分析目标级联（ATC）方法，将系统级分解为系统层和3个子系统级（气动、结构、推进）。各子系统在局部约束下独立优化，系统级负责协调子系统间的共享变量和耦合变量的一致性。验证系统级一致性约束的收敛性，以及CO方法与传统单级优化方法的结果对比。",
+  "category": "mdo",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["collaborative-optimization", "CO", "ATC", "multidisciplinary", "decomposition"],
+  "design_variables": [
+    {
+      "name": "机翼面积",
+      "lower_bound": 50.0,
+      "upper_bound": 200.0,
+      "initial": 120.0
+    },
+    {
+      "name": "展弦比",
+      "lower_bound": 6.0,
+      "upper_bound": 12.0,
+      "initial": 9.0
+    },
+    {
+      "name": "巡航速度",
+      "lower_bound": 200.0,
+      "upper_bound": 300.0,
+      "initial": 250.0
+    },
+    {
+      "name": "结构重量系数",
+      "lower_bound": 0.2,
+      "upper_bound": 0.4,
+      "initial": 0.3
+    },
+    {
+      "name": "推力",
+      "lower_bound": 50000.0,
+      "upper_bound": 200000.0,
+      "initial": 100000.0
+    }
+  ],
+  "objectives": [
+    {
+      "name": "燃油消耗率",
+      "type": "minimize"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "航程",
+      "type": "inequality",
+      "limit": 5000.0
+    },
+    {
+      "name": "子系统一致性偏差",
+      "type": "equality",
+      "limit": 0.001
+    },
+    {
+      "name": "最大应力约束",
+      "type": "inequality",
+      "limit": 350000000.0
+    }
+  ],
+  "optimization_method": {
+    "type": "co",
+    "population": 60,
+    "generations": 100
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "系统级一致性偏差",
+        "value": 0.001,
+        "unit": "-",
+        "tolerance": 50
+      },
+      {
+        "name": "燃油消耗率优化",
+        "value": 0.065,
+        "unit": "kg/km",
+        "tolerance": 15
+      },
+      {
+        "name": "子系统迭代次数",
+        "value": 25,
+        "unit": "-",
+        "tolerance": 30
+      },
+      {
+        "name": "与单级优化偏差",
+        "value": 2.0,
+        "unit": "%",
+        "tolerance": 25
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "id": "AM-05",
+  "name": "渐变材料打印",
+  "nameEn": "Graded Material Printing",
+  "description": "SLM功能梯度材料（FGM）打印分析。材料体系：SS316L（不锈钢）→Inconel 718（镍基高温合金）梯度过渡。过渡区长度L_grad=10mm，成分从0%Inconel 718线性变化至100%Inconel 718。SS316L参数：E=193GPa，ν=0.3，ρ=8000kg/m³，σ_y=290MPa，CTE=16ppm/K，k=16.3W/(m·K)。Inconel 718参数：E=200GPa，ν=0.3，ρ=8190kg/m³，σ_y=1034MPa，CTE=13ppm/K，k=11.4W/(m·K)。混合规则（线性）：E_mix=E_SS×(1-f)+E_IN×f，σ_y_mix=σ_y_SS×(1-f)+σ_y_IN×f，α_mix=α_SS×(1-f)+α_IN×f。验证过渡区材料性能平滑过渡，避免界面脆性相（如Laves相、σ相）。试样尺寸：50mm×10mm×5mm。",
+  "category": "additive_manufacturing",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["functionally graded material", "FGM", "SS316L", "Inconel 718", "composition gradient", "SLM"],
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.01,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 50,
+    "y_div": 10,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "SS316L / Inconel 718 Gradient",
+    "elastic_modulus": 196500000000,
+    "poisson_ratio": 0.3,
+    "density": 8095,
+    "yield_stress": 662000000,
+    "ultimate_stress": 850000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "SS316L_end",
+    "load_type": "distributed",
+    "load_face": "Inconel718_end",
+    "load_magnitude": 10000,
+    "load_direction": "X"
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 2.5e-5,
+    "max_stress": 662000000,
+    "formula": "P_mix = P_SS × (1-f) + P_IN × f (linear mixing rule), f = x / L_grad",
+    "reference": "Shah et al., Additive Manufacturing, 2020; Reichardt et al., Materials & Design, 2016"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "SS316L端弹性模量",
+        "value": 193000000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "Inconel 718端弹性模量",
+        "value": 200000000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "过渡区中点屈服强度",
+        "value": 662000000,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "过渡区CTE变化",
+        "value": 3,
+        "unit": "ppm/K",
+        "tolerance": 10
+      },
+      {
+        "name": "界面残余应力",
+        "value": 150000000,
+        "unit": "Pa",
+        "tolerance": 25
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "RW-06",
+  "name": "道岔转换阻力",
+  "nameEn": "Switch Point Resistance Analysis",
+  "description": "模拟道岔尖轨转换过程中的阻力分析。尖轨长度12m，分析尖轨在转换过程中的摩擦阻力、弹性弯曲变形阻力和密贴力。验证转辙机所需驱动力和功率是否满足设计要求。考虑尖轨与基本轨之间的摩擦系数、温度变化引起的热胀冷缩力以及道床阻力等因素。按EN 13232标准校核道岔转换系统的可靠性。",
+  "category": "railway",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["switch", "point-machine", "friction", "turnout", "EN-13232"],
+  "geometry": {
+    "type": "switch_turnout",
+    "switch_blade_length": 12.0,
+    "rail_type": "UIC60",
+    "switch_angle": 0.026,
+    "switch_radius": 300.0,
+    "heel_depth": 55.0,
+    "tip_width": 0.5
+  },
+  "material": {
+    "name": "UIC60 Rail Steel",
+    "elastic_modulus": 210000000000.0,
+    "yield_strength": 680000000.0,
+    "density": 7850.0,
+    "friction_coefficient": 0.25
+  },
+  "loading": {
+    "normal_force_at_heel": 5000.0,
+    "friction_force": 1250.0,
+    "elastic_deformation_force": 800.0,
+    "temperature_force": 1500.0,
+    "ballast_resistance": 500.0,
+    "total_resistance": 4050.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "总转换阻力",
+        "value": 4050.0,
+        "unit": "N",
+        "tolerance": 15
+      },
+      {
+        "name": "转辙机驱动力",
+        "value": 6000.0,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "驱动功率",
+        "value": 1.2,
+        "unit": "kW",
+        "tolerance": 15
+      },
+      {
+        "name": "转换时间",
+        "value": 3.5,
+        "unit": "s",
+        "tolerance": 15
+      }
+    ]
+  }
+}

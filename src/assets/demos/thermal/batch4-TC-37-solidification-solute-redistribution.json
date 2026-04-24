@@ -1,0 +1,134 @@
+{
+  "id": "TC-37",
+  "name": "凝固溶质再分配Scheil分析",
+  "nameEn": "Solidification Solute Redistribution - Scheil Model for Al-4.5%Cu",
+  "description": "Al-4.5%Cu合金凝固过程溶质再分配Scheil方程分析。初始成分C₀=4.5wt%Cu，平衡分配系数k=0.14，共晶成分C_E=33.2wt%Cu，液相线斜率m_L=-2.6K/wt%，固相线温度T_S=821K，共晶温度T_E=821K(实际为550°C=823K)。Scheil方程：C_L=C₀·(1-f_s)^(k-1)，其中f_s为固相分数。当C_L达到C_E时形成共晶，共晶分数f_E=(C₀/C_E)^(1/(k-1))=(4.5/33.2)^(1/(0.14-1))=(0.1355)^(-1.163)≈8.2%。Al-Cu合金物性：k_thermal=170W/(m·K)(液态)，ρ=2400kg/m³(液态)，c_p=1080J/(kg·K)，潜热L_f=397kJ/kg。凝固潜热释放导致温度回升效应。验证Scheil模型预测的微观偏析与共晶分数。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["solidification", "solute_redistribution", "Scheil", "Al_Cu", "microsegregation", "eutectic_fraction", "partition_coefficient", "casting"],
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": null,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 40,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Al-4.5%Cu Alloy",
+    "elastic_modulus": 71000000000,
+    "poisson_ratio": 0.33,
+    "density": 2800,
+    "yield_stress": 95000000,
+    "thermal_expansion": 23.0e-6,
+    "thermal_conductivity": 170,
+    "specific_heat": 1080
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "all_surfaces",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 973,
+      "T_boundary": 823,
+      "T_ambient": 823,
+      "heat_flux": 0,
+      "convection_coeff": 500,
+      "heat_source": 0,
+      "emissivity": 0.3
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-8,
+    "time_step": 0.05,
+    "total_time": 60
+  },
+  "theoretical": {
+    "max_displacement": 2e-4,
+    "max_stress": 150000000,
+    "max_temperature": 973,
+    "formula": "Scheil: C_L = C_0 * (1 - f_s)^(k - 1); Eutectic fraction: f_E = (C_0 / C_E)^(1/(k-1)); Liquidus: T_L = T_m + m_L * C_L; Solidus: T_S = T_m + m_L * C_0 / k; Latent heat: Q_L = rho * L_f * df_s/dt",
+    "reference": "Scheil, Z. Metallkde, 1942; Kurz & Fisher, Fundamentals of Solidification, 4th Ed., 1998; Brody & Flemings, Trans. TMS-AIME, 1966"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "initial_composition",
+        "value": 4.5,
+        "unit": "wt%",
+        "tolerance": 1.0
+      },
+      {
+        "name": "partition_coefficient",
+        "value": 0.14,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "eutectic_composition",
+        "value": 33.2,
+        "unit": "wt%",
+        "tolerance": 1.0
+      },
+      {
+        "name": "eutectic_fraction",
+        "value": 8.2,
+        "unit": "%",
+        "tolerance": 5.0
+      },
+      {
+        "name": "liquidus_temperature",
+        "value": 922,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "eutectic_temperature",
+        "value": 823,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "latent_heat_fusion",
+        "value": 397000,
+        "unit": "J/kg",
+        "tolerance": 3.0
+      },
+      {
+        "name": "liquidus_slope",
+        "value": -2.6,
+        "unit": "K/wt%",
+        "tolerance": 2.0
+      },
+      {
+        "name": "max_solute_concentration_in_solid",
+        "value": 0.63,
+        "unit": "wt%",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_conductivity_liquid",
+        "value": 170,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "id": "BM-03",
+  "name": "血管壁应力",
+  "nameEn": "Artery Wall Stress",
+  "description": "动脉血管壁应力与脉搏波传播分析。动脉血管内径R=0.003m，壁厚h=0.001m，血压p=16kPa（120mmHg）。血管壁材料（软组织近似）：E=0.5MPa，ν=0.45，ρ=1060kg/m³。薄壁压力容器理论（Laplace定律）：环向应力σ_θ=pR/h=16000×0.003/0.001=48000Pa=48kPa。Moens-Korteweg脉搏波速度：c₀=√(Eh/2ρR)=√(500000×0.001/(2×1060×0.003))=√(78.7)=8.87m/s。验证血管壁应力分布及脉搏波传播速度。",
+  "category": "biomechanics",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["artery", "blood pressure", "Laplace law", "Moens-Korteweg", "pulse wave velocity"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.05,
+    "radius": 0.003,
+    "height": 0.001,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 12,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Arterial Wall Tissue",
+    "elastic_modulus": 500000,
+    "poisson_ratio": 0.45,
+    "density": 1060,
+    "yield_stress": 1000000,
+    "ultimate_stress": 2000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "axial_ends",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 16000,
+    "load_direction": "radial"
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 9.6e-5,
+    "max_stress": 48000,
+    "formula": "σ_θ = pR/h (Laplace), c₀ = √(Eh/2ρR) (Moens-Korteweg)",
+    "reference": "Fung, Biomechanics: Mechanical Properties of Living Tissues"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "环向应力",
+        "value": 48000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "径向位移",
+        "value": 9.6e-5,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "脉搏波速度",
+        "value": 8.87,
+        "unit": "m/s",
+        "tolerance": 15
+      }
+    ]
+  }
+}

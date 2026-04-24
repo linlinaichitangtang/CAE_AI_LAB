@@ -1,0 +1,83 @@
+{
+  "id": "SS-04",
+  "name": "薄壁圆筒轴向压缩",
+  "nameEn": "Thin-Walled Cylinder Axial Compression",
+  "description": "薄壁圆筒在轴向压力P=100kN作用下的压缩分析。壁厚t=5mm，外半径R=50mm，满足薄壁条件(t/R=0.1)。验证轴向应力公式σ=P/A，其中截面积A=2πRt（薄壁近似）。该算例用于验证有限元程序对薄壁结构的轴向受力分析能力。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": [
+    "薄壁圆筒",
+    "压缩",
+    "轴向应力",
+    "薄壁近似"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 1.0,
+    "radius": 0.05,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 12,
+    "z_div": 4,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 100000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.0003183,
+    "max_stress": 63661977.237,
+    "formula": "σ=P/A, A=2πRt=1.5708×10⁻³ m², δ=σL/E",
+    "reference": "Roark, Formulas for Stress and Strain, Table 13.1"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "轴向应力",
+        "value": 63661977.237,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "轴向缩短量",
+        "value": 0.000318,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "径向膨胀量",
+        "value": -4.77e-06,
+        "unit": "m",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

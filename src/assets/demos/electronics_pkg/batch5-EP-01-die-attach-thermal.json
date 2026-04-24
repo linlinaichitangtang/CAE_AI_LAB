@@ -1,0 +1,80 @@
+{
+  "id": "EP-01",
+  "name": "芯片Die贴装热阻",
+  "nameEn": "Die Attach Thermal Resistance",
+  "description": "芯片Die贴装层热阻一维热网络分析。焊料贴装层厚度t=0.05mm=5e-5m，焊料热导率k_solder=50W/(m·K)，贴装面积A=100mm²=1e-4m²。贴装层热阻R_attach=t/(k×A)=5e-5/(50×1e-4)=0.01K/W。芯片功耗P=5W。贴装层温差ΔT=P×R=5×0.01=0.05K。完整热路径：结到壳R_jc=R_die+R_attach+R_substrate，其中R_die=0.05K/W（硅芯片），R_substrate=0.2K/W（氧化铝基板）。总R_jc=0.05+0.01+0.2=0.26K/W。结温T_j=T_case+P×R_jc=85+5×0.26=86.3°C。验证一维热网络模型与有限元热分析结果一致性。",
+  "category": "electronics_pkg",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["die attach", "thermal resistance", "solder", "1D thermal network", "junction temperature"],
+  "geometry": {
+    "type": "block",
+    "length": 0.01,
+    "width": 0.01,
+    "height": 5e-5,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "SAC305 Solder",
+    "elastic_modulus": 50000000000,
+    "poisson_ratio": 0.36,
+    "density": 7400,
+    "yield_stress": 30000000,
+    "ultimate_stress": 45000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_substrate",
+    "load_type": "thermal",
+    "load_face": "top_die_surface",
+    "load_magnitude": 5
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "formula": "R = t/(kA), ΔT = P × R, T_j = T_case + P × R_jc",
+    "reference": "JEDEC JESD51-1; Incropera & DeWitt, Fundamentals of Heat and Mass Transfer"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10,
+    "stress_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "贴装层热阻",
+        "value": 0.01,
+        "unit": "K/W",
+        "tolerance": 5
+      },
+      {
+        "name": "贴装层温差",
+        "value": 0.05,
+        "unit": "K",
+        "tolerance": 5
+      },
+      {
+        "name": "结-壳热阻",
+        "value": 0.26,
+        "unit": "K/W",
+        "tolerance": 10
+      },
+      {
+        "name": "结温",
+        "value": 363.3,
+        "unit": "K",
+        "tolerance": 5
+      }
+    ]
+  }
+}

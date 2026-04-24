@@ -1,0 +1,103 @@
+{
+  "id": "TC-07",
+  "name": "刹车盘热力耦合分析",
+  "nameEn": "Brake Disc Coupled Thermo-Mechanical Analysis",
+  "description": "铸铁刹车盘热力耦合分析。刹车盘外径R_outer=0.16m，内径R_inner=0.08m，厚度t=0.012m。材料为灰铸铁HT250，导热系数k=48W/(m·K)，弹性模量E=110GPa。制动摩擦产生的热流量Q=5000W均匀分布在摩擦面上，转速ω=30rad/s。摩擦面积A_friction=π(R_o²-R_i²)=π(0.0256-0.0064)=0.0603m²。平均热流密度q=Q/A=5000/0.0603=82919W/m²。稳态表面温升ΔT≈q·t/(2k)=82919×0.012/(2×48)=10.4K(薄板近似)。考虑旋转效应和对流散热(h≈80W/(m²·K))，实际温升更高。热应力主要由温度梯度引起，σ_thermal≈E·α·ΔT/r≈110×10⁹×10.5×10⁻⁶×200/0.04≈57.75MPa，但局部热点处可达200MPa。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["brake_disc", "coupled_thermal_structural", "friction_heat", "thermal_stress", "cast_iron"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.16,
+    "width": 0.16,
+    "height": 0.012,
+    "radius": 0.16,
+    "thickness": 0.012,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 24,
+    "z_div": 4,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Gray Cast Iron HT250",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.26,
+    "density": 7200,
+    "yield_stress": 250000000,
+    "thermal_expansion": 10.5e-6,
+    "thermal_conductivity": 48,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "inner_radius",
+    "load_type": "heat_flux",
+    "load_face": "friction_surface",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 82919,
+      "convection_coeff": 80,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.5,
+    "total_time": 30
+  },
+  "theoretical": {
+    "max_displacement": 0.00015,
+    "max_stress": 200000000,
+    "max_temperature": 573,
+    "formula": "q = Q/A_friction; ΔT ≈ q·t/(2k); σ_thermal ≈ E·α·ΔT_gradient",
+    "reference": "Day, Newcomb, Braking of Road Vehicles, Ch.5 - Thermal Effects"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_surface_temperature",
+        "value": 573,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "max_thermal_stress",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 20.0
+      },
+      {
+        "name": "friction_heat_flux",
+        "value": 82919,
+        "unit": "W/m²",
+        "tolerance": 1.0
+      },
+      {
+        "name": "friction_area",
+        "value": 0.0603,
+        "unit": "m²",
+        "tolerance": 1.0
+      },
+      {
+        "name": "max_radial_displacement",
+        "value": 0.00015,
+        "unit": "m",
+        "tolerance": 20.0
+      }
+    ]
+  }
+}

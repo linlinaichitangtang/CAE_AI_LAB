@@ -1,0 +1,132 @@
+{
+  "id": "VL-05",
+  "name": "线性vs非线性材料",
+  "nameEn": "Linear vs Nonlinear Material Model Comparison",
+  "description": "验证不同材料模型在拉伸载荷下的力学响应差异。对拉伸试样(0.2m×0.02m×0.02m)施加F=150kN，分别采用线性弹性、双线性弹塑性(E_t=2GPa)、多线性弹塑性和超弹性模型求解。对比塑性区扩展范围、载荷-位移曲线和卸载后的永久变形量，验证材料非线性求解器的正确性。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["material_model", "elastoplastic", "plasticity", "hyperelastic", "nonlinear"],
+  "validation_type": "material_model",
+  "test_config": {
+    "baseline": {
+      "description": "线性弹性模型，E=200GPa，无屈服",
+      "bc_type": "fixed-free_tension",
+      "material_type": "linear_elastic",
+      "mesh_density": 20
+    },
+    "variants": [
+      {
+        "description": "双线性弹塑性模型，E=200GPa，σ_y=250MPa，E_t=2GPa",
+        "bc_type": "fixed-free_tension",
+        "material_type": "bilinear_elastoplastic",
+        "mesh_density": 20
+      },
+      {
+        "description": "多线性弹塑性模型，5段应力-应变曲线拟合真实钢材",
+        "bc_type": "fixed-free_tension",
+        "material_type": "multilinear_elastoplastic",
+        "mesh_density": 20
+      },
+      {
+        "description": "超弹性模型(Mooney-Rivlin)，用于对比完全不同材料行为",
+        "bc_type": "fixed-free_tension",
+        "material_type": "hyperelastic",
+        "mesh_density": 20
+      }
+    ],
+    "comparison_metrics": ["max_displacement", "max_stress", "plastic_strain", "permanent_deformation", "load_displacement_curve"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 0.2,
+    "width": 0.02,
+    "height": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 250000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 150000,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 3.75e-4,
+    "max_stress": 375000000,
+    "formula": "A = 0.02×0.02 = 4e-4 m²; σ_applied = F/A = 375 MPa > σ_y = 250 MPa; Linear: δ = FL/(EA) = 150000×0.2/(200e9×4e-4) = 3.75e-4 m; Bilinear: elastic δ_e = σ_y·L/E = 250e6×0.2/200e9 = 2.5e-4 m, plastic δ_p = (σ-σ_y)·L/E_t = 125e6×0.2/2e9 = 1.25e-2 m, total δ = 1.275e-2 m; Permanent deformation after unloading = δ_p = 1.25e-2 m",
+    "reference": "Lemaitre, J. Mechanics of Solid Materials; Simo, J.C. Computational Inelasticity"
+  },
+  "acceptance": {
+    "displacement_error_limit": 3.0,
+    "stress_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Linear elastic max displacement",
+        "value": 3.75e-4,
+        "unit": "m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Linear elastic max stress",
+        "value": 375000000,
+        "unit": "Pa",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Bilinear elastoplastic total displacement",
+        "value": 0.01275,
+        "unit": "m",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Bilinear elastoplastic max plastic strain",
+        "value": 0.0625,
+        "unit": "",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Permanent deformation after unloading (bilinear)",
+        "value": 0.0125,
+        "unit": "m",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Plastic zone length fraction (bilinear)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Yield onset load",
+        "value": 100000,
+        "unit": "N",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

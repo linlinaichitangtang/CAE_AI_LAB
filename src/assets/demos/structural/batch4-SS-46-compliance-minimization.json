@@ -1,0 +1,86 @@
+{
+  "id": "SS-46",
+  "name": "MBB梁构型力学拓扑优化",
+  "nameEn": "MBB Beam Compliance Minimization Topology Optimization",
+  "description": "经典MBB（Messerschmitt-Bolkow-Blohm）梁拓扑优化基准算例。梁尺寸L=2m×0.5m×0.01m，载荷F=100kN施加于1/4跨度处下表面，体积分数约束0.4。采用SIMP（Solid Isotropic Material with Penalization）方法，惩罚因子p=3，验证最小柔度C_min及拓扑构型与文献经典结果一致。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["拓扑优化", "SIMP方法", "MBB梁", "柔度最小化", "构型力学"],
+  "geometry": {
+    "type": "plate",
+    "length": 2.0,
+    "width": 0.5,
+    "height": 0.01,
+    "radius": 0.0,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 80,
+    "y_div": 20,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Steel (SIMP Base)",
+    "elastic_modulus": 2.1e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 250e6,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_left_corner",
+    "load_type": "point",
+    "load_face": "quarter_span_bottom",
+    "load_magnitude": 100000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 350e6,
+    "formula": "SIMP: E_eff(x) = x^p·E0, p=3; C = F^T·U = Σ(x_i^p·E0)·u_i^T·k0_i·u_i; Optimize: min C s.t. V/V0≤0.4, 0<x_i<1",
+    "reference": "Bendsoe M.P., Sigmund O. (2003) Topology Optimization: Theory, Methods and Applications"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最小柔度 Minimum Compliance C_min",
+        "value": 8.5,
+        "unit": "N·m",
+        "tolerance": 10
+      },
+      {
+        "name": "体积分数 Volume Fraction",
+        "value": 0.4,
+        "unit": "-",
+        "tolerance": 3
+      },
+      {
+        "name": "载荷点位移 Load Point Displacement",
+        "value": 0.085,
+        "unit": "mm",
+        "tolerance": 10
+      },
+      {
+        "name": "优化迭代次数 Optimization Iterations",
+        "value": 80,
+        "unit": "-",
+        "tolerance": 20
+      }
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "PP-05",
+  "name": "模态振型动画",
+  "nameEn": "Modal Shapes Animation - Box Structure",
+  "description": "展示0.5m立方体盒式结构前6阶模态振型的三维动画。盒体壁厚5mm，材料为铝合金(E=70GPa, ρ=2700kg/m³)。动画包含3D旋转视角和线框叠加显示，可清晰观察各阶振型的空间变形特征。前6阶频率分别为：f₁=128.5Hz(一阶弯曲)、f₂=198.3Hz(二阶弯曲)、f₃=256.7Hz(一阶扭转)、f₄=312.4Hz(局部模态)、f₅=389.1Hz(呼吸模态)、f₆=445.8Hz(高阶弯曲)。60fps高帧率确保动画流畅。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["模态振型", "3D旋转", "线框叠加", "盒式结构", "高帧率"],
+  "visualization": {
+    "type": "animation",
+    "field": "displacement",
+    "color_map": "viridis",
+    "view_mode": "3d_wireframe",
+    "animation": {
+      "enabled": true,
+      "frames": 200,
+      "fps": 60,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 8640,
+    "elements": 6480,
+    "results_file": "results/postprocess/box_modal_shapes.dat"
+  },
+  "display_settings": {
+    "title": "盒式结构前6阶模态振型",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": -1.0,
+      "max": 1.0,
+      "label": "归一化位移",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 0.8, "y": 0.6, "z": 0.9 },
+      "target": { "x": 0.25, "y": 0.25, "z": 0.25 },
+      "rotation": { "pitch": -30, "yaw": 45 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "第一阶频率f₁", "value": 128.5, "unit": "Hz", "tolerance": 3 },
+      { "name": "第三阶频率f₃", "value": 256.7, "unit": "Hz", "tolerance": 3 },
+      { "name": "第六阶频率f₆", "value": 445.8, "unit": "Hz", "tolerance": 3 },
+      { "name": "动画帧率", "value": 60, "unit": "fps", "tolerance": 0 },
+      { "name": "总帧数", "value": 200, "unit": "frames", "tolerance": 0 }
+    ]
+  }
+}

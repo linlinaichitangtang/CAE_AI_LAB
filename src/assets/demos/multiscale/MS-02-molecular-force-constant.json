@@ -1,0 +1,229 @@
+{
+  "id": "MS-02",
+  "name": "分子结构到力常数",
+  "nameEn": "Molecular Structure to Force Constant",
+  "description": "以水分子(H₂O)为模型体系，展示如何从分子结构参数（键长、键角）和分子力学力场参数（键伸缩力常数k_bond、键角弯曲力常数k_angle）出发，通过统计力学均质化方法映射到连续介质弹性常数。该案例涵盖DFT分子几何优化、分子动力学力场参数提取、以及连续介质弹性张量构建三个步骤，是理解微观分子力到宏观弹性响应映射的经典教学案例。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["molecular mechanics", "force constant", "elastic tensor", "homogenization", "H2O", "spring model"],
+  "scales": ["dft", "md", "fe"],
+  "material_system": "H2O molecular",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "H₂O分子几何优化与频率计算",
+      "description": "使用DFT优化水分子几何构型，计算振动频率，提取键伸缩和键角弯曲力常数",
+      "input": {
+        "molecule": "H2O",
+        "initial_bond_length_OH": 1.0,
+        "initial_bond_length_unit": "Angstrom",
+        "initial_angle_HOH": 109.5,
+        "initial_angle_unit": "degree",
+        "spin_multiplicity": 1,
+        "charge": 0
+      },
+      "output": {
+        "optimized_bond_length_OH": 0.96,
+        "optimized_bond_length_unit": "Angstrom",
+        "optimized_angle_HOH": 104.5,
+        "optimized_angle_unit": "degree",
+        "vibrational_frequencies": {
+          "symmetric_stretch": 3657,
+          "bending": 1595,
+          "asymmetric_stretch": 3756,
+          "unit": "cm^-1"
+        },
+        "dipole_moment": 1.85,
+        "dipole_moment_unit": "Debye",
+        "total_energy": -76.4,
+        "total_energy_unit": "eV"
+      },
+      "parameters": {
+        "k_points": "Gamma only",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_H, PAW_PBE_O",
+        "xc_functional": "PBE",
+        "box_size": 15,
+        "box_size_unit": "Angstrom",
+        "smearing": "Gaussian",
+        "smearing_width": 0.01,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "geometry_convergence_force": 0.01,
+        "geometry_convergence_force_unit": "eV/Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Hessian matrix decomposition to force field parameters",
+        "data_transferred": [
+          "optimized_bond_length_OH",
+          "optimized_angle_HOH",
+          "bond_stretching_force_constant",
+          "angle_bending_force_constant",
+          "partial_charges"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "分子动力学力场参数验证",
+      "description": "使用从DFT提取的力场参数进行水分子MD模拟，验证键伸缩和键角弯曲力常数的准确性",
+      "input": {
+        "molecule_count": 216,
+        "box_size": 18.6,
+        "box_size_unit": "Angstrom",
+        "density": 1000,
+        "density_unit": "kg/m^3",
+        "bond_length_OH": 0.96,
+        "bond_length_unit": "Angstrom",
+        "angle_HOH": 104.5,
+        "angle_unit": "degree",
+        "k_bond": 500,
+        "k_bond_unit": "N/m",
+        "k_angle": 50,
+        "k_angle_unit": "N/m/rad"
+      },
+      "output": {
+        "radial_distribution_function": "rdf_OO.dat",
+        "mean_square_displacement": 2.5e-9,
+        "mean_square_displacement_unit": "m^2/s",
+        "diffusion_coefficient": 2.3e-9,
+        "diffusion_coefficient_unit": "m^2/s",
+        "vibrational_spectrum": "vibrational_dos.dat",
+        "average_bond_length": 0.96,
+        "average_bond_length_unit": "Angstrom",
+        "average_angle": 104.5,
+        "average_angle_unit": "degree",
+        "bulk_modulus": 2.2,
+        "bulk_modulus_unit": "GPa"
+      },
+      "parameters": {
+        "potential": "SPC/E rigid + harmonic bond/angle",
+        "timestep": 0.5,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "pressure": 1,
+        "pressure_unit": "atm",
+        "thermostat": "Nosé-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "simulation_time": 50,
+        "simulation_time_unit": "ps",
+        "cutoff_radius": 10,
+        "cutoff_radius_unit": "Angstrom",
+        "electrostatic_method": "PPPM",
+        "electrostatic_accuracy": 1e-4
+      },
+      "bridge_to_next": {
+        "mapping_method": "Virial stress to elastic constants via fluctuation formula",
+        "data_transferred": [
+          "bulk_modulus",
+          "pressure_virial",
+          "stress_fluctuation_tensor",
+          "density"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "连续介质弹性常数构建与验证",
+      "description": "将分子尺度的力常数通过统计力学均质化映射为连续介质弹性常数张量，并进行单轴压缩FE验证",
+      "input": {
+        "elastic_constants_from_homogenization": {
+          "C11": 2.2,
+          "C12": 1.1,
+          "C44": 0.55,
+          "unit": "GPa"
+        },
+        "density": 1000,
+        "density_unit": "kg/m^3",
+        "specimen_geometry": "cube_1cm",
+        "source": "MD virial stress fluctuation from MS-02 Step 2"
+      },
+      "output": {
+        "stress_strain_curve": "stress_strain.dat",
+        "youngs_modulus": 2.2,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.5,
+        "bulk_modulus": 2.2,
+        "bulk_modulus_unit": "GPa",
+        "displacement_field": "displacement.vtk",
+        "max_von_mises_stress": 0.022,
+        "max_von_mises_stress_unit": "MPa"
+      },
+      "parameters": {
+        "element_type": "C3D20R",
+        "mesh_density": "20x20x20",
+        "boundary_condition": "uniaxial_compression_bottom_fixed",
+        "strain_rate": 0.001,
+        "strain_rate_unit": "1/s",
+        "solver_type": "static_general",
+        "nonlinear_geometry": true,
+        "increment_size": 0.01,
+        "max_iterations": 100,
+        "convergence_tolerance": 1e-6
+      },
+      "bridge_to_next": {
+        "mapping_method": "direct comparison of elastic constants across scales",
+        "data_transferred": [
+          "youngs_modulus",
+          "bulk_modulus",
+          "poisson_ratio",
+          "stress_strain_response"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1063/1.445869",
+    "authors": "Berendsen HJC, Grigera JR, Straatsma TP",
+    "year": 1987,
+    "journal": "Journal of Physical Chemistry"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "OH bond length",
+        "value": 0.96,
+        "unit": "Angstrom",
+        "tolerance": 2
+      },
+      {
+        "name": "HOH bond angle",
+        "value": 104.5,
+        "unit": "degree",
+        "tolerance": 2
+      },
+      {
+        "name": "Bond stretching force constant k_bond",
+        "value": 500,
+        "unit": "N/m",
+        "tolerance": 10
+      },
+      {
+        "name": "Angle bending force constant k_angle",
+        "value": 50,
+        "unit": "N/m/rad",
+        "tolerance": 15
+      },
+      {
+        "name": "Bulk modulus (homogenized)",
+        "value": 2.2,
+        "unit": "GPa",
+        "tolerance": 15
+      },
+      {
+        "name": "Diffusion coefficient",
+        "value": 2.3e-9,
+        "unit": "m^2/s",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

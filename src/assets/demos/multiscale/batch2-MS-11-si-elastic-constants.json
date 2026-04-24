@@ -1,0 +1,205 @@
+{
+  "id": "MS-11",
+  "name": "Si晶体弹性常数",
+  "nameEn": "Si Crystal Elastic Constants",
+  "description": "从DFT第一性原理计算硅金刚石立方晶体的三个独立弹性常数C11、C12和C44出发，通过Voigt-Reuss-Hill平均方法获得各向同性弹性模量，再映射到连续介质各向异性弹性有限元模型进行验证。同时计算Zener各向异性比A=2C44/(C11-C12)=1.57，展示Si晶体弹性各向异性的跨尺度一致性。该案例是理解从量子力学到宏观弹性的经典教学范例。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["silicon", "elastic constants", "Voigt-Reuss-Hill", "Zener anisotropy", "diamond cubic", "anisotropic elasticity"],
+  "scales": ["dft", "fe"],
+  "material_system": "Si diamond cubic",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT弹性常数计算",
+      "description": "使用密度泛函理论对Si金刚石立方结构施加微小应变，通过应力-应变关系计算三个独立弹性常数C11、C12、C44",
+      "input": {
+        "crystal_structure": "diamond_cubic",
+        "lattice_constant": 5.431,
+        "lattice_constant_unit": "Angstrom",
+        "atomic_number": 14,
+        "space_group": "Fd-3m",
+        "atoms_per_cell": 8,
+        "strain_amplitudes": [-0.02, -0.01, -0.005, 0.005, 0.01, 0.02],
+        "strain_types": ["volume_conserving_tetragonal", "orthorhombic", "monoclinic"]
+      },
+      "output": {
+        "elastic_constants": {
+          "C11": 165.7,
+          "C12": 63.9,
+          "C44": 79.6,
+          "unit": "GPa"
+        },
+        "zener_anisotropy_ratio": 1.57,
+        "voigt_average": {
+          "bulk_modulus": 97.8,
+          "shear_modulus": 64.1,
+          "unit": "GPa"
+        },
+        "reuss_average": {
+          "bulk_modulus": 97.8,
+          "shear_modulus": 51.7,
+          "unit": "GPa"
+        },
+        "vrh_average": {
+          "bulk_modulus": 97.8,
+          "shear_modulus": 57.9,
+          "youngs_modulus": 145.6,
+          "poisson_ratio": 0.258,
+          "unit": "GPa"
+        },
+        "stress_strain_data": "stress_strain_curves.dat",
+        "lattice_constant_optimized": 5.469,
+        "lattice_constant_optimized_unit": "Angstrom"
+      },
+      "parameters": {
+        "k_points": [16, 16, 16],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Si",
+        "xc_functional": "PBE",
+        "smearing": "Gaussian",
+        "smearing_width": 0.01,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-10,
+        "scf_convergence_unit": "eV",
+        "cell_relax_convergence": 1e-6,
+        "cell_relax_convergence_unit": "eV/Angstrom",
+        "symmetry_reduction": "none_for_strain_calculations",
+        "ibrion": 6,
+        "isif": 3,
+        "nsw": 0
+      },
+      "bridge_to_next": {
+        "mapping_method": "Full elastic tensor C_ij to FE anisotropic constitutive matrix",
+        "data_transferred": [
+          "elastic_constants_C11_C12_C44",
+          "zener_anisotropy_ratio",
+          "vrh_youngs_modulus",
+          "vrh_poisson_ratio",
+          "lattice_constant_optimized"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "各向异性弹性有限元验证",
+      "description": "基于DFT计算的完整弹性张量建立Si单晶各向异性弹性有限元模型，施加不同方向的单轴拉伸和剪切载荷，验证弹性常数与DFT结果的一致性",
+      "input": {
+        "specimen_geometry": {
+          "type": "cube",
+          "side_length": 10,
+          "side_length_unit": "nm"
+        },
+        "elastic_tensor": {
+          "C11": 165.7,
+          "C12": 63.9,
+          "C44": 79.6,
+          "unit": "GPa",
+          "source": "DFT MS-11 Step 1"
+        },
+        "loading_conditions": [
+          "uniaxial_tension_[100]",
+          "uniaxial_tension_[110]",
+          "uniaxial_tension_[111]",
+          "simple_shear_[100](010)"
+        ],
+        "applied_strain": 0.01
+      },
+      "output": {
+        "stress_response": {
+          "sigma_100": 1.657,
+          "sigma_110": 1.953,
+          "sigma_111": 2.038,
+          "unit": "GPa"
+        },
+        "directional_youngs_modulus": {
+          "E_100": 130.2,
+          "E_110": 168.9,
+          "E_111": 187.5,
+          "unit": "GPa"
+        },
+        "shear_modulus_verification": {
+          "G_100_010": 79.6,
+          "unit": "GPa"
+        },
+        "anisotropy_verification": {
+          "E_max_E_min_ratio": 1.44,
+          "zener_ratio_from_FE": 1.57
+        },
+        "displacement_field": "anisotropic_displacement.vtk",
+        "stress_field": "anisotropic_stress.vtk"
+      },
+      "parameters": {
+        "element_type": "C3D8",
+        "mesh_density": "20x20x20",
+        "boundary_condition": "bottom_face_fixed_top_face_displacement_controlled",
+        "solver_type": "static_general",
+        "material_model": "anisotropic_linear_elastic",
+        "elastic_tensor_format": "Voigt_notation_6x6",
+        "geometric_nonlinearity": false,
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 100
+      },
+      "bridge_to_next": {
+        "mapping_method": "Directional elastic response comparison with DFT stress-strain data",
+        "data_transferred": [
+          "directional_youngs_modulus",
+          "shear_modulus_verification",
+          "zener_ratio_from_FE",
+          "stress_strain_response"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.54.11169",
+    "authors": "Nielsen OH, Martin RM",
+    "year": 1996,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "C11",
+        "value": 165.7,
+        "unit": "GPa",
+        "tolerance": 3
+      },
+      {
+        "name": "C12",
+        "value": 63.9,
+        "unit": "GPa",
+        "tolerance": 5
+      },
+      {
+        "name": "C44",
+        "value": 79.6,
+        "unit": "GPa",
+        "tolerance": 5
+      },
+      {
+        "name": "Zener anisotropy ratio A",
+        "value": 1.57,
+        "unit": "dimensionless",
+        "tolerance": 5
+      },
+      {
+        "name": "VRH Young's modulus",
+        "value": 145.6,
+        "unit": "GPa",
+        "tolerance": 5
+      },
+      {
+        "name": "VRH bulk modulus",
+        "value": 97.8,
+        "unit": "GPa",
+        "tolerance": 3
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 5
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "FS-03",
+  "name": "血管支架FSI",
+  "nameEn": "Stent Hemodynamics FSI",
+  "description": "模拟血管支架植入后的血流动力学与支架结构变形的流固耦合分析。血液以Re=500的层流状态流经支架区域，分析支架对血流扰动的影响、壁面剪切应力（WSS）分布以及支架的径向回弹变形。验证支架后方血流再循环区域长度和低WSS区域面积。血管壁采用超弹性Mooney-Rivlin模型，支架采用不锈钢316L材料。",
+  "category": "fsi",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["stent", "hemodynamics", "WSS", "blood-flow", "bio-FSI"],
+  "fluid_domain": {
+    "type": "internal",
+    "density": 1060.0,
+    "viscosity": 3.5e-3,
+    "velocity": 0.2,
+    "pressure": 13332.0
+  },
+  "structure_domain": {
+    "type": "cylinder",
+    "length": 0.02,
+    "width": 0.006,
+    "thickness": 0.0001,
+    "elastic_modulus": 193000000000.0,
+    "density": 7990.0
+  },
+  "coupling": {
+    "method": "partitioned",
+    "interface": "wet_surface",
+    "time_step": 0.001,
+    "total_time": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "壁面剪切应力峰值",
+        "value": 2.5,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "再循环区域长度",
+        "value": 0.005,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "支架径向回弹率",
+        "value": 5.0,
+        "unit": "%",
+        "tolerance": 15
+      },
+      {
+        "name": "低WSS区域占比",
+        "value": 15.0,
+        "unit": "%",
+        "tolerance": 20
+      }
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "id": "TC-21",
+  "name": "凝固收缩",
+  "nameEn": "Solidification Shrinkage and Porosity Prediction",
+  "description": "Al-Si合金铸造凝固收缩与缩孔预测分析。铸造材料为Al-7Si合金(共晶成分附近)，液相线温度T_liquidus=850K(577°C)，固相线温度T_solidus=770K(497°C)，浇注温度T_pour=973K(700°C)。砂型铸造，砂模导热系数k_mold=0.8W/(m·K)。铸件尺寸0.1m×0.1m×0.05m。Al-Si合金物性：固态导热系数k_s=150W/(m·K)，液态导热系数k_l=70W/(m·K)，密度ρ=2680kg/m³，比热容c_p=963J/(kg·K)，潜热L=389000J/kg，热膨胀系数α=21.4×10⁻⁶/K。凝固时间估算t_s=L²/(4α)，其中α_s=k_s/(ρ·c_p)=150/(2680×963)=5.82×10⁻⁵m²/s，对于L=0.05m，t_s≈0.05²/(4×5.82e-5)≈10.7s。凝固收缩率约3-4%，需预测缩孔位置和大小。该案例用于验证相变-流动耦合凝固分析能力。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["solidification", "shrinkage", "porosity", "Al_Si_alloy", "casting", "latent_heat", "mushy_zone"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.05,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 25,
+    "y_div": 25,
+    "z_div": 15,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Al-7Si Casting Alloy (A356)",
+    "elastic_modulus": 72000000000,
+    "poisson_ratio": 0.33,
+    "density": 2680,
+    "yield_stress": 165000000,
+    "thermal_expansion": 21.4e-6,
+    "thermal_conductivity": 150,
+    "specific_heat": 963
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "all_surfaces",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 973,
+      "T_boundary": 473,
+      "T_ambient": 473,
+      "heat_flux": 0,
+      "convection_coeff": 500,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 3000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.05,
+    "total_time": 120
+  },
+  "theoretical": {
+    "max_displacement": 0.0005,
+    "max_stress": 80000000,
+    "max_temperature": 973,
+    "formula": "t_s = L^2 / (4*alpha_s); alpha_s = k_s / (rho*c_p); Niyama criterion: G/sqrt(dT/dt) > threshold; shrinkage = beta_L * (T_liquidus - T_solidus)",
+    "reference": "Stefanescu, Science and Engineering of Casting Solidification, Ch.6 - Solidification Modeling"
+  },
+  "acceptance": {
+    "displacement_error_limit": 25.0,
+    "stress_error_limit": 30.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "thermal_diffusivity_solid",
+        "value": 5.82e-5,
+        "unit": "m^2/s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "solidification_time_estimate",
+        "value": 10.7,
+        "unit": "s",
+        "tolerance": 20.0
+      },
+      {
+        "name": "pouring_temperature",
+        "value": 973,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "liquidus_temperature",
+        "value": 850,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "solidus_temperature",
+        "value": 770,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "latent_heat",
+        "value": 389000,
+        "unit": "J/kg",
+        "tolerance": 1.0
+      },
+      {
+        "name": "solidification_shrinkage_rate",
+        "value": 3.5,
+        "unit": "%",
+        "tolerance": 15.0
+      },
+      {
+        "name": "mushy_zone_width",
+        "value": 80,
+        "unit": "K",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

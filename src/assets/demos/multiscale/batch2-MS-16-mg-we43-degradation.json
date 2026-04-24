@@ -1,0 +1,377 @@
+{
+  "id": "MS-16",
+  "name": "镁合金WE43降解模拟",
+  "nameEn": "Mg Alloy WE43 Degradation Simulation",
+  "description": "镁合金WE43生物可降解材料全链路腐蚀降解模拟：从DFT计算Mg阳极溶解反应能量(Mg→Mg²⁺+2e⁻)出发，通过MD模拟Mg(OH)₂钝化膜的生长动力学，利用相场方法预测点蚀萌生和扩展，最终通过有限元方法预测植入物服役寿命(基于质量损失)。该案例展示可降解生物医用材料从电化学反应到宏观服役性能的跨尺度预测能力。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["WE43", "biodegradable", "corrosion", "Mg(OH)2 passive film", "pitting corrosion", "service life", "biomedical"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Mg alloy WE43",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "Mg阳极溶解反应能量计算",
+      "description": "使用DFT计算Mg表面阳极溶解反应的热力学参数，包括Mg→Mg²⁺+2e⁻的溶解能和Mg(OH)₂钝化膜的形成能",
+      "input": {
+        "reactions": [
+          "Mg(s) -> Mg2+(aq) + 2e-",
+          "Mg(s) + 2H2O -> Mg(OH)2(s) + H2(g)"
+        ],
+        "mg_surface": {
+          "structure": "HCP",
+          "surface_orientation": "(0001)",
+          "slab_layers": 8,
+          "vacuum_layer": 20,
+          "vacuum_layer_unit": "Angstrom"
+        },
+        "electrolyte_model": {
+          "water_molecules": 30,
+          "implicit_solvation": "VASPsol",
+          "dielectric_constant": 78.4
+        },
+        "alloying_elements": ["Y", "Nd", "Zr"],
+        "we43_composition": {
+          "Mg": 92,
+          "Y": 4,
+          "Nd": 3,
+          "Zr": 0.5,
+          "unit": "wt%"
+        }
+      },
+      "output": {
+        "mg_dissolution_energy": 2.37,
+        "dissolution_energy_unit": "eV/atom",
+        "mgoh2_formation_energy": -1.82,
+        "formation_energy_unit": "eV/atom",
+        "corrosion_potential_E_corr": -1.60,
+        "corrosion_potential_unit": "V_vs_SCE",
+        "surface_energy_mg_0001": 0.58,
+        "surface_energy_unit": "J/m^2",
+        "mgoh2_surface_energy": 0.72,
+        "mgoh2_surface_energy_unit": "J/m^2",
+        "work_function": 3.66,
+        "work_function_unit": "eV",
+        "alloying_effect_on_corrosion": {
+          "Y_effect": "reduces_corrosion_rate_by_30pct",
+          "Nd_effect": "forms_stable_intermetallics",
+          "Zr_effect": "grain_refinement_improves_passivity"
+        },
+        "charge_transfer_number": 2,
+        "faradaic_efficiency": 0.92
+      },
+      "parameters": {
+        "k_points": [8, 8, 1],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Mg_Y_Nd_Zr",
+        "xc_functional": "PBE",
+        "solvation_model": "VASPsol",
+        "solvation_radius": 1.36,
+        "solvation_radius_unit": "Angstrom",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "dipole_correction": true,
+        "spin_polarization": false,
+        "ibrion": 2,
+        "isif": 2,
+        "nsw": 100,
+        "nedos": 3001
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT reaction energies and surface properties to ReaxFF reactive force field parameters",
+        "data_transferred": [
+          "mg_dissolution_energy",
+          "mgoh2_formation_energy",
+          "corrosion_potential",
+          "surface_energies",
+          "faradaic_efficiency"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "Mg(OH)₂钝化膜生长动力学模拟",
+      "description": "使用ReaxFF反应力场模拟Mg表面在含水环境中的Mg(OH)₂钝化膜生长过程",
+      "input": {
+        "substrate": {
+          "material": "Mg WE43",
+          "orientation": "(0001)",
+          "dimensions": {
+            "Lx": 10,
+            "Ly": 10,
+            "Lz": 5,
+            "unit": "nm"
+          },
+          "atom_count": 80000
+        },
+        "electrolyte": {
+          "water_model": "SPC_E",
+          "water_molecules": 15000,
+          "na_cl_concentration": 0.154,
+          "concentration_unit": "mol/L",
+          "ph": 7.4,
+          "temperature": 310,
+          "temperature_unit": "K"
+        },
+        "simulation_time_target": 10,
+        "simulation_time_unit": "ns"
+      },
+      "output": {
+        "passive_film_growth": "film_growth.dat",
+        "film_thickness_vs_time": "thickness_vs_time.dat",
+        "initial_growth_rate": 2.5,
+        "growth_rate_unit": "nm/hour",
+        "steady_state_thickness": 250,
+        "film_thickness_unit": "nm",
+        "film_density": 1.45,
+        "film_density_unit": "g/cm^3",
+        "film_porosity": 0.08,
+        "mg_ion_release_rate": 3.2e-4,
+        "ion_release_rate_unit": "mg/cm^2/day",
+        "film_crystallinity": "semi_crystalline_brucite",
+        "grain_size_film": 5,
+        "grain_size_unit": "nm",
+        "corrosion_product_distribution": "corrosion_products.vtk",
+        "hydrogen_evolution_rate": 1.8e-4,
+        "hydrogen_rate_unit": "mL/cm^2/day"
+      },
+      "parameters": {
+        "potential": "ReaxFF (Mg/O/H/Cl by Pitman & van Duin)",
+        "potential_file": "MgOH_ReaxFF.prm",
+        "timestep": 0.25,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": 310,
+        "target_temperature_unit": "K",
+        "cutoff_radius": 10.0,
+        "cutoff_radius_unit": "Angstrom",
+        "bond_order_cutoff": 0.3,
+        "total_steps": 40000000,
+        "dump_interval": 10000,
+        "neighbor_skin": 2.0,
+        "neighbor_skin_unit": "Angstrom",
+        "qeq_method": "charge_equilibration",
+        "qeq_tolerance": 1e-6,
+        "temperature_coupling": 100,
+        "temperature_coupling_unit": "fs"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD passive film morphology and growth kinetics to phase field corrosion model parameters",
+        "data_transferred": [
+          "film_thickness_growth_law",
+          "film_porosity",
+          "mg_ion_release_rate",
+          "film_density",
+          "corrosion_product_morphology"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "WE43点蚀萌生与扩展相场模拟",
+      "description": "基于MD钝化膜参数，使用相场方法模拟Cl⁻诱导的点蚀萌生、钝化膜破裂和蚀坑扩展过程",
+      "input": {
+        "domain_size": {
+          "Lx": 20,
+          "Ly": 20,
+          "Lz": 10,
+          "unit": "um"
+        },
+        "grid_points": "200x200x100",
+        "initial_passive_film_source": "MD MS-16 Step 2",
+        "initial_film_thickness": 250,
+        "film_thickness_unit": "nm",
+        "cl_concentration": 0.154,
+        "cl_concentration_unit": "mol/L",
+        "ph": 7.4,
+        "temperature": 310,
+        "temperature_unit": "K",
+        "simulation_time": 720,
+        "simulation_time_unit": "hours"
+      },
+      "output": {
+        "pit_evolution": "pit_evolution.vtk",
+        "pit_nucleation_time": 48,
+        "pit_nucleation_time_unit": "hours",
+        "pit_depth_vs_time": "pit_depth.dat",
+        "max_pit_depth": 85,
+        "pit_depth_unit": "um",
+        "pit_density": 12,
+        "pit_density_unit": "pits/mm^2",
+        "pit_morphology": "semi_elliptical",
+        "repassivation_events": 3,
+        "corrosion_rate": 0.35,
+        "corrosion_rate_unit": "mm/year",
+        "passive_film_breakdown_potential": -1.35,
+        "breakdown_potential_unit": "V_vs_SCE",
+        "pitting_potential": -1.25,
+        "pitting_potential_unit": "V_vs_SCE"
+      },
+      "parameters": {
+        "model": "phase_field_pitting_corrosion",
+        "order_parameters": ["phi_metal", "phi_film", "phi_electrolyte"],
+        "interface_width": 0.5,
+        "interface_width_unit": "um",
+        "gradient_energy_coefficient": 1e-9,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility_dissolution": 5e-15,
+        "mobility_dissolution_unit": "m^3/(J*s)",
+        "mobility_film_growth": 1e-14,
+        "mobility_film_growth_unit": "m^3/(J*s)",
+        "cl_induced_breakdown": true,
+        "cl_threshold_concentration": 0.1,
+        "cl_threshold_unit": "mol/L",
+        "stochastic_nucleation": true,
+        "nucleation_rate": 1e-3,
+        "nucleation_rate_unit": "1/(um^2*hour)",
+        "time_step": 10,
+        "time_step_unit": "seconds",
+        "total_time": 720,
+        "total_time_unit": "hours",
+        "electric_field_coupling": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field pit statistics and corrosion rate to FE service life prediction model",
+        "data_transferred": [
+          "corrosion_rate",
+          "pit_depth_distribution",
+          "pit_density",
+          "mass_loss_rate",
+          "passive_film_properties"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "WE43植入物服役寿命有限元预测",
+      "description": "基于相场腐蚀数据建立WE43骨植入物的有限元降解模型，预测基于质量损失的服役寿命",
+      "input": {
+        "implant_geometry": {
+          "type": "bone_screw",
+          "outer_diameter": 4.5,
+          "outer_diameter_unit": "mm",
+          "inner_diameter": 3.0,
+          "inner_diameter_unit": "mm",
+          "length": 30,
+          "length_unit": "mm",
+          "thread_pitch": 1.5,
+          "thread_pitch_unit": "mm"
+        },
+        "material_properties": {
+          "initial_youngs_modulus": 45,
+          "youngs_modulus_unit": "GPa",
+          "yield_strength": 200,
+          "yield_strength_unit": "MPa",
+          "ultimate_strength": 280,
+          "ultimate_strength_unit": "MPa",
+          "density": 1840,
+          "density_unit": "kg/m^3"
+        },
+        "degradation_model": {
+          "type": "corrosion_fatigue",
+          "corrosion_rate_source": "PF MS-16 Step 3",
+          "initial_corrosion_rate": 0.35,
+          "corrosion_rate_unit": "mm/year",
+          "stress_corrosion_coupling": true,
+          "loading": "physiological_loading_500N_axial_2Hz"
+        },
+        "body_environment": {
+          "temperature": 310,
+          "temperature_unit": "K",
+          "ph": 7.4,
+          "fluid_composition": "simulated_body_fluid"
+        }
+      },
+      "output": {
+        "degradation_evolution": "degradation_vs_time.vtk",
+        "mass_loss_vs_time": "mass_loss.dat",
+        "service_life_Nf": 18,
+        "service_life_unit": "months",
+        "strength_retention_at_12months": 65,
+        "strength_retention_unit": "percent",
+        "screw_loosening_time": 14,
+        "loosening_time_unit": "months",
+        "corrosion_pit_distribution": "pit_map.vtk",
+        "stress_redistribution": "stress_evolution.vtk",
+        "hydrogen_pocket_volume": 0.02,
+        "hydrogen_volume_unit": "cm^3",
+        "total_mass_loss": 42,
+        "total_mass_loss_unit": "mg",
+        "structural_integrity_index": 0.72
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "circumferential_72_x_axial_100_x_radial_10",
+        "mesh_refinement": "thread_roots_3x_refined",
+        "boundary_condition": "bone_contact_with_friction_0.3",
+        "solver_type": "static_implicit_with_remeshing",
+        "material_model": "degradation_dependent_plasticity",
+        "degradation_law": "exponential_mass_loss",
+        "remeshing_criterion": "element_volume_loss_20pct",
+        "contact_algorithm": "surface_to_surface_penalty",
+        "geometric_nonlinearity": true,
+        "time_increment": 86400,
+        "time_increment_unit": "seconds",
+        "total_time": 540,
+        "total_time_unit": "days",
+        "max_iterations": 500,
+        "convergence_tolerance": 1e-6
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE service life prediction comparison with in vivo degradation data",
+        "data_transferred": [
+          "service_life_Nf",
+          "mass_loss_curve",
+          "strength_retention",
+          "structural_integrity_index"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2013.10.001",
+    "authors": "Jahed H, Shiari B",
+    "year": 2013,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Mg dissolution energy",
+        "value": 2.37,
+        "unit": "eV/atom",
+        "tolerance": 10
+      },
+      {
+        "name": "Corrosion potential E_corr",
+        "value": -1.60,
+        "unit": "V_vs_SCE",
+        "tolerance": 10
+      },
+      {
+        "name": "Corrosion rate",
+        "value": 0.35,
+        "unit": "mm/year",
+        "tolerance": 30
+      },
+      {
+        "name": "Service life Nf",
+        "value": 18,
+        "unit": "months",
+        "tolerance": 25
+      },
+      {
+        "name": "Strength retention at 12 months",
+        "value": 65,
+        "unit": "percent",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 25
+  }
+}

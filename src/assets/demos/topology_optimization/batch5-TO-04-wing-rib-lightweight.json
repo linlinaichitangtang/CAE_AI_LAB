@@ -1,0 +1,95 @@
+{
+  "id": "TO-04",
+  "name": "航空翼肋轻量化设计",
+  "nameEn": "Aircraft Wing Rib Lightweight Design",
+  "description": "航空翼肋多约束拓扑优化问题。翼肋是飞机机翼结构中的关键组件，承受翼面气动载荷并将其传递到翼梁。本算例在给定体积分数约束下，同时考虑强度约束、屈曲约束和模态约束，通过SIMP方法进行综合拓扑优化。设计域为典型的翼肋平面形状（0.5m×0.3m），包含翼梁连接孔和检查口等结构特征。多约束条件下需采用加权折衷法或分层优化策略处理多个约束之间的冲突。优化后结构应在满足所有约束的前提下最大化材料利用率，形成高效的载荷传递路径。",
+  "category": "topology_optimization",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["SIMP", "航空结构", "翼肋", "多约束优化", "轻量化", "屈曲约束"],
+  "design_domain": {
+    "type": "plate",
+    "length": 0.5,
+    "width": 0.3,
+    "height": 0.005,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 200,
+    "y_div": 120,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Aluminum Alloy 7075-T6",
+    "elastic_modulus": 71700000000,
+    "poisson_ratio": 0.33,
+    "density": 2810
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.25,
+    "penalization": 3,
+    "filter_radius": 0.008,
+    "max_iterations": 200,
+    "convergence_tolerance": 0.005
+  },
+  "boundaryConditions": {
+    "fixed_face": "spar_attachment_flanges",
+    "load_type": "uniform",
+    "load_face": "upper_skin_surface",
+    "load_magnitude": 50000,
+    "load_direction": "-Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.25,
+      "unit": "ratio"
+    },
+    {
+      "type": "stress",
+      "value": 503000000,
+      "unit": "Pa"
+    },
+    {
+      "type": "displacement",
+      "value": 0.002,
+      "unit": "m"
+    },
+    {
+      "type": "frequency",
+      "value": 300,
+      "unit": "Hz"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "optimal_compliance",
+        "value": 2.5,
+        "unit": "N·m",
+        "tolerance": 15
+      },
+      {
+        "name": "max_displacement",
+        "value": 0.0018,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "first_natural_frequency",
+        "value": 320,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "mass_reduction_ratio",
+        "value": 0.75,
+        "unit": "ratio",
+        "tolerance": 10
+      }
+    ]
+  }
+}

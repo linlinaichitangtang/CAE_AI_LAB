@@ -1,0 +1,103 @@
+{
+  "id": "TC-04",
+  "name": "平板对流换热分析",
+  "nameEn": "Forced Convection Heat Transfer on Flat Plate",
+  "description": "一块0.3m×0.1m的平板，表面温度维持373K(100°C)，空气以300K(27°C)流过平板表面，对流换热系数h=25W/(m²·K)。根据牛顿冷却定律，热流密度q=h·(T_surface - T_ambient)=25×(373-300)=1825W/m²。平板单侧散热面积A=0.3×0.1=0.03m²，总散热量Q=q·A=1825×0.03=54.75W。该案例验证对流边界条件的正确施加及牛顿冷却定律。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["convection", "Newton_cooling", "flat_plate", "forced_convection"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.1,
+    "height": 0.005,
+    "radius": null,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 15,
+    "y_div": 5,
+    "z_div": 2,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Aluminum 6061-T6",
+    "elastic_modulus": 68900000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "yield_stress": 276000000,
+    "thermal_expansion": 23.6e-6,
+    "thermal_conductivity": 167,
+    "specific_heat": 896
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "top_surface",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 373,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 0,
+      "convection_coeff": 25,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 373,
+    "formula": "q = h·(T_s - T_∞); Q = h·A·(T_s - T_∞)",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.6 - Introduction to Convection"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "heat_flux",
+        "value": 1825,
+        "unit": "W/m²",
+        "tolerance": 2.0
+      },
+      {
+        "name": "total_heat_dissipation",
+        "value": 54.75,
+        "unit": "W",
+        "tolerance": 3.0
+      },
+      {
+        "name": "surface_temperature",
+        "value": 373,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "ambient_temperature",
+        "value": 300,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "convective_heat_transfer_coefficient",
+        "value": 25,
+        "unit": "W/(m²·K)",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

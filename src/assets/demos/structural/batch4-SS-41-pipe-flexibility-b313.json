@@ -1,0 +1,90 @@
+{
+  "id": "SS-41",
+  "name": "管道柔性分析 ASME B31.3",
+  "nameEn": "Pipe Flexibility Analysis ASME B31.3",
+  "description": "基于ASME B31.3工艺管道规范，对DN100碳钢管道Z形布置进行柔性分析。管道外径OD=0.1143m，壁厚t=0.006m，总长L=10m，含两个90°弯头。温差ΔT=200°C，线膨胀系数α=12e-6/K。计算热膨胀应力范围S_E=α·E·ΔT/2=240MPa，验证S_E≤S_A（许用膨胀应力范围）。弯头柔性因子和应力增强系数按规范取值。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["管道分析", "ASME B31.3", "热膨胀", "柔性分析"],
+  "geometry": {
+    "type": "beam",
+    "length": 10.0,
+    "width": 0.1143,
+    "height": 0.006,
+    "radius": 0.0,
+    "thickness": 0.006,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "A106 Gr.B Carbon Steel",
+    "elastic_modulus": 2.0e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 240e6,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "pipe_anchor_end",
+    "load_type": "thermal",
+    "load_face": "pipe_guide_end",
+    "load_magnitude": 0,
+    "load_direction": "Y",
+    "temperature_bc": {
+      "delta_T": 200,
+      "reference_T": 20,
+      "operating_T": 220
+    }
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.012,
+    "max_stress": 240e6,
+    "formula": "S_E = α·E·ΔT/2 = 1.2e-5×2e11×200/2 = 240 MPa; S_A = f(1.25S_c+0.25S_h) per B31.3 Eq.(1)",
+    "reference": "ASME B31.3 Section 319, Eq. (1) and (2)"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "热膨胀应力范围 Expansion Stress Range S_E",
+        "value": 240,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "最大位移 Max Free Thermal Displacement",
+        "value": 12,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "端点反力 Anchor Reaction Force",
+        "value": 45000,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "弯头处最大应力 Max Stress at Elbow",
+        "value": 288,
+        "unit": "MPa",
+        "tolerance": 10
+      }
+    ]
+  }
+}

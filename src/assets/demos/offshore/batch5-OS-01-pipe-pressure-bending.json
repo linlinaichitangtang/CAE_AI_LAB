@@ -1,0 +1,56 @@
+{
+  "id": "OS-01",
+  "name": "管道内压+弯曲",
+  "nameEn": "Pipe Internal Pressure plus Bending",
+  "description": "模拟海底管道在内压和弯曲联合作用下的应力分析。管道材料为API 5L X65，外径D=0.324m，壁厚t=0.012m，设计内压p=15MPa。按ASME B31.3校核组合应力包络线：σ_A²+4σ_T²≤S²，其中σ_A为轴向应力，σ_T为环向剪应力。同时施加弯矩荷载，验证管道在复合荷载下的安全性。分析包含内压引起的环向应力、轴向应力以及弯曲应力的组合效应。",
+  "category": "offshore",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["pipeline", "internal-pressure", "bending", "ASME-B31.3", "API-5L"],
+  "geometry": {
+    "type": "pipe",
+    "outer_diameter": 0.324,
+    "wall_thickness": 0.012,
+    "length": 10.0
+  },
+  "material": {
+    "name": "API 5L X65",
+    "elastic_modulus": 207000000000.0,
+    "yield_strength": 448000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "internal_pressure": 15000000.0,
+    "bending_moment": 200000.0,
+    "external_pressure": 0.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "环向应力",
+        "value": 202.5,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "轴向应力",
+        "value": 101.3,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "弯曲应力",
+        "value": 85.0,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "组合应力利用率",
+        "value": 0.72,
+        "unit": "-",
+        "tolerance": 10
+      }
+    ]
+  }
+}

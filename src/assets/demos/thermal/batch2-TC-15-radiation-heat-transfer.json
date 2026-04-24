@@ -1,0 +1,122 @@
+{
+  "id": "TC-15",
+  "name": "辐射换热",
+  "nameEn": "Radiation Heat Transfer Between Parallel Gray Plates",
+  "description": "两块平行灰体平板间辐射换热分析。两块无限大平行灰板，温度分别为T₁=600K和T₂=400K，发射率ε₁=0.8，ε₂=0.6。根据两平行灰板间净辐射热流密度公式：q=σ(T₁⁴-T₂⁴)/(1/ε₁+1/ε₂-1)，其中σ=5.67×10⁻⁸W/(m²·K⁴)为Stefan-Boltzmann常数。计算：T₁⁴=1.296×10¹¹K⁴，T₂⁴=2.56×10¹⁰K⁴，分子=5.67e-8×(1.296e11-2.56e10)=5.67e-8×1.04e11=5896.8W/m²。分母=1/0.8+1/0.6-1=1.25+1.667-1=1.917。净辐射热流q=5896.8/1.917=3078W/m²。该案例用于验证辐射换热边界条件的正确实现，包括灰体辐射模型和角系数处理。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["radiation", "gray_body", "Stefan_Boltzmann", "emissivity", "parallel_plates", "view_factor"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.05,
+    "radius": null,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 16,
+    "y_div": 16,
+    "z_div": 8,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Oxidized Steel (Plate 1)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 250000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 45,
+    "specific_heat": 480
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "radiation",
+    "load_face": "top_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 400,
+      "T_boundary": 600,
+      "T_ambient": 400,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.8
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 600,
+    "formula": "q = sigma*(T1^4 - T2^4) / (1/epsilon1 + 1/epsilon2 - 1); sigma = 5.67e-8 W/(m^2*K^4)",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.13 - Radiation Exchange Between Surfaces"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "net_radiation_heat_flux",
+        "value": 3078,
+        "unit": "W/m^2",
+        "tolerance": 3.0
+      },
+      {
+        "name": "hot_plate_temperature",
+        "value": 600,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "cold_plate_temperature",
+        "value": 400,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "T1_fourth_power",
+        "value": 1.296e11,
+        "unit": "K^4",
+        "tolerance": 0.5
+      },
+      {
+        "name": "T2_fourth_power",
+        "value": 2.56e10,
+        "unit": "K^4",
+        "tolerance": 0.5
+      },
+      {
+        "name": "radiation_resistance_sum",
+        "value": 1.917,
+        "unit": "",
+        "tolerance": 0.5
+      },
+      {
+        "name": "emissivity_plate1",
+        "value": 0.8,
+        "unit": "",
+        "tolerance": 0.5
+      },
+      {
+        "name": "emissivity_plate2",
+        "value": 0.6,
+        "unit": "",
+        "tolerance": 0.5
+      }
+    ]
+  }
+}

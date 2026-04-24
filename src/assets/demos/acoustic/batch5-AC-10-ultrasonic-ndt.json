@@ -1,0 +1,100 @@
+{
+  "id": "AC-10",
+  "name": "超声无损检测模拟",
+  "nameEn": "Ultrasonic Non-Destructive Testing Simulation",
+  "description": "钢块中超声脉冲传播与裂纹检测的瞬态分析。钢块尺寸0.1m×0.05m，含5mm深度表面裂纹。采用5MHz超声纵波脉冲入射，声速c_steel=5900m/s，波长λ=1.18mm。通过飞行时间TOF=2d/c计算裂纹深度，验证裂纹反射回波与底面回波的时间间隔及幅度比。",
+  "category": "acoustic",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["ultrasonic", "NDT", "time-of-flight", "crack-detection", "transient", "wave-propagation"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": null,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 80,
+    "y_div": 40,
+    "z_div": 40,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel",
+    "elastic_modulus": 2.0e11,
+    "poisson_ratio": 0.3,
+    "density": 7800,
+    "yield_stress": 2.5e8,
+    "speed_of_sound": 5900,
+    "bulk_modulus": 1.667e11
+  },
+  "boundaryConditions": {
+    "fixed_face": "block_sides_absorbing",
+    "load_type": "pressure",
+    "load_face": "top_surface_probe",
+    "load_magnitude": 1.0e6,
+    "load_direction": "Z",
+    "frequency_hz": 5000000,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "transient",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-8,
+    "frequency_range": [0, 10000000]
+  },
+  "theoretical": {
+    "max_displacement": 1.0e-8,
+    "max_stress": 5.0e7,
+    "natural_frequency": 5000000,
+    "formula": "TOF = 2*d / c_steel; d_crack = TOF_crack * c_steel / 2; wavelength = c_steel / f = 5900/5e6 = 1.18mm",
+    "reference": "Krautkramer & Krautkramer, Ultrasonic Testing of Materials, 4th Ed.; ASTM E114"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "ultrasonic_wavelength",
+        "value": 1.18,
+        "unit": "mm",
+        "tolerance": 2
+      },
+      {
+        "name": "crack_echo_TOF",
+        "value": 1.695,
+        "unit": "us",
+        "tolerance": 5
+      },
+      {
+        "name": "back_wall_echo_TOF",
+        "value": 16.95,
+        "unit": "us",
+        "tolerance": 5
+      },
+      {
+        "name": "crack_depth_from_TOF",
+        "value": 5.0,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "crack_to_backwall_amplitude_ratio",
+        "value": 0.35,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "pulse_velocity",
+        "value": 5900,
+        "unit": "m/s",
+        "tolerance": 2
+      }
+    ]
+  }
+}

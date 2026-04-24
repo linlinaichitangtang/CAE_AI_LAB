@@ -1,0 +1,88 @@
+{
+  "id": "AC-01",
+  "name": "音叉模态分析",
+  "nameEn": "Tuning Fork Modal Analysis",
+  "description": "标准A4音叉(440Hz)的模态分析。音叉由两个平行悬臂梁齿组成，材料为结构钢。通过Euler-Bernoulli悬臂梁理论计算第一阶弯曲固有频率，验证与标准音高A4(440Hz)的一致性。分析前四阶模态振型及频率，理解音叉振动特性与声学设计原理。",
+  "category": "acoustic",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["modal", "tuning-fork", "euler-bernoulli", "cantilever", "natural-frequency"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.08,
+    "width": 0.006,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel",
+    "elastic_modulus": 2.0e11,
+    "poisson_ratio": 0.3,
+    "density": 7800,
+    "yield_stress": 2.5e8,
+    "speed_of_sound": 5900,
+    "bulk_modulus": 1.667e11
+  },
+  "boundaryConditions": {
+    "fixed_face": "handle_base",
+    "load_type": "none",
+    "load_face": "",
+    "load_magnitude": 0,
+    "load_direction": "Y",
+    "frequency_hz": 440,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "modal",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [0, 2000]
+  },
+  "theoretical": {
+    "max_displacement": 1.0e-3,
+    "max_stress": 5.0e6,
+    "natural_frequency": 440,
+    "formula": "f_n = (lambda_n^2 / (2*pi*L^2)) * sqrt(E*I / (rho*A)), lambda_1 = 1.8751, I = w*t^3/12, A = w*t",
+    "reference": "Euler-Bernoulli beam theory, Rao, Mechanical Vibrations, 6th Ed., Ch.8"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "first_bending_natural_frequency",
+        "value": 440,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "second_bending_natural_frequency",
+        "value": 2758,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "third_bending_natural_frequency",
+        "value": 7726,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "fourth_bending_natural_frequency",
+        "value": 15140,
+        "unit": "Hz",
+        "tolerance": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "id": "SS-08",
+  "name": "孔口应力集中分析",
+  "nameEn": "Hole Stress Concentration Analysis",
+  "description": "含中心圆孔的矩形薄板在单轴拉伸载荷下的应力集中分析。板尺寸0.2m×0.2m×0.01m，中心圆孔半径r=0.01m，远场应力σ=100MPa。理论应力集中系数Kt=3（无限板中圆孔的Kirsch解），孔边最大应力σ_max=3σ=300MPa。该算例用于验证有限元程序对应力梯度的捕捉能力和网格收敛性。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": [
+    "应力集中",
+    "圆孔",
+    "Kirsch解",
+    "应力集中系数"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.2,
+    "thickness": 0.01,
+    "radius": 0.01,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "element_type": "CPE4"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 1000000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 5e-05,
+    "max_stress": 300000000.0,
+    "formula": "Kirsch解：σ_θθ(r=a,θ=π/2)=3σ_applied, Kt=3",
+    "reference": "Kirsch, 1898; Timoshenko, Theory of Elasticity, Sec. 35"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 8.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "孔边最大应力",
+        "value": 300000000.0,
+        "unit": "Pa",
+        "tolerance": 8.0
+      },
+      {
+        "name": "应力集中系数Kt",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "远场应力",
+        "value": 100000000.0,
+        "unit": "Pa",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

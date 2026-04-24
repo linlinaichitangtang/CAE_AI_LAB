@@ -1,0 +1,96 @@
+{
+  "id": "FD-02",
+  "name": "ε-N曲线Coffin-Manson方程",
+  "nameEn": "Strain-Life Curve Coffin-Manson Equation",
+  "description": "基于Coffin-Manson方程的应变-寿命(ε-N)疲劳分析。采用总应变幅分解为弹性应变幅和塑性应变幅的方法：Δε/2=Δε_e/2+Δε_p/2=σ'_f/E·(2N_f)^b+ε'_f·(2N_f)^c。材料参数：疲劳强度系数σ'_f=900MPa，疲劳强度指数b=-0.085，疲劳延性系数ε'_f=0.5，疲劳延性指数c=-0.6。在总应变幅Δε/2=0.01至0.001范围内计算疲劳寿命，并确定弹性应变与塑性应变相等的过渡寿命N_t。本案例适用于低周疲劳(LCF)与高周疲劳(HCF)过渡区域的教学分析。",
+  "category": "fatigue",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["Coffin-Manson", "应变-寿命法", "低周疲劳", "过渡寿命", "Morrow方程"],
+  "geometry": {
+    "type": "specimen",
+    "length": 0.08,
+    "width": 0.012,
+    "height": 0.006,
+    "radius": 0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 6,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "AISI 304 Stainless Steel (Coffin-Manson Parameters)",
+    "elastic_modulus": 193000000000,
+    "poisson_ratio": 0.29,
+    "density": 8000,
+    "yield_stress": 290000000,
+    "ultimate_stress": 620000000,
+    "fatigue_strength_coefficient": 900000000,
+    "fatigue_strength_exponent": -0.085,
+    "endurance_limit": 240000000
+  },
+  "loading": {
+    "type": "constant_amplitude",
+    "mean_stress": 0,
+    "stress_amplitude": 0,
+    "stress_ratio": -1,
+    "frequency_hz": 0.5,
+    "temperature_K": 293,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "coffin_manson",
+    "parameters": {
+      "sigma_f_prime": 900000000,
+      "b": -0.085,
+      "epsilon_f_prime": 0.5,
+      "c": -0.6,
+      "strain_amplitudes": [0.01, 0.005, 0.003, 0.002, 0.001]
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 4700,
+    "formula": "Δε/2 = σ'_f/E·(2N_f)^b + ε'_f·(2N_f)^c; 2N_t = (ε'_f·E/σ'_f)^(1/(b-c))",
+    "reference": "Coffin LF. A study of the effects of cyclic thermal stresses on a ductile metal. Transactions of ASME, 1954; Manson SS. Behavior of materials under conditions of thermal stress. NACA TN-2933, 1954."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "过渡寿命N_t",
+        "value": 4700,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at Δε/2=0.01",
+        "value": 890,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at Δε/2=0.003",
+        "value": 8500,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "N_f at Δε/2=0.001",
+        "value": 620000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "过渡应变幅Δε_t/2",
+        "value": 0.0038,
+        "unit": "",
+        "tolerance": 15
+      }
+    ]
+  }
+}

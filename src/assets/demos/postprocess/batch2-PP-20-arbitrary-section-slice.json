@@ -1,0 +1,55 @@
+{
+  "id": "PP-20",
+  "name": "任意剖面切片",
+  "nameEn": "Arbitrary Section Slice - Engine Block Internal Visualization",
+  "description": "展示发动机缸体复杂内部结构的任意剖面切片后处理功能。发动机缸体模型包含缸套、水套、曲轴箱等复杂内部几何特征，整体尺寸约400mm x 350mm x 300mm。设置3个不同角度的任意剖切平面：(1)沿曲轴中心线的纵向剖面(θ=0°)，展示缸套与水套的配合关系；(2)45°斜剖面，展示气门座与燃烧室结构；(3)横向剖面(θ=90°)，展示曲轴箱内部加强筋分布。每个剖面同步显示温度场和应力场结果，支持交互式剖切角度和位置调节。通过此案例学习任意剖面切片工具的使用方法和工程应用技巧。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["剖面切片", "任意剖切", "发动机缸体", "内部结构", "交互式工具", "多剖面"],
+  "visualization": {
+    "type": "slice",
+    "field": "temperature",
+    "color_map": "plasma",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": true,
+      "frames": 60,
+      "fps": 20,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "thermal",
+    "nodes": 320000,
+    "elements": 275000,
+    "results_file": "results/postprocess/engine_block_section_slice.dat"
+  },
+  "display_settings": {
+    "title": "发动机缸体任意剖面切片 - 温度/应力内部可视化",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 80,
+      "max": 280,
+      "label": "温度 (°C)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 0.45, "y": 0.35, "z": 0.4 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": 40 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "剖切平面数量", "value": 3, "unit": "个", "tolerance": 0 },
+      { "name": "纵向剖面角度θ₁", "value": 0, "unit": "°", "tolerance": 0 },
+      { "name": "斜剖面角度θ₂", "value": 45, "unit": "°", "tolerance": 0 },
+      { "name": "横向剖面角度θ₃", "value": 90, "unit": "°", "tolerance": 0 },
+      { "name": "最高温度(燃烧室)", "value": 280, "unit": "°C", "tolerance": 5 },
+      { "name": "水套最高温度", "value": 150, "unit": "°C", "tolerance": 10 },
+      { "name": "模型总体积", "value": 0.012, "unit": "m³", "tolerance": 5 },
+      { "name": "剖面刷新帧率", "value": 20, "unit": "fps", "tolerance": 10 }
+    ]
+  }
+}

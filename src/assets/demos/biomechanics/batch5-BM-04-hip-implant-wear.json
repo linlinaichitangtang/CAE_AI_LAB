@@ -1,0 +1,74 @@
+{
+  "id": "BM-04",
+  "name": "髋关节假体磨损",
+  "nameEn": "Hip Implant Wear",
+  "description": "髋关节假体UHMWPE臼杯磨损分析。UHMWPE（超高分子量聚乙烯）臼杯内径R=0.022m，球头半径r=0.014m。接触压力p=5MPa，滑动距离s=0.04m/步（步幅约40mm）。Archard磨损定律：W=k×p×s，磨损系数k=2e-7mm³/Nm=2e-16m³/Nm。单步磨损体积V_step=k×p×s×A_contact，其中接触面积A_contact≈π×(Rr)^(1/2)×w≈200mm²=2e-4m²。10⁶步累计磨损深度h_wear=k×p×s×N=2e-16×5e6×0.04×1e6=4e-5m=40μm。材料参数：E=1GPa，ν=0.46，ρ=940kg/m³，σ_y=21MPa。",
+  "category": "biomechanics",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["hip implant", "UHMWPE", "Archard wear", "contact mechanics", "tribology"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.01,
+    "radius": 0.022,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "UHMWPE",
+    "elastic_modulus": 1000000000,
+    "poisson_ratio": 0.46,
+    "density": 940,
+    "yield_stress": 21000000,
+    "ultimate_stress": 40000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "cup_outer_surface",
+    "load_type": "pressure",
+    "load_face": "cup_inner_surface",
+    "load_magnitude": 5000000,
+    "load_direction": "radial"
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 4e-5,
+    "max_stress": 5000000,
+    "formula": "W = k × p × s (Archard), h_wear = k × p × s × N",
+    "reference": "Archard, J. Appl. Physics, 1953; ISO 14242-1 Wear Test"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "接触压力",
+        "value": 5000000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "10⁶步磨损深度",
+        "value": 4e-5,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "磨损体积",
+        "value": 8e-9,
+        "unit": "m³",
+        "tolerance": 25
+      }
+    ]
+  }
+}

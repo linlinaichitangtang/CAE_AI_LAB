@@ -1,0 +1,133 @@
+{
+  "id": "TC-22",
+  "name": "热障涂层",
+  "nameEn": "Thermal Barrier Coating (TBC) System Analysis",
+  "description": "航空发动机热障涂层(TBC)系统热-力耦合分析。涂层系统为三层结构：镍基高温合金基体(Inconel 738, 厚2mm) + NiCrAlY粘结层(厚0.1mm) + YSZ陶瓷顶层(8%Y₂O₃-ZrO₂, 厚0.3mm)。工作条件：燃气温度T_gas=1500K，燃气对流换热系数h_gas=1500W/(m²·K)。各层材料物性：基体k_sub=22W/(m·K)，粘结层k_bc=11W/(m·K)，YSZ顶层k_tbc=2.0W/(m·K)。稳态热阻分析：R_tbc=0.0003/2.0=1.5×10⁻⁴K·m²/W，R_bc=0.0001/11=9.09×10⁻⁶K·m²/W，R_sub=0.002/22=9.09×10⁻⁵K·m²/W。对流热阻R_conv=1/1500=6.67×10⁻⁴K·m²/W。TBC表面温度T_s≈1300K，粘结层界面温度T_bc_interface≈1000K。热循环氧化条件下界面热生长氧化物(TGO)导致层间应力集中和剥落失效。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["thermal_barrier_coating", "TBC", "YSZ", "NiCrAlY", "TGO", "delamination", "cyclic_oxidation", "superalloy"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.02,
+    "width": 0.02,
+    "height": 0.0024,
+    "radius": null,
+    "thickness": 0.0024,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 24,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "YSZ (8%Y2O3-ZrO2) Top Coat",
+    "elastic_modulus": 40000000000,
+    "poisson_ratio": 0.25,
+    "density": 5700,
+    "yield_stress": 200000000,
+    "thermal_expansion": 10.7e-6,
+    "thermal_conductivity": 2.0,
+    "specific_heat": 500
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "top_surface",
+    "load_magnitude": 1500,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 800,
+      "T_boundary": null,
+      "T_ambient": 1500,
+      "heat_flux": 0,
+      "convection_coeff": 1500,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 1,
+    "total_time": 3600
+  },
+  "theoretical": {
+    "max_displacement": 0.00015,
+    "max_stress": 350000000,
+    "max_temperature": 1300,
+    "formula": "R_total = R_conv + R_tbc + R_bc + R_sub; q = (T_gas - T_coolant) / R_total; T(x) = T_gas - q*(R_conv + integral_0^x dx/k(x)); sigma_thermal = E*Delta_alpha*DeltaT/(1-nu)",
+    "reference": "Padture, Gell, Jordan, Thermal Barrier Coatings for Gas-Turbine Engine Applications, Science, 2002"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "TBC_surface_temperature",
+        "value": 1300,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "bond_coat_interface_temperature",
+        "value": 1000,
+        "unit": "K",
+        "tolerance": 8.0
+      },
+      {
+        "name": "TBC_thermal_resistance",
+        "value": 1.5e-4,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "bond_coat_thermal_resistance",
+        "value": 9.09e-6,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "substrate_thermal_resistance",
+        "value": 9.09e-5,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "convection_thermal_resistance",
+        "value": 6.67e-4,
+        "unit": "K*m^2/W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "gas_temperature",
+        "value": 1500,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "max_interfacial_stress",
+        "value": 350000000,
+        "unit": "Pa",
+        "tolerance": 25.0
+      },
+      {
+        "name": "YSZ_topcoat_thickness",
+        "value": 0.0003,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "TGO_growth_stress",
+        "value": 3000000000,
+        "unit": "Pa",
+        "tolerance": 30.0
+      }
+    ]
+  }
+}

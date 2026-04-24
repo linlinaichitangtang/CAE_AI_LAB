@@ -1,0 +1,121 @@
+{
+  "id": "TC-19",
+  "name": "电子芯片封装",
+  "nameEn": "Electronic Chip Package Thermal Management",
+  "description": "多层电子芯片封装热管理分析。封装结构为5层堆叠：硅芯片(Si die, 10mm×10mm×0.5mm) + 焊料层(solder, 0.05mm) + 铜散热片(Cu heat spreader, 30mm×30mm×1mm) + 热界面材料(TIM, 0.1mm) + 铝散热器(Al heatsink, 50mm×50mm×5mm)。芯片功耗Q=100W，结-环境热阻R_th_ja=0.8K/W，最高结温T_j_max=T_ambient+Q×R_th_ja=323+100×0.8=403K(130°C)。各层热阻：硅芯片R_Si=0.0005/(148×0.0001)=0.0338K/W，焊料R_solder=5e-5/(50×0.0001)=0.01K/W，铜散热片R_Cu=0.001/(400×0.0009)=0.00278K/W，TIM_R=1e-4/(3×0.0009)=0.037K/W。散热器对流换热h=500W/(m²·K)，R_heatsink=1/(500×0.0025)=0.8K/W。该案例用于验证热阻网络分析法的准确性。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["chip_packaging", "thermal_resistance_network", "TIM", "heat_spreader", "junction_temperature", "electronics_cooling"],
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.00665,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 15,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Silicon Die (Si)",
+    "elastic_modulus": 130000000000,
+    "poisson_ratio": 0.28,
+    "density": 2330,
+    "yield_stress": 7000000000,
+    "thermal_expansion": 2.6e-6,
+    "thermal_conductivity": 148,
+    "specific_heat": 700
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "bottom_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 323,
+      "T_boundary": null,
+      "T_ambient": 323,
+      "heat_flux": 0,
+      "convection_coeff": 500,
+      "heat_source": 1000000000
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 403,
+    "formula": "R_th_ja = R_Si + R_solder + R_Cu + R_TIM + R_heatsink; T_j = T_amb + Q * R_th_ja; Q = P / A_die",
+    "reference": "Bar-Cohen, Iyengar, Design and Optimization of Air-Cooled Heat Sinks for Sustainable Development, IEEE Trans. Components and Packaging Tech., 2002"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "total_thermal_resistance_ja",
+        "value": 0.8,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "junction_temperature",
+        "value": 403,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "power_dissipation",
+        "value": 100,
+        "unit": "W",
+        "tolerance": 0.1
+      },
+      {
+        "name": "heat_flux_at_die",
+        "value": 1000000,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Si_die_thermal_resistance",
+        "value": 0.0338,
+        "unit": "K/W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "TIM_thermal_resistance",
+        "value": 0.037,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "heatsink_thermal_resistance",
+        "value": 0.8,
+        "unit": "K/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "ambient_temperature",
+        "value": 323,
+        "unit": "K",
+        "tolerance": 0.1
+      }
+    ]
+  }
+}

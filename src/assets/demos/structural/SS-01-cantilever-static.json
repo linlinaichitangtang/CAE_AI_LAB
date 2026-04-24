@@ -1,0 +1,89 @@
+{
+  "id": "SS-01",
+  "name": "悬臂梁静力学分析",
+  "nameEn": "Cantilever Beam Static Analysis",
+  "description": "经典悬臂梁在自由端受集中力作用下的静力学分析。梁一端完全固定，另一端受竖向集中载荷F=1000N。验证欧拉-伯努利梁理论的挠度公式δ=FL³/(3EI)和最大弯曲应力σ=M·c/I。该算例是结构力学中最基础的基准测试之一，适用于验证有限元求解器在线性静力学问题上的准确性。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": [
+    "悬臂梁",
+    "弯曲",
+    "线性静力学",
+    "基准测试"
+  ],
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000.0,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000.0,
+    "formula": "δ=FL³/(3EI), σ=M·c/I, I=bh³/12=8.3333×10⁻⁶ m⁴",
+    "reference": "Timoshenko, Mechanics of Materials, Eq. 6.12"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大挠度",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "最大弯曲应力",
+        "value": 6000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "固定端反力",
+        "value": 1000.0,
+        "unit": "N",
+        "tolerance": 1.0
+      },
+      {
+        "name": "固定端弯矩",
+        "value": 1000.0,
+        "unit": "N·m",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "id": "EM-06",
+  "name": "磁悬浮轴承",
+  "nameEn": "Active Magnetic Bearing",
+  "description": "主动式磁悬浮轴承（AMB）机电耦合分析。8极结构，转子直径D=0.05m，气隙g=0.0005mm=5e-4m。电磁参数：每极线圈匝数N=200，偏置电流I_0=2A，控制电流I_c=±1A。刚度k=20kN/m，阻尼c=500N·s/m。磁路分析：单极磁力F=μ₀N²(I_0+I_c)²A/(4g²)，A=π×0.01×0.02=6.28e-4m²。线性化刚度k_0=μ₀N²I_0²A/g³=4π×1e-7×200²×4×6.28e-4/(5e-4)³=4π×1e-7×40000×6.28e-4/1.25e-10=25.3kN/m。PID控制器参数：Kp=2000，Ki=500，Kd=50。验证PID控制下转子位移响应及稳定性裕度（相位裕度>45°，增益裕度>6dB）。",
+  "category": "electromagnetic",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["magnetic bearing", "active control", "PID", "levitation", "rotordynamics", "stability"],
+  "geometry": {
+    "type": "motor",
+    "length": 0.05,
+    "width": 0.08,
+    "height": 0.05,
+    "radius": 0.025,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 24,
+    "z_div": 16,
+    "element_type": "SOLID97"
+  },
+  "material": {
+    "name": "Silicon Steel Core + Cu Coil",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "electrical_conductivity": 59600000,
+    "relative_permeability": 5000
+  },
+  "electromagnetic_bc": {
+    "current": 3,
+    "voltage": 48,
+    "frequency_hz": 0,
+    "magnetic_flux_density": 1.2
+  },
+  "boundaryConditions": {
+    "fixed_face": "bearing_housing",
+    "load_type": "electromagnetic_force",
+    "load_magnitude": 20000
+  },
+  "solver": {
+    "type": "coupled_em_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_stress": 80000000,
+    "magnetic_force": 20000,
+    "temperature_rise": 60,
+    "formula": "F = μ₀N²I²A/(4g²), k_0 = μ₀N²I₀²A/g³, PID: u(t) = Kp·e + Ki·∫e·dt + Kd·de/dt",
+    "reference": "Schweitzer & Maslen, Magnetic Bearings, 2009; ISO 14839-1/2/3"
+  },
+  "acceptance": {
+    "force_error_limit": 10,
+    "temperature_error_limit": 10
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "线性化刚度",
+        "value": 25300,
+        "unit": "N/m",
+        "tolerance": 10
+      },
+      {
+        "name": "稳态气隙偏移",
+        "value": 5e-6,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "相位裕度",
+        "value": 55,
+        "unit": "deg",
+        "tolerance": 15
+      },
+      {
+        "name": "线圈温升",
+        "value": 60,
+        "unit": "K",
+        "tolerance": 15
+      }
+    ]
+  }
+}

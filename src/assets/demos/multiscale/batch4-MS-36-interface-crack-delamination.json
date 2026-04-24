@@ -1,0 +1,362 @@
+{
+  "id": "MS-36",
+  "name": "界面裂纹脱层",
+  "nameEn": "Interface Crack Delamination Multiscale Simulation",
+  "description": "双材料界面裂纹脱层从原子断裂能到宏观分层失效的全链条多尺度模拟。首先通过DFT计算Si/SiO2界面的断裂能G_c和界面电子结构，确定界面结合强度；MD模拟界面裂纹的原子尺度断裂过程，建立内聚力本构关系( traction-separation law)；相场模型模拟界面裂纹在双材料界面的偏转行为，基于断裂能比值预测裂纹路径选择(界面偏转 vs 穿层扩展)；FE模型模拟复合材料层合板的双悬臂梁(DCB)脱层试验，预测R曲线和分层韧性。该案例为界面断裂力学方法论的跨尺度验证。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["interface crack", "delamination", "cohesive zone", "phase field fracture", "DCB test", "crack deflection", "R-curve", "bimaterial interface"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Si/SiO2 Interface and Carbon Fiber/Epoxy Laminate",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "界面断裂能计算",
+      "description": "DFT计算Si/SiO2界面的断裂能G_c、界面粘聚力和电子结构，确定界面结合强度",
+      "input": {
+        "interface": "Si(100)/SiO2_amorphous",
+        "Si_layers": 8,
+        "SiO2_layers": 12,
+        "supercell": "3x3",
+        "vacuum_gap": 20,
+        "vacuum_gap_unit": "Angstrom",
+        "separation_modes": ["mode_I", "mode_II", "mixed_mode_30deg"],
+        "separation_steps": 15,
+        "max_separation": 8,
+        "max_separation_unit": "Angstrom",
+        "k_points": [4, 4, 1]
+      },
+      "output": {
+        "fracture_energy_Gc_mode_I": 3.2,
+        "fracture_energy_unit": "J/m^2",
+        "fracture_energy_Gc_mode_II": 4.8,
+        "fracture_energy_unit": "J/m^2",
+        "interface_strength_sigma_max": 12.5,
+        "strength_unit": "GPa",
+        "critical_separation_delta_c": 0.45,
+        "separation_unit": "nm",
+        "traction_separation_law": "traction_sep.dat",
+        "interface_charge_transfer": 0.08,
+        "charge_transfer_unit": "e",
+        "bond_density": 4.2e18,
+        "bond_density_unit": "bonds/m^2",
+        "electron_density_interface": "rho_interface.cube",
+        "Gc_ratio_mode_II_mode_I": 1.5
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Si + PAW_PBE_O",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": [4, 4, 1],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "ibrion": -1,
+        "isif": 2,
+        "vdW_correction": "DFT-D3",
+        "amorphous_SiO2_generation": "melt_quench_3000K",
+        "quench_rate": 1e14,
+        "quench_rate_unit": "K/s"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT fracture energy Gc, interface strength and traction-separation law to MD cohesive zone model and interatomic potential validation",
+        "data_transferred": [
+          "fracture_energy_Gc_mode_I",
+          "fracture_energy_Gc_mode_II",
+          "interface_strength_sigma_max",
+          "critical_separation_delta_c",
+          "Gc_ratio_mode_II_mode_I"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "界面裂纹原子断裂模拟",
+      "description": "MD模拟Si/SiO2界面裂纹的原子尺度断裂过程，建立内聚力本构关系",
+      "input": {
+        "interface": "Si(100)/a-SiO2",
+        "system_size": "30x15x15",
+        "system_size_unit": "nm",
+        "total_atoms": 450000,
+        "pre_crack_length": 8,
+        "pre_crack_length": "nm",
+        "crack_plane": "interface",
+        "loading": "mode_I_tensile_separation",
+        "strain_rate": 1e8,
+        "strain_rate_unit": "1/s",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "Gc_mode_I": 3.2,
+        "Gc_unit": "J/m^2",
+        "sigma_max": 12.5,
+        "sigma_max_unit": "GPa",
+        "delta_c": 0.45,
+        "delta_c_unit": "nm"
+      },
+      "output": {
+        "MD_fracture_energy_Gc": 3.5,
+        "Gc_unit": "J/m^2",
+        "MD_interface_strength": 11.8,
+        "strength_unit": "GPa",
+        "MD_critical_separation": 0.48,
+        "separation_unit": "nm",
+        "cohesive_law_MD": "cohesive_MD.dat",
+        "process_zone_length": 2.8,
+        "process_zone_unit": "nm",
+        "crack_tip_blunting_radius": 0.35,
+        "blunting_unit": "nm",
+        "stress_distribution": "stress_MD.dat",
+        "atomic_displacement_field": "disp_MD.vtk",
+        "MD_vs_DFT_Gc_error": 9.4,
+        "error_unit": "percent"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "Si_potential": "Tersoff_Erhart_Albe",
+        "SiO2_potential": "ReaxFF_CHONSi_Muller",
+        "Si_SiO2_cross": "Tersoff_ReaxFF_mixing_rules",
+        "timestep": 0.5,
+        "timestep_unit": "fs",
+        "ensemble": "NVT",
+        "thermostat": "Nose-Hoover",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "deformation": "constant_strain_rate",
+        "strain_rate": 1e8,
+        "strain_rate_unit": "1/s",
+        "total_strain": 0.15,
+        "dump_interval": 2000,
+        "neighbor_skin": 2.0,
+        "neighbor_skin_unit": "Angstrom",
+        "crack_tip_analysis": "centrosymmetry_parameter",
+        "bond_breakage_threshold": 2.2,
+        "bond_breakage_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD cohesive zone traction-separation law and process zone parameters to phase field crack deflection model",
+        "data_transferred": [
+          "MD_fracture_energy_Gc",
+          "MD_interface_strength",
+          "MD_critical_separation",
+          "cohesive_law_MD",
+          "process_zone_length"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "界面裂纹偏转相场模拟",
+      "description": "相场模型模拟界面裂纹在双材料界面的偏转行为，基于断裂能比值预测裂纹路径选择",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 50,
+          "Lz": 1,
+          "unit": "um"
+        },
+        "grid_spacing": 0.1,
+        "grid_spacing_unit": "um",
+        "grid_points": "1000x500x1",
+        "bimaterial": {
+          "material_1": {"E": 170, "nu": 0.22, "Gc": 50, "unit_E": "GPa", "unit_Gc": "J/m^2"},
+          "material_2": {"E": 4.5, "nu": 0.35, "Gc": 280, "unit_E": "GPa", "unit_Gc": "J/m^2"}
+        },
+        "interface": {
+          "Gc_interface": 3.5,
+          "Gc_interface_unit": "J/m^2",
+          "position": "y = Ly/2",
+          "thickness": 0.2,
+          "thickness_unit": "um"
+        },
+        "pre_crack": {"length": 20, "angle": 0, "angle_unit": "deg", "tip_at_interface": true},
+        "loading": "mode_I_remote_tension",
+        "phase_field_length_scale": 2.0,
+        "length_scale_unit": "um"
+      },
+      "output": {
+        "crack_path": "interface_deflection",
+        "deflection_angle": 15,
+        "deflection_angle_unit": "deg",
+        "crack_deflection_criterion": "He_Hutchinson_satisfied",
+        "Gc_ratio_for_deflection": 0.07,
+        "ratio_unit": "dimensionless",
+        "crack_field": "crack_PF.vtk",
+        "energy_release_rate_interface": 3.5,
+        "energy_release_rate_unit": "J/m^2",
+        "energy_release_rate_substrate": 50,
+        "energy_release_rate_unit": "J/m^2",
+        "stress_intensity_factor_KI": 1.8,
+        "KI_unit": "MPa*sqrt(m)",
+        "mixed_mode_ratio_psi": 0.35,
+        "psi_unit": "dimensionless",
+        "R_curve": "R_curve_PF.dat"
+      },
+      "parameters": {
+        "code": "custom_phase_field_fracture",
+        "model": "phase_field_fracture_bimaterial",
+        "order_parameter": "damage_d",
+        "degradation_function": "quadratic_1-d",
+        "phase_field_length_scale": 2.0,
+        "length_scale_unit": "um",
+        "splitting": "spectral_decomposition_volumetric_deviatoric",
+        "time_integration": "staggered_scheme",
+        "time_step": 0.1,
+        "time_step_unit": "s",
+        "total_time": 10,
+        "total_time_unit": "s",
+        "convergence_tolerance": 1e-8,
+        "max_PF_iterations": 100,
+        "max_mechanics_iterations": 100,
+        "staggered_tolerance": 1e-6,
+        "anisotropy": "interface_directional"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field crack deflection results and R-curve to FE DCB delamination model with cohesive zone",
+        "data_transferred": [
+          "crack_path",
+          "deflection_angle",
+          "energy_release_rate_interface",
+          "R_curve",
+          "mixed_mode_ratio_psi"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "DCB脱层试验FE模拟",
+      "description": "FE模型模拟碳纤维/环氧层合板双悬臂梁(DCB)脱层试验，预测R曲线和分层韧性",
+      "input": {
+        "specimen": "DCB_ASTM_D5528",
+        "dimensions": {
+          "length": 150,
+          "width": 25,
+          "thickness_per_ply": 0.13,
+          "total_thickness": 3.12,
+          "unit": "mm"
+        },
+        "layup": "[0/0]_12",
+        "initial_delamination": 25,
+        "delamination_unit": "mm",
+        "loading": "mode_I_piano_hinge",
+        "opening_rate": 1.0,
+        "opening_rate_unit": "mm/min",
+        "material": {
+          "E11": 140,
+          "E22": 10,
+          "G12": 5,
+          "nu12": 0.3,
+          "unit": "GPa"
+        },
+        "interface": {
+          "Gc_I": 0.28,
+          "Gc_II": 0.79,
+          "sigma_max": 60,
+          "tau_max": 90,
+          "delta_I_c": 0.01,
+          "delta_II_c": 0.02,
+          "Gc_unit": "kJ/m^2",
+          "stress_unit": "MPa",
+          "delta_unit": "mm"
+        },
+        "R_curve_from_PF": "from_MS-36_Step3"
+      },
+      "output": {
+        "initiation_GIc": 0.26,
+        "GIc_unit": "kJ/m^2",
+        "propagation_GIc": 0.52,
+        "propagation_GIc_unit": "kJ/m^2",
+        "R_curve": "R_curve_FE.dat",
+        "load_displacement": "P_delta.dat",
+        "max_load": 45,
+        "max_load_unit": "N",
+        "delamination_length_at_max": 65,
+        "delamination_length_unit": "mm",
+        "fiber_bridging_traction": 8.5,
+        "bridging_unit": "MPa",
+        "FE_vs_experimental_GIc_error": 7.2,
+        "error_unit": "percent",
+        "damage_field": "damage_FE.vtk",
+        "cohesive_zone_length": 3.5,
+        "CZ_length_unit": "mm"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "element_type": "SC8R",
+        "mesh_size": 0.25,
+        "mesh_size_unit": "mm",
+        "refined_zone": "ahead_of_crack_tip_5mm",
+        "refined_element_size": 0.05,
+        "refined_size_unit": "mm",
+        "cohesive_elements": "COH3D8",
+        "cohesive_thickness": 0,
+        "cohesive_law": "bilinear_traction_separation",
+        "damage_initiation": "Quads_criterion",
+        "damage_evolution": "BK_criterion",
+        "B_K_parameter_eta": 1.45,
+        "stabilization": "viscous_regularization_0.001",
+        "step_type": "static_riks",
+        "nlgeom": true,
+        "max_increment": 5000,
+        "convergence_tolerance": 1e-8
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE DCB delamination prediction and R-curve for laminate design and certification testing validation",
+        "data_transferred": [
+          "initiation_GIc",
+          "propagation_GIc",
+          "R_curve",
+          "max_load",
+          "FE_vs_experimental_GIc_error"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.compscitech.2015.09.025",
+    "authors": "Harvey CM, Wang S, Watson A",
+    "year": 2015,
+    "journal": "Composites Science and Technology"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Interface fracture energy Gc (DFT)",
+        "value": 3.2,
+        "unit": "J/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "MD fracture energy Gc",
+        "value": 3.5,
+        "unit": "J/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "Crack deflection angle (PF)",
+        "value": 15,
+        "unit": "deg",
+        "tolerance": 15
+      },
+      {
+        "name": "DCB initiation GIc (FE)",
+        "value": 0.26,
+        "unit": "kJ/m^2",
+        "tolerance": 10
+      },
+      {
+        "name": "DCB propagation GIc (FE)",
+        "value": 0.52,
+        "unit": "kJ/m^2",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

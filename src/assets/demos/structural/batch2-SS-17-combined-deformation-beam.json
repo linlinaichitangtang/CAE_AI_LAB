@@ -1,0 +1,94 @@
+{
+  "id": "SS-17",
+  "name": "组合变形梁分析",
+  "nameEn": "Combined Bending and Torsion Beam Analysis",
+  "description": "圆形截面轴同时承受横向弯曲和扭转载荷的组合变形分析。轴长L=1m，半径R=0.025m，钢材。横向力F=2000N产生弯矩M=FL/4=500N·m（简支梁跨中），扭矩T=300N·m。弯曲应力σ_bend=Mc/I，扭转剪应力τ=Tr/J，von Mises等效应力σ_eq=√(σ²+3τ²)。该算例演示第四强度理论在弯扭组合变形中的应用。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": [
+    "弯扭组合",
+    "von Mises",
+    "第四强度理论",
+    "组合变形"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 1.0,
+    "radius": 0.025,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "45 Steel",
+    "elastic_modulus": 206000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 355000000.0,
+    "thermal_expansion": 1.17e-05,
+    "thermal_conductivity": 48.0,
+    "specific_heat": 480.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 2000.0,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.00049,
+    "max_stress": 110400000.0,
+    "formula": "σ_bend=Mc/I=500×0.025/(π×0.025⁴/4)=81.5MPa, τ=Tr/J=300×0.025/(π×0.025⁴/2)=24.5MPa, σ_eq=√(81.5²+3×24.5²)=92.5MPa",
+    "reference": "Gere & Timoshenko, Mechanics of Materials, Ch. 10"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大弯曲应力",
+        "value": 81500000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "最大扭转剪应力",
+        "value": 24500000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "von Mises等效应力",
+        "value": 92500000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "跨中挠度",
+        "value": 0.00049,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "单位长度扭转角",
+        "value": 0.0597,
+        "unit": "rad/m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

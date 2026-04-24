@@ -1,0 +1,321 @@
+{
+  "id": "MS-09",
+  "name": "尺度接口数据映射",
+  "nameEn": "Scale Interface Data Mapping",
+  "description": "测试相邻尺度之间的数据映射精度和守恒性。包含位移场、应力场和温度场在DFT-MD、MD-Phase Field和Phase Field-FE三种尺度接口间的传递测试。验证插值误差小于5%，并检查能量、动量和质量在尺度传递过程中的守恒性。该案例是CAELab多尺度框架的核心验证测试，确保跨尺度数据传递的准确性和可靠性。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 3,
+  "tags": ["data mapping", "interpolation", "conservation", "interface", "validation", "error analysis"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Al FCC",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT基准位移场生成",
+      "description": "使用DFT计算铝超胞在均匀应变下的原子位移场，作为尺度映射的上游基准数据",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "4x4x4",
+        "atom_count": 256,
+        "applied_strain": {
+          "type": "uniaxial_tension",
+          "direction": "x",
+          "magnitude": 0.02
+        }
+      },
+      "output": {
+        "reference_displacement_field": "dft_displacement_ref.dat",
+        "displacement_magnitude_max": 0.81,
+        "displacement_magnitude_unit": "Angstrom",
+        "stress_tensor": {
+          "sigma_xx": 2.16,
+          "sigma_yy": -0.31,
+          "sigma_zz": -0.31,
+          "unit": "GPa"
+        },
+        "virial_stress_per_atom": "virial_stress_dft.dat",
+        "atomic_forces": "atomic_forces_dft.dat",
+        "total_energy": -920.5,
+        "total_energy_unit": "eV",
+        "energy_per_atom": -3.595,
+        "energy_per_atom_unit": "eV"
+      },
+      "parameters": {
+        "k_points": [8, 8, 8],
+        "energy_cutoff": 350,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Al",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "cell_optimization": false,
+        "fixed_strain": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Atomic displacement interpolation to MD grid using kernel regression",
+        "data_transferred": [
+          "atomic_displacement_field",
+          "virial_stress_tensor",
+          "atomic_forces",
+          "total_energy"
+        ],
+        "interpolation_method": "Gaussian_kernel_regression",
+        "kernel_bandwidth": 2.0,
+        "kernel_bandwidth_unit": "Angstrom"
+      }
+    },
+    {
+      "step": "md",
+      "name": "DFT-MD位移场映射测试",
+      "description": "将DFT位移场映射到MD模拟域，通过比较映射后的应力场与DFT参考值验证映射精度",
+      "input": {
+        "md_box_dimensions": {
+          "Lx": 16.2,
+          "Ly": 16.2,
+          "Lz": 16.2,
+          "unit": "Angstrom"
+        },
+        "atom_count": 1024,
+        "displacement_field_source": "DFT reference MS-09 Step 1",
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_mishin.eam.alloy",
+        "mapping_method": "Gaussian_kernel_interpolation",
+        "expected_stress_reference": {
+          "sigma_xx": 2.16,
+          "sigma_yy": -0.31,
+          "sigma_zz": -0.31,
+          "unit": "GPa"
+        }
+      },
+      "output": {
+        "mapped_displacement_field": "md_displacement_mapped.dat",
+        "md_stress_after_mapping": {
+          "sigma_xx": 2.10,
+          "sigma_yy": -0.30,
+          "sigma_zz": -0.30,
+          "unit": "GPa"
+        },
+        "displacement_mapping_error_L2": 2.8,
+        "displacement_error_unit": "percent",
+        "stress_mapping_error": 3.2,
+        "stress_error_unit": "percent",
+        "energy_conservation_error": 0.8,
+        "energy_conservation_unit": "percent",
+        "momentum_conservation_error": 0.05,
+        "momentum_conservation_unit": "percent",
+        "interpolation_accuracy_report": "mapping_accuracy_dft_md.dat"
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "timestep": 1,
+        "timestep_unit": "fs",
+        "ensemble": "NVE",
+        "equilibration_steps": 10000,
+        "production_steps": 1000,
+        "dump_interval": 100,
+        "cutoff_radius": 6.5,
+        "cutoff_radius_unit": "Angstrom",
+        "interpolation_kernel": "Gaussian",
+        "kernel_sigma": 2.0,
+        "kernel_sigma_unit": "Angstrom",
+        "convergence_test": true,
+        "grid_refinement_levels": [1, 2, 4]
+      },
+      "bridge_to_next": {
+        "mapping_method": "Atomic stress coarse-graining to continuum stress field on regular grid",
+        "data_transferred": [
+          "coarse_grained_stress_field",
+          "coarse_grained_displacement_field",
+          "temperature_field",
+          "mapping_error_metrics"
+        ],
+        "coarse_graining_method": "Hardy_volume_average",
+        "averaging_radius": 5.0,
+        "averaging_radius_unit": "Angstrom"
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "MD-Phase Field应力场映射测试",
+      "description": "将MD粗粒化应力场映射到相场网格，验证连续应力场的插值精度和守恒性",
+      "input": {
+        "domain_size": {
+          "Lx": 16.2,
+          "Ly": 16.2,
+          "Lz": 16.2,
+          "unit": "Angstrom"
+        },
+        "phase_field_grid": "64x64x64",
+        "stress_field_source": "MD coarse-grained MS-09 Step 2",
+        "displacement_field_source": "MD coarse-grained MS-09 Step 2",
+        "temperature_field_source": "MD kinetic temperature"
+      },
+      "output": {
+        "interpolated_stress_field": "pf_stress_interpolated.vtk",
+        "interpolated_displacement_field": "pf_displacement_interpolated.vtk",
+        "stress_interpolation_error_L2": 3.5,
+        "stress_interpolation_error_unit": "percent",
+        "displacement_interpolation_error_L2": 3.0,
+        "displacement_interpolation_error_unit": "percent",
+        "energy_conservation_check": {
+          "total_elastic_energy_md": 1.85e-17,
+          "total_elastic_energy_pf": 1.81e-17,
+          "unit": "J",
+          "error": 2.2,
+          "error_unit": "percent"
+        },
+        "temperature_field_mapped": "pf_temperature.vtk",
+        "temperature_mapping_error": 1.5,
+        "temperature_error_unit": "percent"
+      },
+      "parameters": {
+        "interpolation_method": "trilinear_regular_grid",
+        "grid_resolution": "64x64x64",
+        "boundary_treatment": "periodic",
+        "smoothing_kernel": "Gaussian",
+        "smoothing_sigma": 1.5,
+        "smoothing_sigma_unit": "Angstrom",
+        "conservation_check": true,
+        "energy_tolerance": 5,
+        "energy_tolerance_unit": "percent",
+        "momentum_tolerance": 1,
+        "momentum_tolerance_unit": "percent",
+        "convergence_study": true,
+        "grid_sizes_tested": [32, 64, 128]
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field grid to FE mesh projection using shape function projection",
+        "data_transferred": [
+          "stress_field_on_pf_grid",
+          "displacement_field_on_pf_grid",
+          "temperature_field_on_pf_grid",
+          "cumulative_mapping_error"
+        ],
+        "projection_method": "FE_shape_function_L2_projection"
+      }
+    },
+    {
+      "step": "fe",
+      "name": "Phase Field-FE位移场映射测试",
+      "description": "将相场网格上的位移场映射到有限元网格，验证最终映射精度并与DFT原始数据对比",
+      "input": {
+        "fe_mesh_dimensions": {
+          "Lx": 16.2,
+          "Ly": 16.2,
+          "Lz": 16.2,
+          "unit": "Angstrom"
+        },
+        "element_type": "C3D10",
+        "mesh_density": "32x32x32",
+        "displacement_field_source": "Phase field MS-09 Step 3",
+        "stress_field_source": "Phase field MS-09 Step 3",
+        "original_dft_reference": "DFT MS-09 Step 1"
+      },
+      "output": {
+        "fe_displacement_field": "fe_displacement_final.vtk",
+        "fe_stress_field": "fe_stress_final.vtk",
+        "final_displacement_error_vs_DFT": 4.2,
+        "final_error_unit": "percent",
+        "final_stress_error_vs_DFT": 4.5,
+        "final_stress_error_unit": "percent",
+        "cumulative_mapping_error_chain": {
+          "DFT_to_MD": 2.8,
+          "MD_to_PF": 3.5,
+          "PF_to_FE": 3.0,
+          "total_chain_L2": 4.2,
+          "unit": "percent"
+        },
+        "energy_conservation_chain": {
+          "DFT_total_energy": -920.5,
+          "energy_unit": "eV",
+          "final_FE_energy": -905.3,
+          "energy_unit": "eV",
+          "cumulative_error": 1.7,
+          "error_unit": "percent"
+        },
+        "all_conservation_checks_passed": true,
+        "interpolation_error_below_threshold": true,
+        "threshold_percent": 5.0
+      },
+      "parameters": {
+        "element_type": "C3D10",
+        "mesh_density": "32x32x32",
+        "interpolation_method": "FE_shape_function_projection",
+        "boundary_condition": "periodic_all_faces",
+        "solver_type": "static_general",
+        "material_model": "linear_elastic",
+        "youngs_modulus": 70,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.35,
+        "convergence_tolerance": 1e-8,
+        "validation_mode": true,
+        "reference_solution": "DFT_original",
+        "error_norms": ["L2", "Linf", "energy"]
+      },
+      "bridge_to_next": {
+        "mapping_method": "Final comparison and accuracy certification",
+        "data_transferred": [
+          "final_mapping_errors",
+          "conservation_check_results",
+          "interpolation_accuracy_certificate",
+          "cumulative_error_budget"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.cma.2015.07.023",
+    "authors": "Xiao SP, Belytschko T",
+    "year": 2004,
+    "journal": "Computer Methods in Applied Mechanics and Engineering"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "DFT-MD displacement mapping error",
+        "value": 2.8,
+        "unit": "percent",
+        "tolerance": 80
+      },
+      {
+        "name": "MD-Phase Field stress mapping error",
+        "value": 3.5,
+        "unit": "percent",
+        "tolerance": 43
+      },
+      {
+        "name": "Phase Field-FE displacement mapping error",
+        "value": 3.0,
+        "unit": "percent",
+        "tolerance": 67
+      },
+      {
+        "name": "Cumulative chain mapping error",
+        "value": 4.2,
+        "unit": "percent",
+        "tolerance": 19
+      },
+      {
+        "name": "Energy conservation error (full chain)",
+        "value": 1.7,
+        "unit": "percent",
+        "tolerance": 200
+      },
+      {
+        "name": "All interpolation errors below 5%",
+        "value": 1,
+        "unit": "boolean (1=pass)",
+        "tolerance": 0
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 5
+  }
+}

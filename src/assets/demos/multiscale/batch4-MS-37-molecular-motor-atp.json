@@ -1,0 +1,377 @@
+{
+  "id": "MS-37",
+  "name": "分子马达ATP合酶",
+  "nameEn": "Molecular Motor ATP Synthase Multiscale Simulation",
+  "description": "ATP合酶(F1F0-ATPase)分子马达从量子化学水解能到细胞能量转导的全链条多尺度模拟。首先通过DFT计算ATP水解反应的自由能变化(ΔG≈-50kJ/mol)和过渡态结构，确定分子马达的能量输入；MD模拟F1-ATPase的120°步进旋转机制，包括β亚基构象变化和扭矩传递；介观连续体模型将分子马达的旋转动力学转化为连续体力矩-角速度关系；FE模型模拟细胞尺度下ATP合酶群体在线粒体内膜的能量转导效率。该案例展示了生物分子马达跨尺度模拟的前沿方法。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["ATP synthase", "molecular motor", "F1-ATPase", "ATP hydrolysis", "rotary mechanism", "120 degree stepping", "mitochondria", "energy transduction"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "F1F0-ATPase Molecular Motor (Bovine Mitochondrial)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "ATP水解自由能计算",
+      "description": "DFT计算ATP水解反应(ATP+H2O→ADP+Pi)的自由能变化和过渡态结构",
+      "input": {
+        "reaction": "ATP + H2O -> ADP + Pi",
+        "reactant_cluster": "ATP_Mg2+_6H2O",
+        "product_cluster": "ADP_Mg2+_Pi_6H2O",
+        "solvation": "implicit_COSMO_water",
+        "dielectric_constant": 78.4,
+        "DFT_functional": "B3LYP",
+        "basis_set": "def2-TZVP",
+        "transition_state_search": "QST2",
+        "vibrational_analysis": true,
+        "temperature": 310,
+        "temperature_unit": "K",
+        "pH": 7.4,
+        "Mg2+_concentration": 1.0,
+        "concentration_unit": "mM"
+      },
+      "output": {
+        "reaction_free_energy_dG": -48.5,
+        "dG_unit": "kJ/mol",
+        "reaction_enthalpy_dH": -30.2,
+        "dH_unit": "kJ/mol",
+        "activation_energy_Ea": 72.5,
+        "Ea_unit": "kJ/mol",
+        "transition_state_structure": "TS_opt.xyz",
+        "imaginary_frequency": -1345,
+        "imaginary_frequency_unit": "cm^-1",
+        "P_O_bond_length_TS": 2.15,
+        "bond_length_unit": "Angstrom",
+        "charge_distribution_reactant": "rho_ATP.cube",
+        "charge_distribution_product": "rho_ADP.cube",
+        "thermodynamic_correction": 5.2,
+        "correction_unit": "kJ/mol"
+      },
+      "parameters": {
+        "code": "ORCA",
+        "DFT_functional": "B3LYP-D3BJ",
+        "basis_set": "def2-TZVP",
+        "auxiliary_basis": "def2/J",
+        "solvation_model": "COSMO",
+        "solvent": "water",
+        "dielectric": 78.4,
+        "SCF_convergence": "Tight",
+        "integration_grid": "DefGrid3",
+        "RI_approximation": "RIJCOSX",
+        "frequency_analysis": true,
+        "temperature": 310,
+        "temperature_unit": "K",
+        "pressure": 1,
+        "pressure_unit": "atm",
+        "TS_search_method": "QST2",
+        "IRC_calculation": true,
+        "IRC_steps": 50,
+        "dispersion": "D3BJ"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT reaction free energy and transition state barrier to MD force field (CHARMM36) and ATP hydrolysis rate constant via Eyring equation",
+        "data_transferred": [
+          "reaction_free_energy_dG",
+          "activation_energy_Ea",
+          "P_O_bond_length_TS",
+          "transition_state_structure",
+          "thermodynamic_correction"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "F1-ATPase旋转机制模拟",
+      "description": "全原子MD模拟F1-ATPase的120°步进旋转机制，包括β亚基构象变化和扭矩传递",
+      "input": {
+        "system": "bovine_mitochondrial_F1_ATPase",
+        "subunits": "alpha3_beta3_gamma_delta_epsilon",
+        "total_atoms": 320000,
+        "including_water_ions": true,
+        "water_ions": "TIP3P_150mM_KCl",
+        "box_size": {"Lx": 22, "Ly": 22, "Lz": 18, "unit": "nm"},
+        "force_field": "CHARMM36m",
+        "gamma_shaft": "central_rotor",
+        "stator": "alpha3_beta3_hexamer",
+        "ATP_bound_sites": ["beta_TP", "beta_DP"],
+        "ADP_bound_sites": ["beta_E"],
+        "dG_hydrolysis": -48.5,
+        "dG_unit": "kJ/mol",
+        "Ea_hydrolysis": 72.5,
+        "Ea_unit": "kJ/mol",
+        "temperature": 310,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "rotation_step_angle": 120,
+        "rotation_angle_unit": "deg",
+        "torque_per_step": 42,
+        "torque_unit": "pN·nm",
+        "angular_velocity": 380,
+        "angular_velocity_unit": "rad/s",
+        "step_duration": 1.65,
+        "step_duration_unit": "ms",
+        "beta_subunit_conformational_change": "open_to_closed_8_Angstrom",
+        "gamma_shaft_twist": 32,
+        "twist_unit": "deg",
+        "ATP_hydrolysis_rate": 180,
+        "rate_unit": "s^-1",
+        "power_output": 16,
+        "power_unit": "pN·nm·rad/s",
+        "efficiency": 0.93,
+        "efficiency_unit": "dimensionless",
+        "rotation_trajectory": "rotation.dat",
+        "torque_time_series": "torque.dat"
+      },
+      "parameters": {
+        "code": "NAMD",
+        "force_field": "CHARMM36m",
+        "water_model": "TIP3P",
+        "timestep": 2.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Langevin",
+        "damping_coefficient": 1.0,
+        "damping_coefficient_unit": "ps^-1",
+        "barostat": "Nosé-Hoover_Langevin",
+        "temperature": 310,
+        "temperature_unit": "K",
+        "pressure": 1,
+        "pressure_unit": "atm",
+        "PME_tolerance": 1e-6,
+        "cutoff": 12,
+        "cutoff_unit": "Angstrom",
+        "switching_distance": 10,
+        "switching_distance_unit": "Angstrom",
+        "constraints": "SETTLE_for_water",
+        "rigid_bonds": "hydrogen",
+        "total_simulation_time": 5,
+        "total_time_unit": "us",
+        "steered_MD": "targeted_rotation_120deg",
+        "SMD_velocity": 0.01,
+        "SMD_velocity_unit": "deg/ns"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD torque, angular velocity and power output to mesoscale continuum motor model parameters",
+        "data_transferred": [
+          "rotation_step_angle",
+          "torque_per_step",
+          "angular_velocity",
+          "ATP_hydrolysis_rate",
+          "efficiency"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "介观连续体马达模型",
+      "description": "建立分子马达的介观连续体旋转动力学模型，将分子尺度参数转化为连续体力矩-角速度关系",
+      "input": {
+        "model": "continuum_rotary_motor",
+        "motor_geometry": {
+          "rotor_radius": 2.5,
+          "rotor_radius_unit": "nm",
+          "stator_radius": 5.0,
+          "stator_radius_unit": "nm",
+          "rotor_length": 8.0,
+          "rotor_length_unit": "nm"
+        },
+        "torque_per_step": 42,
+        "torque_unit": "pN·nm",
+        "angular_velocity": 380,
+        "angular_velocity_unit": "rad/s",
+        "step_angle": 120,
+        "step_angle_unit": "deg",
+        "ATP_concentration": 5,
+        "ATP_concentration_unit": "mM",
+        "viscosity_medium": 1e-3,
+        "viscosity_unit": "Pa·s",
+        "temperature": 310,
+        "temperature_unit": "K",
+        "load_torque_range": [0, 80],
+        "load_torque_unit": "pN·nm",
+        "Michaelis_Menten_parameters": {
+          "Km_ATP": 0.15,
+          "Km_unit": "mM",
+          "kcat": 180,
+          "kcat_unit": "s^-1"
+        }
+      },
+      "output": {
+        "torque_angular_velocity_curve": "torque_omega.dat",
+        "stall_torque": 65,
+        "stall_torque_unit": "pN·nm",
+        "no_load_angular_velocity": 420,
+        "no_load_omega_unit": "rad/s",
+        "max_power_output": 18.5,
+        "max_power_unit": "pN·nm·rad/s",
+        "max_efficiency": 0.95,
+        "efficiency_unit": "dimensionless",
+        "ATP_per_revolution": 3.0,
+        "ATP_per_rev_unit": "molecules",
+        "energy_per_ATP": 48.5,
+        "energy_unit": "kJ/mol",
+        "mechanical_work_per_revolution": 145,
+        "work_unit": "pN·nm",
+        "motor_response_time": 2.8,
+        "response_time_unit": "ms"
+      },
+      "parameters": {
+        "code": "custom_continuum_motor_solver",
+        "model": "Langevin_rotary_dynamics",
+        "equation": "I*d(omega)/dt = tau_motor - tau_load - zeta*omega + sqrt(2*zeta*kBT)*noise",
+        "moment_of_inertia_I": 8e-35,
+        "I_unit": "kg·m^2",
+        "friction_coefficient_zeta": 1.1e-23,
+        "zeta_unit": "N·m·s",
+        "thermal_energy_kBT": 4.28e-21,
+        "kBT_unit": "J",
+        "time_integration": "Euler-Maruyama",
+        "time_step": 1e-9,
+        "time_step_unit": "s",
+        "total_time": 0.1,
+        "total_time_unit": "s",
+        "ensemble_averaging": 10000,
+        "random_seed": 42
+      },
+      "bridge_to_next": {
+        "mapping_method": "Continuum motor model torque-velocity characteristics to FE cellular energy transduction model",
+        "data_transferred": [
+          "stall_torque",
+          "no_load_angular_velocity",
+          "max_power_output",
+          "max_efficiency",
+          "ATP_per_revolution"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "细胞能量转导FE模拟",
+      "description": "FE模型模拟细胞尺度下ATP合酶群体在线粒体内膜的能量转导效率",
+      "input": {
+        "domain": "mitochondrial_inner_membrane_cristae",
+        "membrane_geometry": "lamellar_cristae",
+        "cristae_dimensions": {
+          "length": 800,
+          "width": 200,
+          "thickness": 10,
+          "unit": "nm"
+        },
+        "ATP_synthase_density": 1200,
+        "density_unit": "motors/um^2",
+        "total_motors": 192000,
+        "motor_properties": {
+          "stall_torque": 65,
+          "no_load_omega": 420,
+          "max_power": 18.5,
+          "torque_unit": "pN·nm",
+          "omega_unit": "rad/s",
+          "power_unit": "pN·nm·rad/s"
+        },
+        "proton_motive_force": 180,
+        "PMF_unit": "mV",
+        "membrane_potential": 150,
+        "membrane_potential_unit": "mV",
+        "pH_gradient": 0.5,
+        "pH_gradient_unit": "dimensionless",
+        "ATP_demand": "cellular_basal_metabolism"
+      },
+      "output": {
+        "total_ATP_production_rate": 3.5e4,
+        "production_rate_unit": "ATP/s",
+        "total_power_output": 3.55,
+        "power_unit": "pW",
+        "membrane_energy_conversion_efficiency": 0.88,
+        "efficiency_unit": "dimensionless",
+        "proton_flux": 1.05e5,
+        "proton_flux_unit": "H+/s",
+        "H_plus_per_ATP": 3.0,
+        "H_plus_per_ATP_unit": "dimensionless",
+        "ATP_concentration_profile": "ATP_profile.vtk",
+        "membrane_stress": 0.5,
+        "membrane_stress_unit": "MPa",
+        "cristae_deformation": 2.5,
+        "deformation_unit": "nm",
+        "energy_balance": "energy_balance.dat"
+      },
+      "parameters": {
+        "code": "COMSOL_Multiphysics",
+        "physics": "coupled_electrochemical_mechanical",
+        "electrochemical_module": "Nernst-Planck_with_Butler-Volmer",
+        "structural_module": "thin_shell",
+        "membrane_element": "S3R",
+        "mesh_size": 5,
+        "mesh_size_unit": "nm",
+        "motor_distribution": "uniform_on_cristae_surface",
+        "boundary_conditions": {
+          "matrix_pH": 7.8,
+          "intermembrane_pH": 7.0,
+          "membrane_potential": 150,
+          "potential_unit": "mV"
+        },
+        "time_dependent": true,
+        "time_step": 0.001,
+        "time_step_unit": "s",
+        "total_time": 1,
+        "total_time_unit": "s",
+        "convergence_tolerance": 1e-6,
+        "max_iterations": 200,
+        "coupling": "fully_coupled_electrochemical_mechanical"
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE cellular energy transduction results for mitochondrial function modeling and bioenergetics analysis",
+        "data_transferred": [
+          "total_ATP_production_rate",
+          "total_power_output",
+          "membrane_energy_conversion_efficiency",
+          "proton_flux",
+          "energy_balance"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1038/s41586-020-2725-y",
+    "authors": "Guo H, Suzuki H, Tiefenbach J, Saito K, Kato-Yamada Y, Hayashi K",
+    "year": 2020,
+    "journal": "Nature"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "ATP hydrolysis free energy",
+        "value": -48.5,
+        "unit": "kJ/mol",
+        "tolerance": 5
+      },
+      {
+        "name": "Torque per 120 degree step",
+        "value": 42,
+        "unit": "pN·nm",
+        "tolerance": 15
+      },
+      {
+        "name": "Stall torque (continuum model)",
+        "value": 65,
+        "unit": "pN·nm",
+        "tolerance": 10
+      },
+      {
+        "name": "Energy conversion efficiency",
+        "value": 0.88,
+        "unit": "dimensionless",
+        "tolerance": 8
+      },
+      {
+        "name": "ATP production rate (FE)",
+        "value": 35000,
+        "unit": "ATP/s",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

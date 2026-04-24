@@ -1,0 +1,52 @@
+{
+  "id": "PP-14",
+  "name": "应变能密度云图",
+  "nameEn": "Strain Energy Density Contour - Cantilever Beam",
+  "description": "展示悬臂梁在端部集中力作用下的应变能密度分布。梁长L=1m，矩形截面0.05m x 0.1m，材料为钢(E=200GPa, v=0.3)，自由端施加F=10kN集中力。应变能密度U=σ²/(2E)，在固定端根部达到最大值，沿梁长度方向逐渐衰减。总应变能U_total=FLδ/2，其中δ为端部位移。通过此案例学习应变能密度的物理含义及其在结构强度评估中的应用，理解能量集中区域与应力集中区域的对应关系，掌握基于能量的结构优化方法。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["应变能密度", "能量法", "悬臂梁", "能量集中", "结构优化"],
+  "visualization": {
+    "type": "contour",
+    "field": "energy_density",
+    "color_map": "hot",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 2480,
+    "elements": 1920,
+    "results_file": "results/postprocess/cantilever_strain_energy.dat"
+  },
+  "display_settings": {
+    "title": "悬臂梁应变能密度云图 - U=σ²/(2E)",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 56000,
+      "label": "应变能密度 (J/m³)",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 1.2, "y": 0.8, "z": 0.6 },
+      "target": { "x": 0.5, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": -30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大应变能密度", "value": 56250, "unit": "J/m³", "tolerance": 5 },
+      { "name": "总应变能U_total", "value": 10.0, "unit": "J", "tolerance": 5 },
+      { "name": "端部位移δ", "value": 2.0, "unit": "mm", "tolerance": 5 },
+      { "name": "施加力F", "value": 10000, "unit": "N", "tolerance": 0 },
+      { "name": "能量集中位置", "value": 0.0, "unit": "m (距固定端)", "tolerance": 5 }
+    ]
+  }
+}

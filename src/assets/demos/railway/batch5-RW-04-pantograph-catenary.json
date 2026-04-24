@@ -1,0 +1,62 @@
+{
+  "id": "RW-04",
+  "name": "弓网系统",
+  "nameEn": "Pantograph-Catenary Interaction",
+  "description": "模拟受电弓与接触网系统的动态耦合分析。受电弓滑板与接触线之间的接触力目标值F_c=100±20N。接触网采用简单链形悬挂，接触线张力15kN，承力索张力15kN。分析接触力波动、接触线抬升量以及弓网系统的波传播特性。接触线波动传播速度c=√(T/ρ)≈530km/h。验证在不同运行速度下的弓网接触质量，确保接触力标准差满足EN 50317要求。",
+  "category": "railway",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["pantograph", "catenary", "contact-force", "wave-propagation", "EN-50317"],
+  "geometry": {
+    "type": "pantograph_catenary",
+    "span_length": 50.0,
+    "number_of_spans": 10,
+    "contact_wire_height": 5.3,
+    "stagger": 0.3,
+    "dropper_spacing": 10.0,
+    "messenger_wire_height": 6.5
+  },
+  "material": {
+    "name": "Contact Wire CuAg",
+    "contact_wire_density": 1.07,
+    "contact_wire_tension": 15000.0,
+    "messenger_wire_density": 0.6,
+    "messenger_wire_tension": 15000.0
+  },
+  "loading": {
+    "pantograph_upward_force": 100.0,
+    "train_speed": 300.0,
+    "contact_force_mean": 100.0,
+    "contact_force_std_target": 20.0,
+    "pantograph_mass": 7.5,
+    "pan_head_mass": 3.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "接触力均值",
+        "value": 100.0,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "接触力标准差",
+        "value": 20.0,
+        "unit": "N",
+        "tolerance": 15
+      },
+      {
+        "name": "接触线最大抬升",
+        "value": 0.1,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "波动传播速度",
+        "value": 530.0,
+        "unit": "km/h",
+        "tolerance": 5
+      }
+    ]
+  }
+}

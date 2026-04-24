@@ -1,0 +1,198 @@
+{
+  "id": "MS-12",
+  "name": "Fe晶格常数与体模量",
+  "nameEn": "Fe Lattice Constant and Bulk Modulus",
+  "description": "通过DFT计算BCC铁的基态晶格常数和能量-体积曲线，利用三阶Birch-Murnaghan状态方程拟合获得体模量B0=170GPa。随后将DFT结果用于校准EAM势函数参数，使MD模拟的静水压缩响应与DFT一致。该案例展示从第一性原理到经验势函数的参数传递方法，是跨尺度模拟中势函数开发的核心教学案例。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["iron", "BCC", "lattice constant", "bulk modulus", "Birch-Murnaghan EOS", "EAM potential", "hydrostatic compression"],
+  "scales": ["dft", "md"],
+  "material_system": "BCC Fe",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT能量-体积曲线计算",
+      "description": "对BCC Fe进行一系列不同体积的结构优化，计算能量-体积关系，拟合Birch-Murnaghan状态方程获得平衡晶格常数和体模量",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant_initial": 2.87,
+        "lattice_constant_unit": "Angstrom",
+        "atomic_number": 26,
+        "space_group": "Im-3m",
+        "volume_range": {
+          "V_V0_min": 0.90,
+          "V_V0_max": 1.10,
+          "number_of_points": 11
+        }
+      },
+      "output": {
+        "energy_volume_data": "EV_curve.dat",
+        "equilibrium_lattice_constant": 2.834,
+        "lattice_constant_unit": "Angstrom",
+        "equilibrium_volume_per_atom": 11.38,
+        "volume_unit": "Angstrom^3",
+        "cohesive_energy": -8.29,
+        "cohesive_energy_unit": "eV/atom",
+        "bulk_modulus_B0": 173.2,
+        "bulk_modulus_unit": "GPa",
+        "bulk_modulus_pressure_derivative": 5.18,
+        "magnetic_moment": 2.22,
+        "magnetic_moment_unit": "mu_B",
+        "bm_eos_fit": {
+          "method": "Birch-Murnaghan_3rd_order",
+          "R_squared": 0.9999
+        }
+      },
+      "parameters": {
+        "k_points": [16, 16, 16],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Fe_pv",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "spin_polarization": true,
+        "initial_magnetic_moment": 2.2,
+        "magnetic_moment_unit": "mu_B",
+        "ibrion": 2,
+        "isif": 4,
+        "nsw": 100,
+        "ediffg": -0.001,
+        "ediffg_unit": "eV/Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT EV curve to EAM potential parameter fitting via force-matching",
+        "data_transferred": [
+          "equilibrium_lattice_constant",
+          "cohesive_energy",
+          "bulk_modulus_B0",
+          "pressure_derivative_B0_prime",
+          "magnetic_moment",
+          "energy_volume_curve"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "EAM势函数校准与静水压缩验证",
+      "description": "基于DFT能量-体积曲线校准EAM势函数参数，使用MD模拟静水压缩过程，验证体模量与DFT结果的一致性",
+      "input": {
+        "crystal_structure": "BCC",
+        "lattice_constant": 2.834,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "10x10x10",
+        "atom_count": 2000,
+        "potential_type": "EAM",
+        "potential_candidate": "Mendelev_EAM_Fe",
+        "calibration_target": {
+          "lattice_constant_DFT": 2.834,
+          "cohesive_energy_DFT": -8.29,
+          "bulk_modulus_DFT": 173.2,
+          "source": "DFT MS-12 Step 1"
+        },
+        "compression_range": {
+          "strain_min": -0.10,
+          "strain_max": 0.0,
+          "steps": 20
+        }
+      },
+      "output": {
+        "eam_potential_file": "Fe_EAM_calibrated.eam.alloy",
+        "fitted_parameters": {
+          "lattice_constant": 2.855,
+          "cohesive_energy": -4.28,
+          "bulk_modulus": 174.0,
+          "unit": "GPa"
+        },
+        "md_compression_PV_data": "MD_PV_curve.dat",
+        "md_bulk_modulus": 170.5,
+        "md_bulk_modulus_unit": "GPa",
+        "error_vs_DFT": {
+          "lattice_constant_error": 0.7,
+          "cohesive_energy_error": 1.2,
+          "bulk_modulus_error": 1.6,
+          "unit": "percent"
+        },
+        "virial_stress_equilibrium": "virial_stress.dat",
+        "pressure_vs_volume": "PV_data.dat"
+      },
+      "parameters": {
+        "potential": "EAM (Mendelev-type, recalibrated)",
+        "potential_file": "Fe_EAM_calibrated.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "barostat": "Parrinello-Rahman",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": 0,
+        "target_temperature_unit": "K",
+        "pressure_coupling": "isotropic",
+        "compression_rate": 0.001,
+        "compression_rate_unit": "strain_per_ps",
+        "equilibration_steps": 50000,
+        "production_steps": 100000,
+        "dump_interval": 1000,
+        "cutoff_radius": 5.5,
+        "cutoff_radius_unit": "Angstrom",
+        "neighbor_skin": 1.0,
+        "neighbor_skin_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD PV curve comparison with DFT Birch-Murnaghan EOS for validation",
+        "data_transferred": [
+          "md_bulk_modulus",
+          "md_lattice_constant",
+          "PV_curve_comparison",
+          "potential_calibration_quality_metrics"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.63.024104",
+    "authors": "Mendelev MI, Han S, Srolovitz DJ, Ackland GJ, Sun DY, Asta M",
+    "year": 2003,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "DFT equilibrium lattice constant",
+        "value": 2.834,
+        "unit": "Angstrom",
+        "tolerance": 2
+      },
+      {
+        "name": "DFT bulk modulus B0",
+        "value": 173.2,
+        "unit": "GPa",
+        "tolerance": 5
+      },
+      {
+        "name": "DFT cohesive energy",
+        "value": -8.29,
+        "unit": "eV/atom",
+        "tolerance": 3
+      },
+      {
+        "name": "MD bulk modulus (EAM)",
+        "value": 170.5,
+        "unit": "GPa",
+        "tolerance": 5
+      },
+      {
+        "name": "Bulk modulus DFT-MD error",
+        "value": 1.6,
+        "unit": "percent",
+        "tolerance": 50
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 5
+  }
+}

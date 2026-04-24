@@ -1,0 +1,80 @@
+{
+  "id": "TO-06",
+  "name": "热传导路径优化",
+  "nameEn": "Thermal Conduction Path Optimization",
+  "description": "热传导路径拓扑优化问题。在给定高导热材料体积分数约束下，通过SIMP方法寻找最优的材料分布，使从中心热源到边缘散热器的热传导效率最大化（即最大化热柔度的倒数/最小化热柔度）。中心热源功率50W，四边为恒温散热边界。采用热-力类比方法，将热传导优化转化为等效的结构柔度优化问题。材料为铜-环氧树脂复合材料体系，高导热相（铜）体积分数限制为30%。优化后应形成从中心向四周辐射的树状热传导网络，有效降低热源温度。",
+  "category": "topology_optimization",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["SIMP", "热传导", "热管理", "散热优化", "热-力类比"],
+  "design_domain": {
+    "type": "plate",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.005,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 100,
+    "y_div": 100,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Copper-Epoxy Composite",
+    "elastic_modulus": 120000000000,
+    "poisson_ratio": 0.34,
+    "density": 5800
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.3,
+    "penalization": 3,
+    "filter_radius": 0.003,
+    "max_iterations": 120,
+    "convergence_tolerance": 0.01
+  },
+  "boundaryConditions": {
+    "fixed_face": "four_edges_ambient_temperature",
+    "load_type": "point",
+    "load_face": "center_heat_source",
+    "load_magnitude": 50,
+    "load_direction": "thermal"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.3,
+      "unit": "ratio"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "max_temperature_reduction",
+        "value": 35,
+        "unit": "percent",
+        "tolerance": 15
+      },
+      {
+        "name": "thermal_compliance",
+        "value": 12.5,
+        "unit": "K·W",
+        "tolerance": 15
+      },
+      {
+        "name": "effective_thermal_conductance",
+        "value": 4.0,
+        "unit": "W/K",
+        "tolerance": 15
+      },
+      {
+        "name": "final_volume_fraction",
+        "value": 0.3,
+        "unit": "ratio",
+        "tolerance": 5
+      }
+    ]
+  }
+}

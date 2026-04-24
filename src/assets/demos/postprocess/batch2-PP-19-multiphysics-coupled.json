@@ -1,0 +1,55 @@
+{
+  "id": "PP-19",
+  "name": "多物理场耦合结果",
+  "nameEn": "Multiphysics Coupled Results - Turbine Blade Thermo-Mechanical Analysis",
+  "description": "展示涡轮叶片在热-力耦合作用下的多物理场后处理结果。叶片材料为镍基高温合金Inconel 718，工作温度范围600-1100°C，离心转速12000rpm，气动压力载荷0.5-2.0MPa。三个同步视口分别显示：(1)温度场分布(热传导+对流换热)；(2)热应力场(Von Mises等效应力，含热应变)；(3)总位移场(热膨胀+机械变形)。采用颜色编码叠加显示，可切换单场/多场视图。通过此案例学习多物理场耦合结果的后处理方法和同步可视化技术，理解热-力耦合效应在高温结构设计中的重要性。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["多物理场", "热力耦合", "涡轮叶片", "同步视口", "温度场", "热应力"],
+  "visualization": {
+    "type": "multiphysics",
+    "field": "temperature",
+    "color_map": "hot",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": true,
+      "frames": 90,
+      "fps": 24,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "coupled",
+    "nodes": 156000,
+    "elements": 128000,
+    "results_file": "results/postprocess/turbine_blade_multiphysics.dat"
+  },
+  "display_settings": {
+    "title": "涡轮叶片多物理场耦合 - 温度场/热应力/总位移",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 600,
+      "max": 1100,
+      "label": "温度 (°C)",
+      "n_levels": 25
+    },
+    "camera": {
+      "position": { "x": 0.08, "y": 0.06, "z": 0.1 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -35, "yaw": 60 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最高温度", "value": 1100, "unit": "°C", "tolerance": 3 },
+      { "name": "最低温度", "value": 600, "unit": "°C", "tolerance": 3 },
+      { "name": "最大热应力", "value": 850, "unit": "MPa", "tolerance": 10 },
+      { "name": "最大总位移", "value": 1.2, "unit": "mm", "tolerance": 10 },
+      { "name": "热膨胀贡献占比", "value": 65, "unit": "%", "tolerance": 10 },
+      { "name": "机械变形贡献占比", "value": 35, "unit": "%", "tolerance": 10 },
+      { "name": "同步视口数量", "value": 3, "unit": "个", "tolerance": 0 },
+      { "name": "转速", "value": 12000, "unit": "rpm", "tolerance": 0 }
+    ]
+  }
+}

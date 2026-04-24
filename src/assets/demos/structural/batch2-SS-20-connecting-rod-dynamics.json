@@ -1,0 +1,96 @@
+{
+  "id": "SS-20",
+  "name": "汽车连杆动力学分析",
+  "nameEn": "Automotive Connecting Rod Dynamics Analysis",
+  "description": "汽车发动机连杆的动力学强度分析。连杆长度L=0.15m，材质为锻造40Cr钢，曲柄半径r_crank=0.04m，发动机转速ω=300rad/s（约2865rpm）。最大惯性力F_inertia=m·ω²·r_crank，连杆质量m≈0.35kg。连杆承受交变的拉压载荷和弯曲载荷，需进行疲劳评估。基于Goodman图进行疲劳寿命预测，考虑平均应力和应力幅值的影响。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "连杆",
+    "动力学",
+    "疲劳分析",
+    "Goodman图",
+    "惯性力"
+  ],
+  "geometry": {
+    "type": "beam",
+    "length": 0.15,
+    "width": 0.025,
+    "height": 0.012,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 24,
+    "y_div": 6,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "40Cr Forged Steel",
+    "elastic_modulus": 206000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 785000000.0,
+    "thermal_expansion": 1.17e-05,
+    "thermal_conductivity": 44.0,
+    "specific_heat": 470.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 12600.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 2.1e-05,
+    "max_stress": 168000000.0,
+    "formula": "F_inertia=m·ω²·r_crank=0.35×300²×0.04=12600N, σ_max=F/A+M·c/I (杆身截面), Goodman: σ_a/σ_e+σ_m/σ_ut≤1",
+    "reference": "Juvinall & Marshek, Fundamentals of Machine Component Design, Ch. 7"
+  },
+  "acceptance": {
+    "displacement_error_limit": 8.0,
+    "stress_error_limit": 8.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大惯性力",
+        "value": 12600.0,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "杆身最大应力",
+        "value": 168000000.0,
+        "unit": "Pa",
+        "tolerance": 8.0
+      },
+      {
+        "name": "最大变形量",
+        "value": 2.1e-05,
+        "unit": "m",
+        "tolerance": 8.0
+      },
+      {
+        "name": "一阶固有频率",
+        "value": 1850.0,
+        "unit": "Hz",
+        "tolerance": 10.0
+      },
+      {
+        "name": "疲劳安全系数(Goodman)",
+        "value": 2.1,
+        "unit": "",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "BM-07",
+  "name": "Wolff定律骨骼重塑",
+  "nameEn": "Bone Remodeling (Wolff's Law)",
+  "description": "基于Wolff定律的近端股骨自适应骨骼重塑分析。初始骨密度ρ₀=1800kg/m³，参考应力σ_ref=50MPa，重塑指数n=2.0。密度-应力关系：ρ=ρ₀+(σ/σ_ref)^n×Δρ_max，其中Δρ_max=500kg/m³。载荷条件：日常行走载荷F=2500N（3.5倍体重），冲击载荷峰值F=5000N。模拟周期6个月（约1.5×10⁶步）。股骨几何：长度L=0.35m，头直径D_head=0.045m，颈干角130°。皮质骨E随密度变化：E=C×ρ^α，C=2.5GPa/(g/cm³)^2，α=2。验证重塑后密度分布与Ward三角、股骨距等解剖结构的对应关系。",
+  "category": "biomechanics",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["Wolff's law", "bone remodeling", "density distribution", "proximal femur", "adaptive"],
+  "geometry": {
+    "type": "custom",
+    "length": 0.35,
+    "width": 0.06,
+    "height": 0.06,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 24,
+    "z_div": 24,
+    "element_type": "C3D10"
+  },
+  "material": {
+    "name": "Cancellous Bone (Remodeling)",
+    "elastic_modulus": 500000000,
+    "poisson_ratio": 0.3,
+    "density": 1800,
+    "yield_stress": 50000000,
+    "ultimate_stress": 80000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "distal_femur",
+    "load_type": "distributed",
+    "load_face": "femoral_head",
+    "load_magnitude": 2500,
+    "load_direction": "Y"
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_displacement": 2e-4,
+    "max_stress": 50000000,
+    "formula": "ρ_new = ρ_old + k × (σ/σ_ref - 1)^n × dt, E = C × ρ^α",
+    "reference": "Wolff, Das Gesetz der Transformation der Knochen, 1892; Carter & Hayes, J. Bone Joint Surg., 1977"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "重塑后最大密度",
+        "value": 2100,
+        "unit": "kg/m³",
+        "tolerance": 15
+      },
+      {
+        "name": "重塑后最小密度",
+        "value": 600,
+        "unit": "kg/m³",
+        "tolerance": 20
+      },
+      {
+        "name": "Ward三角密度",
+        "value": 800,
+        "unit": "kg/m³",
+        "tolerance": 25
+      },
+      {
+        "name": "股骨距密度",
+        "value": 2000,
+        "unit": "kg/m³",
+        "tolerance": 15
+      }
+    ]
+  }
+}

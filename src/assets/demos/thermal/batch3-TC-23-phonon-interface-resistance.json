@@ -1,0 +1,128 @@
+{
+  "id": "TC-23",
+  "name": "微纳尺度界面热阻(声子散律+Kapitza)",
+  "nameEn": "Phonon Interface Thermal Resistance (Kapitza Resistance) - Si/SiO₂",
+  "description": "微纳尺度Si/SiO₂界面Kapitza热阻分析。硅与二氧化硅界面处由于声子谱失配(acoustic mismatch)和界面缺陷，产生界面热阻R_K≈2×10⁻⁸ K·m²/W。硅中声子平均自由程λ_mfp≈300nm(300K)，热导率k_Si=148W/(m·K)。施加热流密度q=1×10⁸ W/m²时，界面温跃ΔT=q×R_K=1e8×2e-8=2K。采用声子散射模型(DMM)验证界面传热，分析薄膜厚度对等效热导率的影响：当膜厚d<λ_mfp时，k_eff=k_bulk×(d/λ_mfp)/(1+d/λ_mfp)。几何模型为Si/SiO₂双层薄膜，总厚600nm，界面位于中间。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 4,
+  "tags": ["Kapitza_resistance", "phonon_scattering", "acoustic_mismatch", "Si_SiO2", "nanoscale_heat", "DMM_model", "mean_free_path"],
+  "geometry": {
+    "type": "plate",
+    "length": 1e-6,
+    "width": 1e-6,
+    "height": 6e-7,
+    "radius": null,
+    "thickness": 6e-7,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 30,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Silicon (Si) - Single Crystal",
+    "elastic_modulus": 170000000000,
+    "poisson_ratio": 0.28,
+    "density": 2329,
+    "yield_stress": 7000000000,
+    "thermal_expansion": 2.6e-6,
+    "thermal_conductivity": 148,
+    "specific_heat": 700
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "top_surface",
+    "load_magnitude": 1e8,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 1e8,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-8,
+    "time_step": 0,
+    "total_time": 0
+  },
+  "theoretical": {
+    "max_displacement": 1e-10,
+    "max_stress": 50000000,
+    "max_temperature": 302,
+    "formula": "DeltaT_interface = q * R_K; R_K = 2e-8 K*m^2/W; q = 1e8 W/m^2; k_eff = k_bulk * (d/lambda_mfp) / (1 + d/lambda_mfp); lambda_mfp_Si = 300nm at 300K",
+    "reference": "Swartz, Pohl, Thermal Boundary Resistance, Rev. Mod. Phys., 1989; DMM: Stoner, Maris, Phys. Rev. B, 1993"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": 30.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Kapitza_resistance",
+        "value": 2e-8,
+        "unit": "K*m^2/W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "interface_temperature_jump",
+        "value": 2.0,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "heat_flux",
+        "value": 1e8,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "phonon_mean_free_path_Si",
+        "value": 3e-7,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "Si_thermal_conductivity",
+        "value": 148,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "SiO2_thermal_conductivity",
+        "value": 1.4,
+        "unit": "W/(m*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "thermal_boundary_conductance",
+        "value": 5e7,
+        "unit": "W/(m^2*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Si_film_thickness",
+        "value": 3e-7,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "SiO2_film_thickness",
+        "value": 3e-7,
+        "unit": "m",
+        "tolerance": 0.5
+      }
+    ]
+  }
+}

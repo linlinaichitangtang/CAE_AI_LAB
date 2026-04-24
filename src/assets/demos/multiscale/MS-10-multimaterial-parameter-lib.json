@@ -1,0 +1,738 @@
+{
+  "id": "MS-10",
+  "name": "多材料体系参数库",
+  "nameEn": "Multimaterial Parameter Library",
+  "description": "建立涵盖金属(Fe, Al, Cu, Ti)、陶瓷(Al2O3, Si3N4, ZrO2)和高分子(PE, PMMA, Epoxy)三大类10种材料的多尺度参数库。每种材料包含DFT计算参数、MD势函数参数、相场模型参数和FE本构参数的完整参数集。该测试案例验证CAELab多尺度框架对不同材料体系的兼容性，并确保各尺度参数的物理一致性和数值稳定性。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["parameter library", "multimaterial", "metals", "ceramics", "polymers", "validation", "compatibility"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Multimaterial (Fe, Al, Cu, Ti, Al2O3, Si3N4, ZrO2, PE, PMMA, Epoxy)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "多材料DFT参数验证",
+      "description": "验证10种材料的DFT计算参数设置，确保每种材料的晶格常数、弹性常数和基本物性与实验值吻合",
+      "input": {
+        "materials": [
+          {
+            "name": "Fe",
+            "structure": "BCC",
+            "atomic_number": 26,
+            "reference_lattice_constant": 2.87,
+            "reference_lattice_constant_unit": "Angstrom"
+          },
+          {
+            "name": "Al",
+            "structure": "FCC",
+            "atomic_number": 13,
+            "reference_lattice_constant": 4.05,
+            "reference_lattice_constant_unit": "Angstrom"
+          },
+          {
+            "name": "Cu",
+            "structure": "FCC",
+            "atomic_number": 29,
+            "reference_lattice_constant": 3.62,
+            "reference_lattice_constant_unit": "Angstrom"
+          },
+          {
+            "name": "Ti",
+            "structure": "HCP",
+            "atomic_number": 22,
+            "reference_lattice_constants": {"a": 2.95, "c": 4.69},
+            "reference_lattice_constants_unit": "Angstrom"
+          },
+          {
+            "name": "Al2O3",
+            "structure": "corundum_rhombohedral",
+            "formula": "Al2O3",
+            "space_group": "R-3c",
+            "reference_lattice_constants": {"a": 4.76, "c": 12.99},
+            "reference_lattice_constants_unit": "Angstrom"
+          },
+          {
+            "name": "Si3N4",
+            "structure": "beta_hexagonal",
+            "formula": "Si3N4",
+            "space_group": "P63/m",
+            "reference_lattice_constants": {"a": 7.608, "c": 2.911},
+            "reference_lattice_constants_unit": "Angstrom"
+          },
+          {
+            "name": "ZrO2",
+            "structure": "tetragonal",
+            "formula": "ZrO2",
+            "space_group": "P42/nmc",
+            "reference_lattice_constants": {"a": 3.64, "c": 5.27},
+            "reference_lattice_constants_unit": "Angstrom"
+          },
+          {
+            "name": "PE",
+            "structure": "orthorhombic_crystal",
+            "repeat_unit": "C2H4",
+            "reference_lattice_constants": {"a": 7.40, "b": 4.93, "c": 2.53},
+            "reference_lattice_constants_unit": "Angstrom"
+          },
+          {
+            "name": "PMMA",
+            "structure": "atactic_amorphous",
+            "repeat_unit": "C5O2H8",
+            "density": 1190,
+            "density_unit": "kg/m^3"
+          },
+          {
+            "name": "Epoxy",
+            "structure": "crosslinked_amorphous",
+            "base": "DGEBA",
+            "hardener": "DDS",
+            "density": 1200,
+            "density_unit": "kg/m^3"
+          }
+        ]
+      },
+      "output": {
+        "dft_parameters_library": "dft_params_library.json",
+        "validation_results": {
+          "lattice_constant_errors": {
+            "Fe": 1.2,
+            "Al": 0.8,
+            "Cu": 0.5,
+            "Ti": 1.5,
+            "Al2O3": 1.8,
+            "Si3N4": 2.0,
+            "ZrO2": 1.5,
+            "unit": "percent"
+          },
+          "elastic_constant_errors": {
+            "Fe": 5.0,
+            "Al": 3.0,
+            "Cu": 4.0,
+            "Ti": 6.0,
+            "Al2O3": 8.0,
+            "Si3N4": 7.0,
+            "ZrO2": 8.0,
+            "unit": "percent"
+          },
+          "all_lattice_errors_below_3_percent": true,
+          "all_elastic_errors_below_10_percent": true
+        },
+        "computed_properties": {
+          "metals": {
+            "Fe": {"a": 2.87, "B": 170, "E": 210, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"},
+            "Al": {"a": 4.05, "B": 77, "E": 70, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"},
+            "Cu": {"a": 3.62, "B": 140, "E": 130, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"},
+            "Ti": {"a": 2.95, "B": 110, "E": 116, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"}
+          },
+          "ceramics": {
+            "Al2O3": {"a": 4.76, "B": 254, "E": 380, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"},
+            "Si3N4": {"a": 7.608, "B": 250, "E": 300, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"},
+            "ZrO2": {"a": 3.64, "B": 190, "E": 210, "unit_a": "Angstrom", "unit_B": "GPa", "unit_E": "GPa"}
+          }
+        }
+      },
+      "parameters": {
+        "metals": {
+          "k_points": [12, 12, 12],
+          "energy_cutoff": 500,
+          "energy_cutoff_unit": "eV",
+          "pseudopotentials": {
+            "Fe": "PAW_PBE_Fe_sv",
+            "Al": "PAW_PBE_Al",
+            "Cu": "PAW_PBE_Cu",
+            "Ti": "PAW_PBE_Ti_pv"
+          },
+          "xc_functional": "PBE",
+          "smearing": "Methfessel-Paxton",
+          "smearing_width": 0.2,
+          "smearing_width_unit": "eV",
+          "scf_convergence": 1e-8,
+          "scf_convergence_unit": "eV",
+          "spin_polarized": {"Fe": true, "Ti": true, "Al": false, "Cu": false}
+        },
+        "ceramics": {
+          "k_points": [8, 8, 8],
+          "energy_cutoff": 600,
+          "energy_cutoff_unit": "eV",
+          "pseudopotentials": {
+            "Al2O3": "PAW_PBE_Al, PAW_PBE_O",
+            "Si3N4": "PAW_PBE_Si, PAW_PBE_N",
+            "ZrO2": "PAW_PBE_Zr_sv, PAW_PBE_O"
+          },
+          "xc_functional": "PBE",
+          "vdw_correction": "DFT-D3",
+          "scf_convergence": 1e-8,
+          "scf_convergence_unit": "eV"
+        },
+        "polymers": {
+          "k_points": "Gamma only",
+          "energy_cutoff": 400,
+          "energy_cutoff_unit": "eV",
+          "xc_functional": "PBE-D3",
+          "vdw_correction": "DFT-D3",
+          "box_size": 20,
+          "box_size_unit": "Angstrom",
+          "scf_convergence": 1e-6,
+          "scf_convergence_unit": "eV"
+        }
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT properties to MD potential selection and calibration",
+        "data_transferred": [
+          "lattice_constants_all_materials",
+          "elastic_constants_all_materials",
+          "cohesive_energies",
+          "surface_energies",
+          "defect_energies"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "多材料MD势函数参数验证",
+      "description": "验证10种材料对应的MD势函数参数，确保MD模拟结果与DFT参考值一致",
+      "input": {
+        "materials_potentials": {
+          "Fe": {"potential": "EAM", "file": "Fe_MeyerEntel.eam.alloy", "cutoff": 5.5, "cutoff_unit": "Angstrom"},
+          "Al": {"potential": "EAM", "file": "Al_Mishin.eam.alloy", "cutoff": 6.5, "cutoff_unit": "Angstrom"},
+          "Cu": {"potential": "EAM", "file": "Cu_Mishin.eam.alloy", "cutoff": 5.5, "cutoff_unit": "Angstrom"},
+          "Ti": {"potential": "EAM", "file": "Ti_Mishin.eam.alloy", "cutoff": 5.8, "cutoff_unit": "Angstrom"},
+          "Al2O3": {"potential": "Buckingham+Morse", "file": "Al2O3_Buckingham.pot", "cutoff": 10.0, "cutoff_unit": "Angstrom"},
+          "Si3N4": {"potential": "Tersoff", "file": "Si3N4_Tersoff.pot", "cutoff": 3.5, "cutoff_unit": "Angstrom"},
+          "ZrO2": {"potential": "Buckingham", "file": "ZrO2_Buckingham.pot", "cutoff": 10.0, "cutoff_unit": "Angstrom"},
+          "PE": {"potential": "OPLS-AA", "file": "PE_OPLS.pot", "cutoff": 12.0, "cutoff_unit": "Angstrom"},
+          "PMMA": {"potential": "OPLS-AA", "file": "PMMA_OPLS.pot", "cutoff": 12.0, "cutoff_unit": "Angstrom"},
+          "Epoxy": {"potential": "COMPASS", "file": "Epoxy_COMPASS.pot", "cutoff": 12.5, "cutoff_unit": "Angstrom"}
+        },
+        "reference_data_source": "DFT MS-10 Step 1"
+      },
+      "output": {
+        "md_parameters_library": "md_params_library.json",
+        "validation_results": {
+          "lattice_constant_md_vs_dft_errors": {
+            "Fe": 0.5,
+            "Al": 0.3,
+            "Cu": 0.4,
+            "Ti": 0.8,
+            "Al2O3": 1.5,
+            "Si3N4": 1.2,
+            "ZrO2": 1.0,
+            "unit": "percent"
+          },
+          "elastic_constant_md_vs_dft_errors": {
+            "Fe": 8.0,
+            "Al": 5.0,
+            "Cu": 6.0,
+            "Ti": 10.0,
+            "Al2O3": 12.0,
+            "Si3N4": 10.0,
+            "ZrO2": 12.0,
+            "unit": "percent"
+          },
+          "all_md_errors_below_15_percent": true
+        },
+        "md_simulation_parameters": {
+          "metals": {
+            "timestep": 1,
+            "timestep_unit": "fs",
+            "ensemble": "NPT",
+            "temperature": 300,
+            "temperature_unit": "K"
+          },
+          "ceramics": {
+            "timestep": 0.5,
+            "timestep_unit": "fs",
+            "ensemble": "NPT",
+            "temperature": 300,
+            "temperature_unit": "K"
+          },
+          "polymers": {
+            "timestep": 1,
+            "timestep_unit": "fs",
+            "ensemble": "NPT",
+            "temperature": 300,
+            "temperature_unit": "K",
+            "electrostatic": "PPPM"
+          }
+        }
+      },
+      "parameters": {
+        "metals": {
+          "thermostat": "Nosé-Hoover",
+          "thermostat_damping": 100,
+          "thermostat_damping_unit": "fs",
+          "barostat": "Parrinello-Rahman",
+          "barostat_damping": 1000,
+          "barostat_damping_unit": "fs",
+          "equilibration_steps": 50000,
+          "production_steps": 100000
+        },
+        "ceramics": {
+          "thermostat": "Nosé-Hoover",
+          "thermostat_damping": 50,
+          "thermostat_damping_unit": "fs",
+          "barostat": "Parrinello-Rahman",
+          "barostat_damping": 500,
+          "barostat_damping_unit": "fs",
+          "equilibration_steps": 100000,
+          "production_steps": 200000
+        },
+        "polymers": {
+          "thermostat": "Nosé-Hoover",
+          "thermostat_damping": 100,
+          "thermostat_damping_unit": "fs",
+          "barostat": "Berendsen",
+          "barostat_damping": 500,
+          "barostat_damping_unit": "fs",
+          "equilibration_steps": 500000,
+          "production_steps": 1000000,
+          "bond_constraints": "LINCS"
+        }
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD thermodynamic and mechanical properties to phase field model parameters",
+        "data_transferred": [
+          "interface_energies",
+          "diffusion_coefficients",
+          "elastic_constants",
+          "thermal_conductivities"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "多材料相场参数验证",
+      "description": "验证10种材料的相场模型参数，确保界面宽度、梯度能系数和迁移率等参数的物理合理性",
+      "input": {
+        "phase_field_parameters": {
+          "metals": {
+            "Fe": {
+              "interface_width": 0.5,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 1.0e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 1.0e-14,
+              "mobility_unit": "m^3/(J*s)",
+              "driving_force": 1.0e9,
+              "driving_force_unit": "J/m^3"
+            },
+            "Al": {
+              "interface_width": 0.8,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 1.2e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 5.0e-14,
+              "mobility_unit": "m^3/(J*s)",
+              "driving_force": 5.0e8,
+              "driving_force_unit": "J/m^3"
+            },
+            "Cu": {
+              "interface_width": 0.6,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 1.1e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 3.0e-14,
+              "mobility_unit": "m^3/(J*s)",
+              "driving_force": 8.0e8,
+              "driving_force_unit": "J/m^3"
+            },
+            "Ti": {
+              "interface_width": 0.7,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 1.3e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 2.0e-14,
+              "mobility_unit": "m^3/(J*s)",
+              "driving_force": 1.2e9,
+              "driving_force_unit": "J/m^3"
+            }
+          },
+          "ceramics": {
+            "Al2O3": {
+              "interface_width": 0.3,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 5.0e-10,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 1.0e-16,
+              "mobility_unit": "m^3/(J*s)",
+              "fracture_energy_Gc": 30,
+              "fracture_energy_unit": "J/m^2"
+            },
+            "Si3N4": {
+              "interface_width": 0.4,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 6.0e-10,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 5.0e-16,
+              "mobility_unit": "m^3/(J*s)",
+              "fracture_energy_Gc": 65,
+              "fracture_energy_unit": "J/m^2"
+            },
+            "ZrO2": {
+              "interface_width": 0.5,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 8.0e-10,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 1.0e-15,
+              "mobility_unit": "m^3/(J*s)",
+              "fracture_energy_Gc": 40,
+              "fracture_energy_unit": "J/m^2",
+              "transformation_strain": 0.04
+            }
+          },
+          "polymers": {
+            "PE": {
+              "interface_width": 5.0,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 1.0e-8,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 1.0e-12,
+              "mobility_unit": "m^3/(J*s)",
+              "crystallization_temperature": 414,
+              "crystallization_temperature_unit": "K"
+            },
+            "PMMA": {
+              "interface_width": 3.0,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 8.0e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 5.0e-13,
+              "mobility_unit": "m^3/(J*s)",
+              "glass_transition_temperature": 378,
+              "glass_transition_temperature_unit": "K"
+            },
+            "Epoxy": {
+              "interface_width": 2.0,
+              "interface_width_unit": "nm",
+              "gradient_energy_coefficient": 5.0e-9,
+              "gradient_energy_coefficient_unit": "J/m",
+              "mobility": 1.0e-13,
+              "mobility_unit": "m^3/(J*s)",
+              "glass_transition_temperature": 453,
+              "glass_transition_temperature_unit": "K",
+              "crosslink_density": 2.8e3,
+              "crosslink_density_unit": "mol/m^3"
+            }
+          }
+        },
+        "reference_data_source": "MD MS-10 Step 2"
+      },
+      "output": {
+        "phase_field_parameters_library": "pf_params_library.json",
+        "validation_results": {
+          "interface_stability_check": "all_materials_stable",
+          "numerical_stability_CFL": "all_materials_satisfy_CFL",
+          "grid_convergence": "all_materials_converged",
+          "parameter_physical_range_check": "all_within_physical_bounds"
+        },
+        "simulation_settings": {
+          "metals": {
+            "model": "Allen-Cahn",
+            "grid_spacing": 0.1,
+            "grid_spacing_unit": "nm",
+            "time_step": 1.0,
+            "time_step_unit": "ns"
+          },
+          "ceramics": {
+            "model": "Phase_field_fracture_AT2",
+            "grid_spacing": 0.05,
+            "grid_spacing_unit": "nm",
+            "time_step": 0.1,
+            "time_step_unit": "ns"
+          },
+          "polymers": {
+            "model": "Allen-Cahn_Cahn-Hilliard_coupled",
+            "grid_spacing": 1.0,
+            "grid_spacing_unit": "nm",
+            "time_step": 10.0,
+            "time_step_unit": "ns"
+          }
+        }
+      },
+      "parameters": {
+        "validation_tests": [
+          "interface_width_resolution_check",
+          "gradient_energy_stability",
+          "mobility_positive_definite",
+          "driving_force_consistency",
+          "CFL_condition_satisfied",
+          "mass_conservation_check",
+          "energy_dissipation_check"
+        ],
+        "tolerances": {
+          "interface_width_error": 10,
+          "gradient_energy_error": 15,
+          "mobility_error": 20,
+          "numerical_stability": 5
+        },
+        "tolerances_unit": "percent"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field effective properties to FE constitutive parameters",
+        "data_transferred": [
+          "effective_elastic_properties",
+          "fracture_parameters",
+          "transformation_parameters",
+          "viscoelastic_parameters"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "多材料FE本构参数验证",
+      "description": "验证10种材料的有限元本构参数，确保FE模拟结果与实验参考值一致，并测试CAELab框架对多材料模型的兼容性",
+      "input": {
+        "fe_material_models": {
+          "metals": {
+            "Fe": {
+              "model": "J2_plasticity_isotropic_hardening",
+              "E": 210,
+              "E_unit": "GPa",
+              "nu": 0.29,
+              "rho": 7874,
+              "rho_unit": "kg/m^3",
+              "sigma_y": 250,
+              "sigma_y_unit": "MPa",
+              "hardening_modulus": 1.5,
+              "hardening_modulus_unit": "GPa"
+            },
+            "Al": {
+              "model": "J2_plasticity_isotropic_hardening",
+              "E": 70,
+              "E_unit": "GPa",
+              "nu": 0.35,
+              "rho": 2700,
+              "rho_unit": "kg/m^3",
+              "sigma_y": 55,
+              "sigma_y_unit": "MPa",
+              "hardening_modulus": 0.4,
+              "hardening_modulus_unit": "GPa"
+            },
+            "Cu": {
+              "model": "J2_plasticity_isotropic_hardening",
+              "E": 130,
+              "E_unit": "GPa",
+              "nu": 0.34,
+              "rho": 8960,
+              "rho_unit": "kg/m^3",
+              "sigma_y": 70,
+              "sigma_y_unit": "MPa",
+              "hardening_modulus": 0.8,
+              "hardening_modulus_unit": "GPa"
+            },
+            "Ti": {
+              "model": "J2_plasticity_anisotropic_hardening",
+              "E": 116,
+              "E_unit": "GPa",
+              "nu": 0.32,
+              "rho": 4507,
+              "rho_unit": "kg/m^3",
+              "sigma_y": 880,
+              "sigma_y_unit": "MPa",
+              "hardening_modulus": 2.0,
+              "hardening_modulus_unit": "GPa"
+            }
+          },
+          "ceramics": {
+            "Al2O3": {
+              "model": "linear_elastic_damage",
+              "E": 380,
+              "E_unit": "GPa",
+              "nu": 0.22,
+              "rho": 3950,
+              "rho_unit": "kg/m^3",
+              "KIC": 4.0,
+              "KIC_unit": "MPa*sqrt(m)",
+              "compressive_strength": 2600,
+              "compressive_strength_unit": "MPa"
+            },
+            "Si3N4": {
+              "model": "linear_elastic_damage",
+              "E": 300,
+              "E_unit": "GPa",
+              "nu": 0.24,
+              "rho": 3200,
+              "rho_unit": "kg/m^3",
+              "KIC": 7.0,
+              "KIC_unit": "MPa*sqrt(m)",
+              "compressive_strength": 3000,
+              "compressive_strength_unit": "MPa"
+            },
+            "ZrO2": {
+              "model": "transformation_toughening",
+              "E": 210,
+              "E_unit": "GPa",
+              "nu": 0.31,
+              "rho": 5680,
+              "rho_unit": "kg/m^3",
+              "KIC": 10.0,
+              "KIC_unit": "MPa*sqrt(m)",
+              "transformation_strain": 0.04,
+              "transformation_start_stress": 300,
+              "transformation_start_stress_unit": "MPa"
+            }
+          },
+          "polymers": {
+            "PE": {
+              "model": "viscoelastic_linear_solid",
+              "E_instantaneous": 1.5,
+              "E_instantaneous_unit": "GPa",
+              "E_equilibrium": 0.2,
+              "E_equilibrium_unit": "GPa",
+              "nu": 0.42,
+              "rho": 950,
+              "rho_unit": "kg/m^3",
+              "relaxation_time": 1.0,
+              "relaxation_time_unit": "s",
+              "melting_temperature": 414,
+              "melting_temperature_unit": "K"
+            },
+            "PMMA": {
+              "model": "viscoelastic_generalized_maxwell",
+              "E_glassy": 3.3,
+              "E_glassy_unit": "GPa",
+              "E_rubbery": 1.5,
+              "E_rubbery_unit": "GPa",
+              "nu": 0.37,
+              "rho": 1190,
+              "rho_unit": "kg/m^3",
+              "Tg": 378,
+              "Tg_unit": "K",
+              "relaxation_spectrum": "Prony_series_5_terms"
+            },
+            "Epoxy": {
+              "model": "viscoelastic_damage",
+              "E": 3.5,
+              "E_unit": "GPa",
+              "nu": 0.35,
+              "rho": 1200,
+              "rho_unit": "kg/m^3",
+              "Tg": 453,
+              "Tg_unit": "K",
+              "tensile_strength": 80,
+              "tensile_strength_unit": "MPa",
+              "fracture_energy": 200,
+              "fracture_energy_unit": "J/m^2"
+            }
+          }
+        },
+        "reference_data_source": "Phase field MS-10 Step 3",
+        "benchmark_tests": ["uniaxial_tension", "three_point_bending", "creep", "impact"]
+      },
+      "output": {
+        "fe_parameters_library": "fe_params_library.json",
+        "validation_results": {
+          "uniaxial_tension_stress_strain_errors": {
+            "Fe": 3.0,
+            "Al": 4.0,
+            "Cu": 3.5,
+            "Ti": 5.0,
+            "Al2O3": 8.0,
+            "Si3N4": 7.0,
+            "ZrO2": 8.0,
+            "PE": 10.0,
+            "PMMA": 10.0,
+            "Epoxy": 10.0,
+            "unit": "percent"
+          },
+          "all_fe_errors_below_15_percent": true,
+          "numerical_convergence_all_materials": true,
+          "mesh_convergence_all_materials": true
+        },
+        "complete_parameter_library": "multimaterial_params_complete.json",
+        "cross_scale_consistency_report": "consistency_report.dat",
+        "framework_compatibility": {
+          "all_materials_loadable": true,
+          "all_scales_compatible": true,
+          "parameter_transfer_verified": true
+        }
+      },
+      "parameters": {
+        "metals": {
+          "element_type": "C3D8R",
+          "mesh_density": "20x20x20",
+          "solver_type": "static_implicit",
+          "large_deformation": true
+        },
+        "ceramics": {
+          "element_type": "C3D8R",
+          "mesh_density": "30x30x30",
+          "solver_type": "static_implicit",
+          "damage_model": "Mazars",
+          "element_deletion": true
+        },
+        "polymers": {
+          "element_type": "C3D8H",
+          "mesh_density": "15x15x15",
+          "solver_type": "static_implicit",
+          "viscoelastic_integration": "implicit_Euler",
+          "time_dependent": true
+        },
+        "common": {
+          "convergence_tolerance": 1e-6,
+          "max_iterations": 200,
+          "increment_size": 0.01
+        }
+      },
+      "bridge_to_next": {
+        "mapping_method": "Complete parameter library generation and cross-scale consistency certification",
+        "data_transferred": [
+          "complete_material_parameter_sets",
+          "validation_reports_all_scales",
+          "cross_scale_consistency_metrics",
+          "framework_compatibility_certificate"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.commatsci.2016.09.022",
+    "authors": "Kim H, Kim W, Falk ML",
+    "year": 2016,
+    "journal": "Computational Materials Science"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "DFT lattice constant error (max across metals)",
+        "value": 2.0,
+        "unit": "percent",
+        "tolerance": 50
+      },
+      {
+        "name": "MD elastic constant error vs DFT (max across metals)",
+        "value": 10.0,
+        "unit": "percent",
+        "tolerance": 50
+      },
+      {
+        "name": "Phase field numerical stability (all materials)",
+        "value": 1,
+        "unit": "boolean (1=pass)",
+        "tolerance": 0
+      },
+      {
+        "name": "FE stress-strain error vs reference (max across all)",
+        "value": 10.0,
+        "unit": "percent",
+        "tolerance": 50
+      },
+      {
+        "name": "Framework compatibility (all materials loadable)",
+        "value": 1,
+        "unit": "boolean (1=pass)",
+        "tolerance": 0
+      },
+      {
+        "name": "Cross-scale parameter consistency",
+        "value": 1,
+        "unit": "boolean (1=pass)",
+        "tolerance": 0
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "id": "SS-28",
+  "name": "功能梯度材料FGM梁弯曲分析",
+  "nameEn": "Functionally Graded Material (FGM) Beam Bending",
+  "description": "功能梯度材料(FGM)悬臂梁在自由端集中载荷作用下的弯曲分析。材料从底部Al(E=70GPa)到顶部Al2O3(E=380GPa)按幂律分布(p=1)。通过计算等效弹性模量E_eff≈225GPa，预测自由端挠度δ≈0.047mm。本案例展示了FGM材料梯度效应对结构力学响应的影响，适用于航空航天热防护结构、生物医学植入物等领域的教学与学习。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["FGM", "功能梯度材料", "悬臂梁", "弯曲", "幂律分布", "复合材料"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.2,
+    "width": 0.02,
+    "height": 0.01,
+    "radius": 0,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 4,
+    "z_div": 10,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Al/Al2O3 FGM (power law p=1)",
+    "elastic_modulus": 225000000000,
+    "poisson_ratio": 0.3,
+    "density": 3700,
+    "yield_stress": 400000000,
+    "thermal_expansion": 8.0e-6,
+    "thermal_conductivity": 30,
+    "specific_heat": 780
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 500,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 4.7e-5,
+    "max_stress": 178571428.57,
+    "formula": "E_eff = (E_c * E_m)^(1/2) for p=1; δ = FL³/(3E_eff*I), I = bh³/12",
+    "reference": "Birman V, Byrd LW. Modeling and analysis of functionally graded materials and structures. ASME Applied Mechanics Reviews, 2007."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "自由端最大挠度",
+        "value": 4.7e-5,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "固定端最大应力",
+        "value": 178571428.57,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "等效弹性模量",
+        "value": 225000000000,
+        "unit": "Pa",
+        "tolerance": 5
+      }
+    ]
+  }
+}

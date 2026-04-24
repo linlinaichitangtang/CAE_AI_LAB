@@ -1,0 +1,380 @@
+{
+  "id": "MS-18",
+  "name": "形状记忆合金NiTi模拟",
+  "nameEn": "Shape Memory Alloy NiTi Simulation",
+  "description": "镍钛形状记忆合金全链路多尺度模拟：从DFT计算B2奥氏体到B19'马氏体的相变能量出发，通过MD模拟相变路径和晶格对应关系，利用相场方法预测马氏体微观组织演化(孪晶变体选择)，最终通过有限元方法模拟伪弹性滞后回环。该案例展示智能材料从电子结构到宏观超弹性行为的跨尺度预测能力，涵盖热弹性马氏体相变的核心物理机制。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["NiTi", "shape memory", "martensite transformation", "B2-B19'", "pseudoelasticity", "hysteresis loop", "twin variant"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "NiTi shape memory alloy",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "NiTi马氏体相变能量计算",
+      "description": "使用DFT计算NiTi合金B2奥氏体相和B19'马氏体相的总能、晶格参数和相变能垒",
+      "input": {
+        "austenite_phase": {
+          "structure": "B2_CsCl",
+          "space_group": "Pm-3m",
+          "lattice_constant": 3.015,
+          "lattice_constant_unit": "Angstrom",
+          "ni_ti_ratio": "50:50_equiatomic"
+        },
+        "martensite_phase": {
+          "structure": "B19_monoclinic",
+          "space_group": "P21/m",
+          "lattice_constants": {"a": 2.889, "b": 4.120, "c": 4.622, "beta": 97.8},
+          "lattice_constants_unit": "Angstrom"
+        },
+        "transformation_path": "Bain_correspondence_B2_to_B19prime",
+        "supercell": "2x2x2"
+      },
+      "output": {
+        "b2_total_energy": -8.95,
+        "b2_energy_unit": "eV/atom",
+        "b19prime_total_energy": -9.02,
+        "b19prime_energy_unit": "eV/atom",
+        "transformation_energy": -0.07,
+        "transformation_energy_unit": "eV/atom",
+        "transformation_barrier": 0.12,
+        "transformation_barrier_unit": "eV/atom",
+        "equilibrium_transformation_temperature": 355,
+        "transformation_temperature_unit": "K",
+        "clausius_clapeyron_slope": 0.13,
+        "cc_slope_unit": "K/MPa",
+        "lattice_correspondence": {
+          "B2_direction": "[110]",
+          "B19prime_direction": "[010]"
+        },
+        "transformation_strain": {
+          "max_recoverable_strain": 8.0,
+          "strain_unit": "percent"
+        },
+        "elastic_constants_B2": {
+          "C11": 162,
+          "C12": 130,
+          "C44": 34,
+          "unit": "GPa"
+        },
+        "density_of_states": "DOS.dat"
+      },
+      "parameters": {
+        "k_points": [16, 16, 16],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Ni_pv_Ti_pv",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "spin_polarization": false,
+        "ibrion": 2,
+        "isif": 3,
+        "nsw": 200,
+        "phonon_calculation": true,
+        "phonon_supercell": "3x3x3",
+        "neb_images": 9,
+        "neb_spring_constant": 5.0,
+        "neb_spring_unit": "eV/Angstrom^2"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT transformation energy and lattice correspondence to MEAM potential for NiTi",
+        "data_transferred": [
+          "transformation_energy",
+          "transformation_barrier",
+          "lattice_constants_B2_B19prime",
+          "transformation_strain",
+          "clausius_clapeyron_slope",
+          "elastic_constants"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "NiTi相变路径分子动力学模拟",
+      "description": "使用MEAM势函数模拟NiTi从B2到B19'的相变路径，捕捉原子级相变机制和变体选择",
+      "input": {
+        "crystal_structure": "B2",
+        "lattice_constant": 3.015,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "20x20x20",
+        "atom_count": 16000,
+        "ni_ti_ratio": "50:50",
+        "temperature_range": {
+          "start": 450,
+          "end": 200,
+          "unit": "K",
+          "cooling_rate": 1e10,
+          "cooling_rate_unit": "K/s"
+        },
+        "applied_stress": 200,
+        "applied_stress_unit": "MPa"
+      },
+      "output": {
+        "transformation_path": "transformation_trajectory.vtk",
+        "ms_temperature": 335,
+        "ms_temperature_unit": "K",
+        "mf_temperature": 305,
+        "mf_temperature_unit": "K",
+        "martensite_variant_distribution": "variants.vtk",
+        "variant_1_fraction": 0.45,
+        "variant_2_fraction": 0.35,
+        "variant_3_fraction": 0.20,
+        "twin_boundary_spacing": 15,
+        "twin_spacing_unit": "nm",
+        "hysteresis_width": 30,
+        "hysteresis_width_unit": "K",
+        "latent_heat": 25,
+        "latent_heat_unit": "J/g",
+        "transformation_strain_MD": 7.8,
+        "transformation_strain_unit": "percent"
+      },
+      "parameters": {
+        "potential": "MEAM (NiTi by Zhong et al.)",
+        "potential_file": "NiTi_MEAM_Zhong.library",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "barostat": "Parrinello-Rahman",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": "cooling_from_450_to_200K",
+        "pressure": 0,
+        "pressure_unit": "GPa",
+        "cutoff_radius": 6.0,
+        "cutoff_radius_unit": "Angstrom",
+        "total_steps": 25000000,
+        "dump_interval": 10000,
+        "neighbor_skin": 1.5,
+        "neighbor_skin_unit": "Angstrom",
+        "periodic_boundary": true,
+        "deformation_method": "uniaxial_tension"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD variant fractions and twin spacing to phase field Landau free energy parameters",
+        "data_transferred": [
+          "transformation_temperatures_MS_MF",
+          "variant_fractions",
+          "twin_boundary_spacing",
+          "hysteresis_width",
+          "transformation_strain",
+          "latent_heat"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "NiTi马氏体微观组织相场模拟",
+      "description": "基于MD相变参数，使用相场方法模拟NiTi马氏体变体选择、孪晶形成和微观组织演化",
+      "input": {
+        "domain_size": {
+          "Lx": 2,
+          "Ly": 2,
+          "Lz": 2,
+          "unit": "um"
+        },
+        "grid_points": "200x200x200",
+        "initial_phase": "B2_austenite",
+        "transformation_temperatures_source": "MD MS-18 Step 2",
+        "ms_temperature": 335,
+        "ms_temperature_unit": "K",
+        "mf_temperature": 305,
+        "mf_temperature_unit": "K",
+        "applied_strain": 0.06,
+        "temperature": 320,
+        "temperature_unit": "K",
+        "number_of_variants": 3
+      },
+      "output": {
+        "microstructure_evolution": "microstructure_evolution.vtk",
+        "variant_map": "variant_map.vtk",
+        "final_variant_fractions": {
+          "V1": 0.42,
+          "V2": 0.38,
+          "V3": 0.20
+        },
+        "twin_boundary_network": "twin_boundaries.vtk",
+        "average_twin_width": 120,
+        "twin_width_unit": "nm",
+        "habit_plane": {
+          "variant_pair": "V1-V2",
+          "plane": "{111}_type",
+          "angle": 43.5,
+          "angle_unit": "degree"
+        },
+        "macro_transformation_strain": 7.5,
+        "transformation_strain_unit": "percent",
+        "hysteresis_loop_PF": "stress_strain_PF.dat",
+        "austenite_fraction_vs_temperature": "phase_fraction.dat"
+      },
+      "parameters": {
+        "model": "multi-variant_phase_field_martensite",
+        "order_parameters": ["eta_1", "eta_2", "eta_3"],
+        "interface_width": 20,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 2e-9,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility": 1e-12,
+        "mobility_unit": "m^3/(J*s)",
+        "landau_coefficients": {
+          "a0": 5e5,
+          "a1": -2e6,
+          "a2": 1e6,
+          "unit": "J/m^3"
+        },
+        "transformation_strain_tensors": "from_lattice_correspondence",
+        "elastic_anisotropy": true,
+        "elastic_compatibility": true,
+        "time_step": 0.01,
+        "time_step_unit": "us",
+        "total_time": 10,
+        "total_time_unit": "us",
+        "noise_amplitude": 0.001
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field hysteresis and transformation strain to FE constitutive model parameters",
+        "data_transferred": [
+          "transformation_strain",
+          "variant_fractions",
+          "hysteresis_loop_data",
+          "twin_boundary_characteristics",
+          "macro_stress_strain_response"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "NiTi伪弹性滞后回环有限元模拟",
+      "description": "基于相场微观组织结果，建立宏观NiTi伪弹性本构模型，模拟拉伸-卸载循环下的应力-应变滞后回环",
+      "input": {
+        "specimen_geometry": {
+          "type": "dog_bone_tensile",
+          "gauge_length": 25,
+          "gauge_length_unit": "mm",
+          "gauge_width": 5,
+          "gauge_width_unit": "mm",
+          "gauge_thickness": 1,
+          "gauge_thickness_unit": "mm"
+        },
+        "material_model": {
+          "type": "Lagoudas_constitutive",
+          "transformation_strain_source": "PF MS-18 Step 3",
+          "max_transformation_strain": 0.075,
+          "elastic_modulus_austenite": 68,
+          "elastic_modulus_austenite_unit": "GPa",
+          "elastic_modulus_martensite": 28,
+          "elastic_modulus_martensite_unit": "GPa",
+          "transformation_start_stress": 380,
+          "transformation_start_stress_unit": "MPa",
+          "transformation_finish_stress": 520,
+          "transformation_finish_stress_unit": "MPa",
+          "reverse_start_stress": 220,
+          "reverse_start_stress_unit": "MPa",
+          "reverse_finish_stress": 120,
+          "reverse_finish_stress_unit": "MPa"
+        },
+        "loading_protocol": {
+          "type": "cyclic_tension_unloading",
+          "max_strain": 0.06,
+          "strain_rate": 1e-3,
+          "strain_rate_unit": "s^-1",
+          "number_of_cycles": 5,
+          "temperature": 320,
+          "temperature_unit": "K"
+        }
+      },
+      "output": {
+        "stress_strain_hysteresis": "hysteresis_loop.dat",
+        "forward_transformation_stress": 385,
+        "forward_stress_unit": "MPa",
+        "reverse_transformation_stress": 225,
+        "reverse_stress_unit": "MPa",
+        "hysteresis_width": 160,
+        "hysteresis_width_unit": "MPa",
+        "dissipated_energy_per_cycle": 5.2,
+        "dissipated_energy_unit": "MJ/m^3",
+        "residual_strain_after_1st_cycle": 0.003,
+        "residual_strain_unit": "dimensionless",
+        "martensite_volume_fraction": "MVF_vs_strain.dat",
+        "max_MVF": 0.95,
+        "stress_distribution": "stress_field.vtk",
+        "transformation_front": "Luders_band.vtk",
+        "luders_band_angle": 56,
+        "luders_angle_unit": "degree"
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "50x10x4",
+        "mesh_refinement": "gauge_section_uniform",
+        "boundary_condition": "one_end_fixed_one_end_displacement_controlled",
+        "solver_type": "static_implicit",
+        "material_model": "Lagoudas_SMA_constitutive",
+        "transformation_kinetics": "exponential_hardening",
+        "return_mapping": "SMA_return_mapping",
+        "geometric_nonlinearity": false,
+        "max_increment": 5000,
+        "initial_increment_size": 1e-5,
+        "max_increment_size": 0.001,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200,
+        "stabilization": "artificial_damping_0.0002"
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE hysteresis loop comparison with experimental cyclic loading data",
+        "data_transferred": [
+          "hysteresis_loop",
+          "dissipated_energy",
+          "transformation_stresses",
+          "residual_strain",
+          "luders_band_pattern"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.ijplas.2006.03.005",
+    "authors": "Lagoudas DC, Entchev PB",
+    "year": 2004,
+    "journal": "International Journal of Plasticity"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "B2-B19' transformation energy",
+        "value": -0.07,
+        "unit": "eV/atom",
+        "tolerance": 20
+      },
+      {
+        "name": "Ms temperature",
+        "value": 335,
+        "unit": "K",
+        "tolerance": 10
+      },
+      {
+        "name": "Max recoverable strain",
+        "value": 7.5,
+        "unit": "percent",
+        "tolerance": 15
+      },
+      {
+        "name": "Hysteresis width",
+        "value": 160,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "Dissipated energy per cycle",
+        "value": 5.2,
+        "unit": "MJ/m^3",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 20
+  }
+}

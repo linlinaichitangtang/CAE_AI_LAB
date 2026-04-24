@@ -1,0 +1,71 @@
+{
+  "id": "RL-02",
+  "name": "响应面法可靠度分析",
+  "nameEn": "Response Surface Method (RSM) Reliability Analysis",
+  "description": "基于响应面法（RSM）的可靠度分析问题。考虑三个随机因素：板厚度t、弹性模量E和外载荷P。通过中心复合设计（CCD）安排15次试验点，拟合二次多项式响应面模型。采用留一交叉验证（LOO）评估模型精度，要求LOO误差小于5%。在响应面模型基础上进行蒙特卡洛抽样计算失效概率。该算例展示如何用少量确定性分析构建代理模型，显著降低计算成本的同时保持足够的预测精度。",
+  "category": "reliability",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["响应面法", "RSM", "中心复合设计", "CCD", "代理模型", "交叉验证"],
+  "random_variables": [
+    {
+      "name": "thickness_t",
+      "distribution": "normal",
+      "mean": 0.01,
+      "stddev": 0.0005,
+      "cov": 0.05
+    },
+    {
+      "name": "elastic_modulus_E",
+      "distribution": "normal",
+      "mean": 210000000000,
+      "stddev": 10500000000,
+      "cov": 0.05
+    },
+    {
+      "name": "load_P",
+      "distribution": "normal",
+      "mean": 50000,
+      "stddev": 7500,
+      "cov": 0.15
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "sigma_allowable - sigma_max(t, E, P)",
+    "description": "隐式极限状态函数，最大应力不超过许用应力。需通过有限元分析或响应面近似计算"
+  },
+  "reliability_method": {
+    "type": "rsm",
+    "samples": 15,
+    "target_reliability_index": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "LOO_cross_validation_error",
+        "value": 3.5,
+        "unit": "percent",
+        "tolerance": 30
+      },
+      {
+        "name": "R_squared",
+        "value": 0.985,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "failure_probability",
+        "value": 0.00135,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "reliability_index",
+        "value": 3.0,
+        "unit": "",
+        "tolerance": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "id": "SS-35",
+  "name": "球罐支柱结构分析",
+  "nameEn": "Spherical Tank Support Structure Analysis",
+  "description": "球形储罐(R=5m, 壁厚t=0.025m)在内压p=2MPa作用下的薄膜应力分析。按ASME VIII规范计算薄膜应力σ=pR/(2t)=200MPa。同时分析支柱与球壳连接处的局部应力集中效应。本案例适用于压力容器设计、ASME规范验证和化工设备结构完整性评估的教学与工程演示。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["球罐", "压力容器", "ASME VIII", "薄膜应力", "支柱", "化工设备"],
+  "geometry": {
+    "type": "sphere",
+    "length": 10.0,
+    "width": 10.0,
+    "height": 10.0,
+    "radius": 5.0,
+    "thickness": 0.025,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 40,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "SA516 Gr.70 Pressure Vessel Steel",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 260000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "support_columns",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 2000000,
+    "load_direction": "normal",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0025,
+    "max_stress": 200000000,
+    "formula": "σ = pR/(2t) = 2e6×5/(2×0.025) = 200 MPa (membrane stress, ASME VIII Div.1)",
+    "reference": "ASME Boiler and Pressure Vessel Code, Section VIII, Division 1, 2023 Edition."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "薄膜应力",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "最大径向位移",
+        "value": 0.0025,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "支柱连接处应力集中系数",
+        "value": 2.5,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "支柱反力",
+        "value": 1570000,
+        "unit": "N",
+        "tolerance": 5
+      }
+    ]
+  }
+}

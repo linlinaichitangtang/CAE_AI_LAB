@@ -1,0 +1,66 @@
+{
+  "id": "CP-04",
+  "name": "混凝土裂缝验算",
+  "nameEn": "Concrete Crack Width Check",
+  "description": "按GB 50010混凝土结构设计标准进行钢筋混凝土梁裂缝宽度验算。裂缝宽度计算公式：w_max=α_cr·ψ·σ_s/E_s·(1.9c+0.08d_eq/ρ_te)，其中α_cr为构件受力特征系数，ψ为裂缝间纵向受拉钢筋应变不均匀系数，σ_s为钢筋应力，c为保护层厚度，d_eq为等效钢筋直径，ρ_te为有效配筋率。验证最大裂缝宽度w_max≤0.3mm（一类环境）。",
+  "category": "compliance",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["crack-width", "GB-50010", "RC-beam", "serviceability", "reinforcement"],
+  "geometry": {
+    "type": "rectangular_beam",
+    "width": 0.25,
+    "height": 0.5,
+    "effective_depth": 0.465,
+    "span": 6.0,
+    "concrete_cover": 0.025
+  },
+  "material": {
+    "name": "C30 Concrete + HRB400 Rebar",
+    "concrete_grade": "C30",
+    "concrete_tensile_strength": 2010000.0,
+    "concrete_elastic_modulus": 30000000000.0,
+    "rebar_grade": "HRB400",
+    "rebar_yield_strength": 400000000.0,
+    "rebar_elastic_modulus": 200000000000.0,
+    "rebar_diameter": 0.02,
+    "rebar_area": 0.001256,
+    "equivalent_diameter": 0.02
+  },
+  "loading": {
+    "bending_moment": 120000.0,
+    "axial_force": 0.0,
+    "crack_coefficient_alpha_cr": 1.9,
+    "steel_stress_sigma_s": 220000000.0,
+    "strain_nonuniformity_psi": 0.8,
+    "effective_reinforcement_ratio_rho_te": 0.015
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "钢筋应力σ_s",
+        "value": 220.0,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "应变不均匀系数ψ",
+        "value": 0.8,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "最大裂缝宽度w_max",
+        "value": 0.25,
+        "unit": "mm",
+        "tolerance": 15
+      },
+      {
+        "name": "裂缝宽度限值",
+        "value": 0.3,
+        "unit": "mm",
+        "tolerance": 0
+      }
+    ]
+  }
+}

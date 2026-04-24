@@ -1,0 +1,134 @@
+{
+  "id": "TC-28",
+  "name": "汽车发动机缸体冷却分析",
+  "nameEn": "Automotive Engine Block Cooling Analysis - Cast Iron Cylinder",
+  "description": "铸铁发动机缸体冷却水套热分析。缸体材料为灰铸铁HT250，气缸内径D=86mm，壁厚δ=5mm。燃烧峰值温度T_peak=2500K，冷却液温度T_coolant=363K(90°C)，冷却液对流换热系数h_cool=5000W/(m²·K)。稳态等效热流密度q≈1×10⁶W/m²。铸铁物性：k=46W/(m·K)，α=10.5×10⁻⁶/K，E=120GPa。缸壁温度分布：内壁T_inner=T_coolant+q·(1/h_cool+δ/k)=363+1e6×(2e-4+1.087e-4)=363+308.7=671.7K。通过优化冷却通道设计，使内壁最高温度T_max<573K(300°C)。需分析冷却液流速对换热系数的影响及缸体热变形。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["engine_block", "cast_iron", "cooling_jacket", "cylinder_bore", "combustion_heat", "coolant_channel", "thermal_deformation"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.1,
+    "width": null,
+    "height": null,
+    "radius": 0.043,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 36,
+    "y_div": 36,
+    "z_div": 20,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Gray Cast Iron HT250",
+    "elastic_modulus": 120000000000,
+    "poisson_ratio": 0.26,
+    "density": 7200,
+    "yield_stress": 250000000,
+    "thermal_expansion": 10.5e-6,
+    "thermal_conductivity": 46,
+    "specific_heat": 540
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "outer_coolant_surface",
+    "load_magnitude": 5000,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 363,
+      "T_boundary": null,
+      "T_ambient": 363,
+      "heat_flux": 1e6,
+      "convection_coeff": 5000,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-7,
+    "time_step": 0.1,
+    "total_time": 60
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 180000000,
+    "max_temperature": 573,
+    "formula": "T_inner = T_coolant + q*(1/h_cool + delta/k); R_total = 1/h_cool + delta/k; sigma_hoop = E*alpha*(T_inner - T_coolant)/(1-nu); T_max < 573K design criterion",
+    "reference": "Heywood, Internal Combustion Engine Fundamentals, McGraw-Hill, 1988"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 20.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "cylinder_bore_diameter",
+        "value": 0.086,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "wall_thickness",
+        "value": 0.005,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "coolant_temperature",
+        "value": 363,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "combustion_peak_temperature",
+        "value": 2500,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "equivalent_heat_flux",
+        "value": 1e6,
+        "unit": "W/m^2",
+        "tolerance": 10.0
+      },
+      {
+        "name": "convection_coefficient_coolant",
+        "value": 5000,
+        "unit": "W/(m^2*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "max_wall_temperature_design_limit",
+        "value": 573,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "wall_thermal_resistance",
+        "value": 1.087e-4,
+        "unit": "K*m^2/W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "coolant_thermal_resistance",
+        "value": 2e-4,
+        "unit": "K*m^2/W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "hoop_thermal_stress",
+        "value": 180000000,
+        "unit": "Pa",
+        "tolerance": 20.0
+      }
+    ]
+  }
+}

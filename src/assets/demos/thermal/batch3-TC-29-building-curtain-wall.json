@@ -1,0 +1,140 @@
+{
+  "id": "TC-29",
+  "name": "建筑节能幕墙热工分析",
+  "nameEn": "Building Energy-Efficient Curtain Wall Thermal Analysis - Double Glazing",
+  "description": "中空玻璃幕墙稳态传热分析，验证U值满足建筑节能要求。双层中空玻璃：外层玻璃厚6mm(k_g=1.0W/(m·K))，空气间层12mm(k_air=0.025W/(m·K))，内层玻璃厚6mm。室外温度T_out=233K(-40°C)，室内温度T_in=293K(20°C)。室外对流换热系数h_o=23W/(m²·K)，室内对流换热系数h_i=8W/(m²·K)，空气间层等效换热系数h_gap=5.5W/(m²·K)(含对流+辐射)。总热阻：R_total=1/h_i+t_g/k_g+1/h_gap+t_g/k_g+1/h_o=0.125+0.006+0.182+0.006+0.0435=0.3625K·m²/W。U值=1/R_total=2.76W/(m²·K)。采用Low-E镀膜玻璃(h_gap降至3.0W/(m²·K))后R_total=0.542K·m²/W，U=1.84W/(m²·K)。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["curtain_wall", "double_glazing", "U_value", "building_energy", "Low_E_coating", "air_gap", "thermal_resistance", "fenestration"],
+  "geometry": {
+    "type": "plate",
+    "length": 1.0,
+    "width": 1.0,
+    "height": 0.024,
+    "radius": null,
+    "thickness": 0.024,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 12,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Soda-Lime Glass",
+    "elastic_modulus": 70000000000,
+    "poisson_ratio": 0.22,
+    "density": 2500,
+    "yield_stress": 50000000,
+    "thermal_expansion": 9.0e-6,
+    "thermal_conductivity": 1.0,
+    "specific_heat": 840
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "outdoor_surface",
+    "load_magnitude": 23,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 263,
+      "T_boundary": null,
+      "T_ambient": 233,
+      "heat_flux": 0,
+      "convection_coeff": 23,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-8,
+    "time_step": 0,
+    "total_time": 0
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 25000000,
+    "max_temperature": 293,
+    "formula": "1/U = 1/h_i + t_glass/k_glass + 1/h_gap + t_glass/k_glass + 1/h_o; R_total = 0.125 + 0.006 + 0.182 + 0.006 + 0.0435 = 0.3625 K*m^2/W; U = 1/R_total = 2.76 W/(m^2*K)",
+    "reference": "ISO 15099:2003 - Thermal Performance of Windows, Doors and Shading Devices; ASHRAE Handbook Fundamentals, Ch.31"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "outdoor_temperature",
+        "value": 233,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "indoor_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "temperature_difference",
+        "value": 60,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "outdoor_convection_coefficient",
+        "value": 23,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "indoor_convection_coefficient",
+        "value": 8,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "air_gap_convection_coefficient",
+        "value": 5.5,
+        "unit": "W/(m^2*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "total_thermal_resistance",
+        "value": 0.3625,
+        "unit": "K*m^2/W",
+        "tolerance": 5.0
+      },
+      {
+        "name": "U_value_standard",
+        "value": 2.76,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "U_value_LowE",
+        "value": 1.84,
+        "unit": "W/(m^2*K)",
+        "tolerance": 8.0
+      },
+      {
+        "name": "glass_thickness",
+        "value": 0.006,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "air_gap_thickness",
+        "value": 0.012,
+        "unit": "m",
+        "tolerance": 0.5
+      }
+    ]
+  }
+}

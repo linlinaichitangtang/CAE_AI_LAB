@@ -1,0 +1,52 @@
+{
+  "id": "PP-06",
+  "name": "频响函数瀑布图",
+  "nameEn": "FRF Waterfall Plot - Damping Comparison",
+  "description": "展示同一单自由度系统在不同阻尼比下的频响函数瀑布图。系统参数：m=1kg, k=10000N/m, 固有频率f_n=15.92Hz。五条FRF曲线分别对应阻尼比ζ=0.01、0.02、0.05、0.1、0.2，沿Z轴偏移排列形成瀑布图效果。可以清晰观察到：阻尼比越小共振峰越尖锐、峰值越高；阻尼比增大后共振峰明显展宽降低。瀑布图是参数化分析的重要可视化手段。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["瀑布图", "FRF", "阻尼比对比", "参数化分析", "共振峰迁移"],
+  "visualization": {
+    "type": "waterfall",
+    "field": "frequency_response",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 2,
+    "elements": 1,
+    "results_file": "results/postprocess/frf_waterfall_damping.dat"
+  },
+  "display_settings": {
+    "title": "频响函数瀑布图 - 不同阻尼比对比",
+    "axis_labels": ["频率 (Hz)", "幅值 (m/N)", "阻尼比 ζ"],
+    "color_bar": {
+      "min": 0,
+      "max": 0.05,
+      "label": "幅值 (m/N)",
+      "n_levels": 12
+    },
+    "camera": {
+      "position": { "x": 25, "y": 0.04, "z": 0.25 },
+      "target": { "x": 15, "y": 0.02, "z": 0.1 },
+      "rotation": { "pitch": -35, "yaw": -20 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "固有频率f_n", "value": 15.92, "unit": "Hz", "tolerance": 1 },
+      { "name": "ζ=0.01峰值", "value": 0.05, "unit": "m/N", "tolerance": 5 },
+      { "name": "ζ=0.02峰值", "value": 0.025, "unit": "m/N", "tolerance": 5 },
+      { "name": "ζ=0.1峰值", "value": 0.005, "unit": "m/N", "tolerance": 5 },
+      { "name": "ζ=0.2峰值", "value": 0.0025, "unit": "m/N", "tolerance": 5 }
+    ]
+  }
+}

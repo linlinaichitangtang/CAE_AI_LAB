@@ -1,0 +1,143 @@
+{
+  "id": "VL-12",
+  "name": "强化模型对比验证",
+  "nameEn": "Hardening Model Comparison: Isotropic vs Kinematic vs Combined",
+  "description": "验证各向同性强化、随动强化和混合强化三种塑性强化模型在循环载荷下的力学响应差异。采用钢棒(0.2m×0.02m×0.02m)施加±300MPa循环拉压载荷(σ_y=250MPa)。各向同性强化模型无Bauschinger效应，屈服面均匀膨胀；随动强化模型具有完全Bauschinger效应，屈服面中心平移；混合强化模型综合两者特性。对比三种模型在1、5、10次循环后的应力-应变滞回环形状、塑性应变累积和循环硬化/软化行为。验证随动强化在第1次反向加载时屈服应力降低约50%(Bauschinger效应)，各向同性强化屈服面膨胀至σ_y+Δσ。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["hardening", "isotropic_hardening", "kinematic_hardening", "bauschinger_effect", "cyclic_loading", "hysteresis", "constitutive_model"],
+  "validation_type": "constitutive_model",
+  "test_config": {
+    "baseline": {
+      "description": "各向同性强化，屈服面均匀膨胀，无Bauschinger效应",
+      "bc_type": "cyclic_tension_compression",
+      "material_type": "isotropic_hardening",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "线性随动强化，屈服面平移，完全Bauschinger效应",
+        "bc_type": "cyclic_tension_compression",
+        "material_type": "linear_kinematic_hardening",
+        "mesh_density": 10
+      },
+      {
+        "description": "混合强化(50%各向同性+50%随动)，综合特性",
+        "bc_type": "cyclic_tension_compression",
+        "material_type": "combined_hardening",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["yield_stress_reverse_loading", "plastic_strain_accumulation", "hysteresis_loop_area", "bauschinger_effect_ratio"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 0.2,
+    "width": 0.02,
+    "height": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 250000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490,
+    "hardening_params": {
+      "isotropic": { "hardening_modulus": 2000000000, "type": "linear" },
+      "kinematic": { "hardening_modulus": 2000000000, "type": "linear_prager" },
+      "combined": { "isotropic_fraction": 0.5, "kinematic_fraction": 0.5, "hardening_modulus": 2000000000 }
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "displacement_control_cyclic",
+    "load_face": "x_max",
+    "load_magnitude": 0.003,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.003,
+    "max_stress": 300000000,
+    "formula": "Applied strain range: ε_a = ±0.015 (±1.5%); Elastic strain at yield: ε_y = σ_y/E = 250e6/200e9 = 0.00125; Isotropic hardening: 1st cycle tensile yield at σ=250MPa, compressive reverse yield at σ=-(250+Δσ) where Δσ = H·ε_p; After 1st cycle: ε_p ≈ 0.015-0.00125 = 0.01375, Δσ = 2e9×0.01375 = 27.5MPa; Compressive yield at -(250+27.5) = -277.5MPa; No Bauschinger effect; Kinematic hardening: 1st cycle tensile yield at σ=250MPa, backstress α = H·ε_p = 2e9×0.01375 = 27.5MPa; Compressive reverse yield at σ = -(σ_y-α) = -(250-27.5) = -222.5MPa; Bauschinger ratio = 222.5/277.5 = 0.802; Combined (50/50): Compressive yield at -(250+13.75-13.75) = -250MPa; Bauschinger ratio = 250/277.5 = 0.901; Hysteresis loop area: Kinematic > Combined > Isotropic (1st cycle)",
+    "reference": "Chaboche, J.L. Time-independent constitutive theories for cyclic plasticity; Lemaitre, J. Mechanics of Solid Materials"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Isotropic hardening - tensile yield stress (1st cycle)",
+        "value": 250000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Isotropic hardening - compressive reverse yield (1st cycle)",
+        "value": -277500000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Kinematic hardening - tensile yield stress (1st cycle)",
+        "value": 250000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Kinematic hardening - compressive reverse yield (1st cycle)",
+        "value": -222500000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Combined hardening - compressive reverse yield (1st cycle)",
+        "value": -250000000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Bauschinger effect ratio (kinematic)",
+        "value": 0.802,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Bauschinger effect ratio (combined)",
+        "value": 0.901,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Plastic strain per cycle (kinematic, stabilized)",
+        "value": 0.025,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Plastic strain per cycle (isotropic, 1st)",
+        "value": 0.01375,
+        "unit": "",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

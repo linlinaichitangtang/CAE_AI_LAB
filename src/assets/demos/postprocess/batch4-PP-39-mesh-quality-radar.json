@@ -1,0 +1,57 @@
+{
+  "id": "PP-39",
+  "name": "网格质量评分",
+  "nameEn": "Mesh Quality Scoring - Radar Chart with 50000 Elements",
+  "description": "演示大规模网格质量的综合评估与雷达图可视化方法。以某汽车副车架有限元模型为对象，网格包含50000个单元(六面体为主，含少量四面体过渡单元)。评估5项关键质量指标：(1)雅可比比(Jacobian Ratio)，阈值<0.6为不合格；(2)纵横比(Aspect Ratio)，阈值>5:1为不合格；(3)偏斜度(Skewness)，阈值>60度为警告、>75度为不合格；(4)翘曲度(Warpage)，阈值>15度为警告、>30度为不合格；(5)锥度(Taper)，阈值>0.5为警告、>0.7为不合格。雷达图(蜘蛛图)以五边形展示，每个轴代表一项指标，数值范围0-100分(100为最优)。区域颜色编码：绿色(80-100分合格)、黄色(60-79分警告)、红色(0-59分不合格)。综合评分78.5分，偏斜度和翘曲度为薄弱环节。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["网格质量", "雷达图", "雅可比比", "纵横比", "偏斜度", "质量评分"],
+  "visualization": {
+    "type": "mesh_quality",
+    "field": "mesh_quality",
+    "color_map": "viridis",
+    "view_mode": "combined",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 55000,
+    "elements": 50000,
+    "results_file": "results/postprocess/subframe_mesh_quality.dat"
+  },
+  "display_settings": {
+    "title": "副车架网格质量评估 - 雷达图综合评分",
+    "axis_labels": ["雅可比比", "纵横比", "偏斜度", "翘曲度", "锥度"],
+    "color_bar": {
+      "min": 0,
+      "max": 100,
+      "label": "质量评分 (0-100)",
+      "n_levels": 5
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 1.2 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "网格单元总数", "value": 50000, "unit": "个", "tolerance": 0 },
+      { "name": "雅可比比评分", "value": 92, "unit": "分", "tolerance": 5 },
+      { "name": "纵横比评分", "value": 85, "unit": "分", "tolerance": 5 },
+      { "name": "偏斜度评分", "value": 65, "unit": "分", "tolerance": 8 },
+      { "name": "翘曲度评分", "value": 58, "unit": "分", "tolerance": 8 },
+      { "name": "锥度评分", "value": 93, "unit": "分", "tolerance": 5 },
+      { "name": "综合质量评分", "value": 78.5, "unit": "分", "tolerance": 5 },
+      { "name": "不合格单元数量", "value": 1850, "unit": "个", "tolerance": 15 },
+      { "name": "不合格单元占比", "value": 3.7, "unit": "%", "tolerance": 20 },
+      { "name": "雷达图轴数", "value": 5, "unit": "个", "tolerance": 0 }
+    ]
+  }
+}

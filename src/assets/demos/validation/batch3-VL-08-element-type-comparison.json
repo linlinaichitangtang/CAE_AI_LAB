@@ -1,0 +1,150 @@
+{
+  "id": "VL-08",
+  "name": "单元类型对比",
+  "nameEn": "Element Type Comparison Study",
+  "description": "验证不同单元类型对同一悬臂梁弯曲问题的求解精度差异。采用相同自由度数量(约1000)的四种单元：C3D4(线性四面体)、C3D10(二次四面体)、C3D8(线性六面体)和C3D20R(缩减积分二次六面体)进行对比。验证C3D20R精度最高、C3D4最差(剪切锁定效应)，各单元位移误差分别为C3D4<15%、C3D10<3%、C3D8<5%、C3D20R<1%。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["element_type", "shear_locking", "tetrahedron", "hexahedron", "accuracy_comparison"],
+  "validation_type": "element_type",
+  "test_config": {
+    "baseline": {
+      "description": "C3D20R缩减积分二次六面体，约1000单元，最高精度参考",
+      "bc_type": "fixed-free_cantilever",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "C3D4线性四面体单元，约1000单元，预期剪切锁定",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "C3D10二次四面体单元，约1000单元，精度较好",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "C3D8线性六面体单元，约1000单元，存在剪切锁定",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["max_displacement", "max_stress", "shear_locking_indicator", "displacement_error_percentage"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D20R"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; δ_exact = FL³/(3EI) = 2.0e-4 m; σ_exact = Mc/I = 6.0e6 Pa; C3D4: severe shear locking, δ_FEM/δ_exact ≈ 0.85-0.90 (underestimates deflection); C3D8: moderate shear locking, δ_FEM/δ_exact ≈ 0.90-0.95; C3D10: good accuracy, δ_FEM/δ_exact ≈ 0.97-1.00; C3D20R: excellent accuracy, δ_FEM/δ_exact ≈ 0.995-1.002; Locking ratio = shear_strain_energy/bending_strain_energy",
+    "reference": "Bathe, K.J. Finite Element Procedures; Hughes, T.J.R. The Finite Element Method: Linear Static and Dynamic Finite Element Analysis"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Theoretical max displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "C3D4 displacement error",
+        "value": 12.0,
+        "unit": "%",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D10 displacement error",
+        "value": 2.0,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D8 displacement error",
+        "value": 4.0,
+        "unit": "%",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D20R displacement error",
+        "value": 0.5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D4 shear locking ratio (shear/bending energy)",
+        "value": 0.35,
+        "unit": "",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D8 shear locking ratio",
+        "value": 0.15,
+        "unit": "",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D20R shear locking ratio",
+        "value": 0.02,
+        "unit": "",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D10 max stress error",
+        "value": 2.5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D20R max stress error",
+        "value": 0.5,
+        "unit": "%",
+        "tolerance": 50.0
+      }
+    ]
+  }
+}

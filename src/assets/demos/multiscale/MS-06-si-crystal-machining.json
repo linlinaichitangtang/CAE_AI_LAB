@@ -1,0 +1,324 @@
+{
+  "id": "MS-06",
+  "name": "Si晶体加工全链路",
+  "nameEn": "Si Crystal Machining Full Chain",
+  "description": "硅晶体纳米加工全链路多尺度模拟：从DFT计算硅的电子结构和带隙出发，通过分子动力学模拟纳米切削过程（切削深度5nm），利用相场方法预测位错结构演化，最终通过有限元方法分析宏观变形场。该案例展示从电子结构到宏观加工性能的完整跨尺度预测能力，涵盖半导体材料加工中的关键多尺度问题。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["silicon", "nano-cutting", "band gap", "dislocation", "machining", "semiconductor", "full chain"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Si",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "Si电子结构与弹性性质计算",
+      "description": "使用DFT计算硅的基态电子结构、带隙和弹性常数，为MD势函数校准提供参考",
+      "input": {
+        "crystal_structure": "diamond_cubic",
+        "lattice_constant": 5.431,
+        "lattice_constant_unit": "Angstrom",
+        "atomic_number": 14,
+        "space_group": "Fd-3m"
+      },
+      "output": {
+        "band_gap": 1.12,
+        "band_gap_unit": "eV",
+        "band_gap_type": "indirect",
+        "lattice_constant_optimized": 5.47,
+        "lattice_constant_unit": "Angstrom",
+        "bulk_modulus": 97.8,
+        "bulk_modulus_unit": "GPa",
+        "elastic_constants": {
+          "C11": 165.6,
+          "C12": 63.9,
+          "C44": 79.5,
+          "unit": "GPa"
+        },
+        "cohesive_energy": -4.63,
+        "cohesive_energy_unit": "eV/atom",
+        "surface_energy_100": 1.36,
+        "surface_energy_unit": "J/m^2",
+        "stacking_fault_energy": 0.05,
+        "stacking_fault_energy_unit": "J/m^2"
+      },
+      "parameters": {
+        "k_points": [12, 12, 12],
+        "energy_cutoff": 400,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Si",
+        "xc_functional": "PBE",
+        "smearing": "Gaussian",
+        "smearing_width": 0.01,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "band_structure_path": "L-Gamma-X-W-K-Gamma",
+        "k_points_band": 100,
+        "vdw_correction": "DFT-D3"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Elastic constants and defect energies to Tersoff potential calibration",
+        "data_transferred": [
+          "elastic_constants_C11_C12_C44",
+          "cohesive_energy",
+          "surface_energy",
+          "stacking_fault_energy",
+          "lattice_constant"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "Si纳米切削分子动力学模拟",
+      "description": "使用Tersoff势函数模拟金刚石刀具对硅(100)面的纳米切削过程，切削深度5nm",
+      "input": {
+        "workpiece_material": "Si diamond_cubic",
+        "workpiece_orientation": "(100)[010]",
+        "workpiece_dimensions": {
+          "Lx": 40,
+          "Ly": 30,
+          "Lz": 20,
+          "unit": "nm"
+        },
+        "atom_count": 1600000,
+        "tool_material": "diamond_rigid",
+        "tool_geometry": "edge_radius_5nm",
+        "cutting_depth": 5,
+        "cutting_depth_unit": "nm",
+        "cutting_speed": 200,
+        "cutting_speed_unit": "m/s",
+        "cutting_direction": "[010]",
+        "rake_angle": 0,
+        "rake_angle_unit": "degree",
+        "clearance_angle": 7,
+        "clearance_angle_unit": "degree"
+      },
+      "output": {
+        "cutting_forces": {
+          "tangential_force": 280,
+          "normal_force": 350,
+          "unit": "nN"
+        },
+        "specific_cutting_energy": 45,
+        "specific_cutting_energy_unit": "GJ/m^3",
+        "chip_morphology": "chip_morphology.vtk",
+        "subsurface_damage_depth": 8,
+        "damage_depth_unit": "nm",
+        "dislocation_density": 5e15,
+        "dislocation_density_unit": "m^-2",
+        "amorphization_layer_thickness": 3,
+        "amorphization_unit": "nm",
+        "temperature_rise": 150,
+        "temperature_rise_unit": "K",
+        "residual_stress_max": 5.0,
+        "residual_stress_unit": "GPa",
+        "surface_roughness_Ra": 0.8,
+        "surface_roughness_unit": "nm"
+      },
+      "parameters": {
+        "potential": "Tersoff (Erhart-Albe Si-C)",
+        "potential_file": "SiC_Tersoff_ErhartAlbe.tersoff",
+        "timestep": 0.5,
+        "timestep_unit": "fs",
+        "ensemble": "NVE_with_thermostat_boundary",
+        "boundary_atoms_temperature": 300,
+        "boundary_temperature_unit": "K",
+        "thermostat": "Berendsen",
+        "thermostat_coupling": 100,
+        "thermostat_coupling_unit": "fs",
+        "cutoff_radius": 4.0,
+        "cutoff_radius_unit": "Angstrom",
+        "total_cutting_distance": 25,
+        "cutting_distance_unit": "nm",
+        "dump_interval": 1000,
+        "neighbor_skin": 1.5,
+        "neighbor_skin_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Dislocation network and amorphization zone to phase field order parameter field",
+        "data_transferred": [
+          "dislocation_density_field",
+          "amorphization_zone_geometry",
+          "residual_stress_field",
+          "subsurface_damage_profile",
+          "temperature_field"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "Si加工诱导位错相场模拟",
+      "description": "基于MD切削结果，使用相场晶体(PFC)模型模拟加工诱导的位错结构演化和亚表面损伤层形成",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 60,
+          "Lz": 40,
+          "unit": "nm"
+        },
+        "grid_points": "200x120x80",
+        "initial_dislocation_field_source": "MD dislocation analysis",
+        "initial_amorphous_fraction": 0.15,
+        "initial_amorphous_depth": 3,
+        "initial_amorphous_depth_unit": "nm",
+        "residual_stress_source": "MD stress field",
+        "temperature_field_source": "MD temperature field"
+      },
+      "output": {
+        "dislocation_evolution": "dislocation_evolution.vtk",
+        "amorphous_crystal_interface": "interface_evolution.vtk",
+        "final_damage_depth": 12,
+        "damage_depth_unit": "nm",
+        "dislocation_network_pattern": "cellular",
+        "average_dislocation_spacing": 15,
+        "dislocation_spacing_unit": "nm",
+        "phase_field_order_parameter_range": {
+          "crystalline": 1.0,
+          "amorphous": 0.0,
+          "interface": 0.5
+        },
+        "residual_stress_relaxation": 35,
+        "stress_relaxation_unit": "percent"
+      },
+      "parameters": {
+        "model": "Phase field crystal (PFC) with amorphization",
+        "order_parameters": ["psi_crystal", "eta_amorphous"],
+        "interface_width": 2.0,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 3e-10,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility_crystal": 1e-14,
+        "mobility_crystal_unit": "m^3/(J*s)",
+        "mobility_amorphous": 5e-15,
+        "mobility_amorphous_unit": "m^3/(J*s)",
+        "driving_force_crystallization": 1e8,
+        "driving_force_unit": "J/m^3",
+        "elastic_coupling": true,
+        "elastic_mismatch_strain": 0.02,
+        "time_step": 0.1,
+        "time_step_unit": "ns",
+        "total_time": 100,
+        "total_time_unit": "ns",
+        "noise_amplitude": 0.005
+      },
+      "bridge_to_next": {
+        "mapping_method": "Damage field and residual stress to FE constitutive model parameters",
+        "data_transferred": [
+          "damage_depth_profile",
+          "dislocation_density_distribution",
+          "residual_stress_after_relaxation",
+          "amorphous_fraction_depth_profile"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "Si加工宏观变形有限元分析",
+      "description": "基于相场输出的损伤场和残余应力，建立考虑亚表面损伤层的宏观有限元模型，分析加工变形和翘曲",
+      "input": {
+        "wafer_dimensions": {
+          "diameter": 300,
+          "thickness": 0.775,
+          "unit": "mm"
+        },
+        "material_properties": {
+          "bulk_Si": {
+            "youngs_modulus": 130,
+            "youngs_modulus_unit": "GPa",
+            "poisson_ratio": 0.28,
+            "density": 2329,
+            "density_unit": "kg/m^3"
+          },
+          "damaged_layer": {
+            "youngs_modulus_reduction": 40,
+            "reduction_unit": "percent",
+            "thickness": 12,
+            "thickness_unit": "nm"
+          }
+        },
+        "residual_stress_source": "Phase field MS-06 Step 3",
+        "damage_field_source": "Phase field MS-06 Step 3",
+        "machining_pattern": "parallel_grooves_pitch_50um"
+      },
+      "output": {
+        "wafer_deformation": "wafer_deformation.vtk",
+        "max_warp": 15,
+        "warp_unit": "um",
+        "surface_profile": "surface_profile.dat",
+        "stress_distribution": "stress_distribution.vtk",
+        "max_subsurface_stress": 2.5,
+        "max_subsurface_stress_unit": "GPa",
+        "total_residual_stress_energy": 0.05,
+        "residual_energy_unit": "J",
+        "critical_stress_location": "groove_intersections"
+      },
+      "parameters": {
+        "element_type": "S8R",
+        "mesh_density": "radial_200_x_thickness_10",
+        "mesh_refinement": "surface_layer_5_elements",
+        "boundary_condition": "free_standing",
+        "solver_type": "static_general",
+        "geometric_nonlinearity": true,
+        "material_model": "anisotropic_elastic_with_damage",
+        "damage_model": "continuum_damage_mechanics",
+        "initial_damage_field": "from_phase_field",
+        "max_iterations": 500,
+        "convergence_tolerance": 1e-8,
+        "stabilization": "artificial_damping_0.0001"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Warp and stress comparison with wafer metrology data",
+        "data_transferred": [
+          "wafer_warp",
+          "surface_profile",
+          "stress_distribution",
+          "damage_zone_dimensions"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.ijmachtools.2015.07.004",
+    "authors": "Fang FZ, Zhang XD, Hu XT",
+    "year": 2015,
+    "journal": "International Journal of Machine Tools and Manufacture"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Si band gap",
+        "value": 1.12,
+        "unit": "eV",
+        "tolerance": 5
+      },
+      {
+        "name": "Specific cutting energy",
+        "value": 45,
+        "unit": "GJ/m^3",
+        "tolerance": 20
+      },
+      {
+        "name": "Subsurface damage depth",
+        "value": 8,
+        "unit": "nm",
+        "tolerance": 25
+      },
+      {
+        "name": "Surface roughness Ra",
+        "value": 0.8,
+        "unit": "nm",
+        "tolerance": 30
+      },
+      {
+        "name": "Wafer warp",
+        "value": 15,
+        "unit": "um",
+        "tolerance": 25
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 25
+  }
+}

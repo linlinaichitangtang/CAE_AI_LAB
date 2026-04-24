@@ -1,0 +1,88 @@
+{
+  "id": "SS-14",
+  "name": "循环对称结构分析",
+  "nameEn": "Cyclic Symmetry Structure Analysis",
+  "description": "8折循环对称圆盘在内压p=10MPa作用下的应力分析。圆盘外径R=0.1m，内径R=0.02m，厚度t=0.01m。利用循环对称性，仅需分析一个45°扇形区域。验证Lamé厚壁圆筒公式：内壁环向应力σ_θ=10.83MPa，外壁环向应力σ_θ=0.83MPa。该算例用于验证有限元程序中循环对称边界条件的实现。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": [
+    "循环对称",
+    "厚壁圆筒",
+    "Lamé公式",
+    "对称边界"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "radius": 0.1,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 4,
+    "y_div": 16,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "r_inner",
+    "load_type": "pressure",
+    "load_face": "r_inner",
+    "load_magnitude": 10000000.0,
+    "load_direction": "radial",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 5e-06,
+    "max_stress": 10833333.333,
+    "formula": "Lamé公式：σ_θ(r)=(p_iR_i²-p_oR_o²)/(R_o²-R_i²)+(p_i-p_o)R_i²R_o²/((R_o²-R_i²)r²)",
+    "reference": "Timoshenko, Theory of Elasticity, Sec. 28"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "内壁环向应力",
+        "value": 10833333.333,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "外壁环向应力",
+        "value": 833333.333,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "内壁径向应力",
+        "value": 10000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "对称扇形角",
+        "value": 45.0,
+        "unit": "deg",
+        "tolerance": 0.1
+      }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "id": "PP-10",
+  "name": "多帧导出动画",
+  "nameEn": "Multi-frame Animation Export Test",
+  "description": "测试后处理动画导出功能的完整工作流：VTK序列 → PNG序列 → GIF动画。使用悬臂梁模态分析结果，共360帧，30fps，生成12秒动画。测试内容包括：(1)VTK序列文件完整性校验(360个文件无缺失)；(2)PNG序列分辨率一致性检查(1920x1080)；(3)GIF文件帧顺序正确性验证；(4)各格式间数值一致性对比。此测试确保动画导出管线的数据完整性和格式兼容性。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["动画导出", "VTK序列", "PNG序列", "GIF", "帧完整性", "格式转换"],
+  "visualization": {
+    "type": "animation",
+    "field": "displacement",
+    "color_map": "cool",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 360,
+      "fps": 30,
+      "format": "vtk_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "modal",
+    "nodes": 4800,
+    "elements": 3600,
+    "results_file": "results/postprocess/cantilever_modal_export.dat"
+  },
+  "display_settings": {
+    "title": "动画导出测试 - VTK/PNG/GIF管线验证",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": -1.0,
+      "max": 1.0,
+      "label": "归一化位移",
+      "n_levels": 14
+    },
+    "camera": {
+      "position": { "x": 0.8, "y": 0.5, "z": 0.4 },
+      "target": { "x": 0.3, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -22, "yaw": -25 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "总帧数", "value": 360, "unit": "frames", "tolerance": 0 },
+      { "name": "帧率", "value": 30, "unit": "fps", "tolerance": 0 },
+      { "name": "动画时长", "value": 12.0, "unit": "s", "tolerance": 0 },
+      { "name": "PNG分辨率宽", "value": 1920, "unit": "px", "tolerance": 0 },
+      { "name": "PNG分辨率高", "value": 1080, "unit": "px", "tolerance": 0 },
+      { "name": "VTK文件完整性", "value": 100, "unit": "%", "tolerance": 0 },
+      { "name": "GIF文件大小", "value": 50, "unit": "MB", "tolerance": 30 }
+    ]
+  }
+}

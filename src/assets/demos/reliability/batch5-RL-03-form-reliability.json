@@ -1,0 +1,70 @@
+{
+  "id": "RL-03",
+  "name": "FORM一次可靠度方法",
+  "nameEn": "First Order Reliability Method (FORM)",
+  "description": "基于一次可靠度方法（FORM/Hasofer-Lind方法）的可靠度分析问题。抗力R服从对数正态分布LN(300,30)MPa，载荷效应S服从正态分布N(250,50)MPa，极限状态函数g=R-S。FORM方法通过将非正态随机变量等价变换至标准正态空间（使用Rackwitz-Fiessler变换），然后在标准正态空间中搜索极限状态面上距原点最近的点（设计点u*），可靠度指标beta等于原点到设计点的欧氏距离。需验证beta值和设计点坐标u*的正确性，并与蒙特卡洛方法结果进行对比。",
+  "category": "reliability",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["FORM", "Hasofer-Lind", "设计点", "对数正态分布", "等价正态化"],
+  "random_variables": [
+    {
+      "name": "R",
+      "distribution": "lognormal",
+      "mean": 300000000,
+      "stddev": 30000000,
+      "cov": 0.1
+    },
+    {
+      "name": "S",
+      "distribution": "normal",
+      "mean": 250000000,
+      "stddev": 50000000,
+      "cov": 0.2
+    }
+  ],
+  "limit_state": {
+    "type": "explicit",
+    "g_function": "R - S",
+    "description": "抗力R（对数正态）与载荷效应S（正态）之差。需通过等价正态变换在标准正态空间中求解"
+  },
+  "reliability_method": {
+    "type": "form",
+    "samples": 0,
+    "target_reliability_index": 1.65
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "reliability_index_beta",
+        "value": 1.65,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "failure_probability_FORM",
+        "value": 0.0495,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "design_point_u_star_R",
+        "value": 0.89,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "design_point_u_star_S",
+        "value": -1.37,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "failure_probability_MC_verification",
+        "value": 0.0505,
+        "unit": "",
+        "tolerance": 15
+      }
+    ]
+  }
+}

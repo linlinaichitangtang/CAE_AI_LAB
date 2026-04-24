@@ -1,0 +1,94 @@
+{
+  "id": "AC-07",
+  "name": "轨道交通浮置地板隔振分析",
+  "nameEn": "Railway Floating Floor Vibration Isolation",
+  "description": "轨道交通浮置地板系统的隔振性能分析。浮置地板通过弹性垫层支撑，固有频率f_n=12Hz，隔振起始频率为√2×f_n≈17Hz。分析弹性垫层的刚度与阻尼特性，验证50Hz以上频段插入损失IL>20dB的隔振指标。评估不同垫层刚度对隔振频率范围的影响。",
+  "category": "acoustic",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["floating-floor", "vibration-isolation", "insertion-loss", "railway", "resilient-layer"],
+  "geometry": {
+    "type": "plate",
+    "length": 3.0,
+    "width": 2.5,
+    "height": 0.2,
+    "radius": null,
+    "thickness": 0.2,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 25,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Reinforced Concrete (Floor Slab)",
+    "elastic_modulus": 3.0e10,
+    "poisson_ratio": 0.2,
+    "density": 2400,
+    "yield_stress": 3.0e7,
+    "speed_of_sound": 3500,
+    "bulk_modulus": 1.667e10
+  },
+  "boundaryConditions": {
+    "fixed_face": "resilient_mat_base",
+    "load_type": "harmonic",
+    "load_face": "floor_top_surface",
+    "load_magnitude": 1000,
+    "load_direction": "Z",
+    "frequency_hz": 50,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "harmonic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [1, 200]
+  },
+  "theoretical": {
+    "max_displacement": 5.0e-5,
+    "max_stress": 1.5e6,
+    "natural_frequency": 12,
+    "formula": "f_n = (1/(2*pi)) * sqrt(k/m); IL = 20*log10(1/(1-(f/f_n)^2)); isolation begins at f > sqrt(2)*f_n",
+    "reference": "Cremer & Heckl, Structure-Borne Sound, 3rd Ed., Ch.5; ISO 14837-1"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 3
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "natural_frequency_f_n",
+        "value": 12,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "insertion_loss_at_50Hz",
+        "value": 22,
+        "unit": "dB",
+        "tolerance": 10
+      },
+      {
+        "name": "insertion_loss_at_100Hz",
+        "value": 34,
+        "unit": "dB",
+        "tolerance": 10
+      },
+      {
+        "name": "insertion_loss_at_200Hz",
+        "value": 46,
+        "unit": "dB",
+        "tolerance": 10
+      },
+      {
+        "name": "isolation_onset_frequency",
+        "value": 17,
+        "unit": "Hz",
+        "tolerance": 5
+      }
+    ]
+  }
+}

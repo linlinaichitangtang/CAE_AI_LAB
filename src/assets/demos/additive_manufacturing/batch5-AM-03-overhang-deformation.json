@@ -1,0 +1,80 @@
+{
+  "id": "AM-03",
+  "name": "悬垂结构热变形",
+  "nameEn": "Overhang Structure Thermal Deformation",
+  "description": "SLM悬垂结构热变形分析。悬垂角度θ=30°（相对水平面），无支撑打印。Ti-6Al-4V材料：E=110GPa，ν=0.33，ρ=4430kg/m³，σ_y=880MPa，CTE=8.6ppm/K，热导率k=6.7W/(m·K)，熔点T_m=1941K，屈服强度随温度变化（800°C时降至约100MPa）。悬垂结构尺寸：长L=20mm，宽W=5mm，厚T=2mm。热源温度ΔT≈1700K（熔池附近）。悬垂面下方无粉末支撑时，重力与热应力耦合导致翘曲变形。理论翘曲量δ≈α×ΔT×L²/(8h)=8.6e-6×1700×0.02²/(8×0.002)=3.66e-4m=0.37mm。验证不同支撑密度（0%、25%、50%、100%）下的变形量对比。",
+  "category": "additive_manufacturing",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["overhang", "thermal deformation", "support structure", "SLM", "Ti-6Al-4V", "warping"],
+  "geometry": {
+    "type": "custom",
+    "length": 0.02,
+    "width": 0.005,
+    "height": 0.002,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 10,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V (T-dependent)",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "base_plate_connection",
+    "load_type": "thermal",
+    "load_face": "overhang_surface",
+    "load_magnitude": 1700
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 3.66e-4,
+    "max_stress": 880000000,
+    "formula": "δ ≈ α × ΔT × L² / (8h), σ_thermal = E × α × ΔT / (1-ν)",
+    "reference": "Li et al., Additive Manufacturing, 2018; Vandenbroucke & Kruth, RPJ, 2007"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "无支撑翘曲量",
+        "value": 3.66e-4,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "50%支撑密度翘曲量",
+        "value": 1.5e-4,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "最大热应力",
+        "value": 500000000,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "临界悬垂角度",
+        "value": 45,
+        "unit": "deg",
+        "tolerance": 10
+      }
+    ]
+  }
+}

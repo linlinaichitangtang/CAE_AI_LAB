@@ -1,0 +1,103 @@
+{
+  "id": "TC-01",
+  "name": "一维导热杆稳态热传导",
+  "nameEn": "1D Steady-State Heat Conduction in a Rod",
+  "description": "经典一维稳态热传导问题。一根长0.5m、截面积0.01m²的钢杆，左端保持373K(100°C)，右端保持293K(20°C)。在无内热源条件下，温度沿杆长方向呈线性分布。通过傅里叶定律验证热流密度q = kA·ΔT/L = 50×0.01×(373-293)/0.5 = 80W。该案例适用于验证有限元热分析程序的基本导热求解能力。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": ["1D", "steady_state", "heat_conduction", "fourier_law", "linear_temperature"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.5,
+    "width": 0.1,
+    "height": 0.1,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "right_face",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 373,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 373,
+    "formula": "T(x) = T_left - (T_left - T_right) * x / L; q = k * A * (T_left - T_right) / L",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.2 - One-Dimensional Steady-State Conduction"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "heat_flow_rate",
+        "value": 80,
+        "unit": "W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "max_temperature",
+        "value": 373,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "min_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "midpoint_temperature",
+        "value": 333,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "temperature_gradient",
+        "value": -160,
+        "unit": "K/m",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "OS-02",
+  "name": "储罐静力分析",
+  "nameEn": "Storage Tank Static Analysis",
+  "description": "模拟固定顶储罐在静液压力作用下的结构分析。储罐直径D=20m，罐壁高度H=15m，储存液体比重γ=9.8kN/m³。按API 650标准确定各层罐壁厚度，分析罐壁在静水压力下的环向应力分布和径向变形。罐壁厚度沿高度方向按静水压力梯度变化，底部最厚，顶部最薄。验证最大环向应力出现在底部，σ_θ=γHD/(2t)。",
+  "category": "offshore",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["storage-tank", "API-650", "hydrostatic-pressure", "shell", "ring-stress"],
+  "geometry": {
+    "type": "cylinder",
+    "diameter": 20.0,
+    "height": 15.0,
+    "roof_type": "fixed_cone"
+  },
+  "material": {
+    "name": "A283 Gr.C",
+    "elastic_modulus": 200000000000.0,
+    "yield_strength": 205000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "liquid_density": 1000.0,
+    "liquid_level": 14.0,
+    "internal_pressure": 0.0,
+    "wind_pressure": 500.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "底部罐壁厚度(API 650)",
+        "value": 0.014,
+        "unit": "m",
+        "tolerance": 10
+      },
+      {
+        "name": "最大环向应力",
+        "value": 98.0,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "底部径向变形",
+        "value": 1.4,
+        "unit": "mm",
+        "tolerance": 15
+      },
+      {
+        "name": "罐壁轴向应力",
+        "value": 5.2,
+        "unit": "MPa",
+        "tolerance": 15
+      }
+    ]
+  }
+}

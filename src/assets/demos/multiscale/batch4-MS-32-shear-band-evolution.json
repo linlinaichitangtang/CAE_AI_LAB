@@ -1,0 +1,339 @@
+{
+  "id": "MS-32",
+  "name": "剪切带演化",
+  "nameEn": "Shear Band Evolution Multiscale Simulation",
+  "description": "金属玻璃中剪切带从原子尺度萌生到宏观传播的全链条多尺度模拟。首先通过DFT计算金属玻璃(Zr50Cu50)中局部剪切转变区(STZ)的激活能和滑移面表面能γ_surface，确定塑性变形起始条件；然后通过MD模拟揭示位错堆积和应变局部化过程，捕捉剪切带核的早期形成；相场模型基于应变软化本构描述剪切带的扩展动力学，包括带内温度升高的热-力耦合效应；FE模型在宏观尺度预测剪切带的传播路径、速度和导致的材料失效模式。该案例展示了非晶合金中绝热剪切带的多尺度形成机制。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["shear band", "metallic glass", "ZrCu", "strain localization", "STZ", "adiabatic shear", "thermal softening", "amorphous plasticity"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Zr50Cu50 Metallic Glass",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "塑性起始与STZ激活能计算",
+      "description": "DFT计算Zr50Cu50金属玻璃中剪切转变区(STZ)的激活能和滑移面表面能，确定塑性变形起始条件",
+      "input": {
+        "composition": "Zr50Cu50",
+        "model": "amorphous_cell_200_atoms",
+        "atomic_arrangement": "melt-quenched_from_2500K",
+        "quench_rate": 1e13,
+        "quench_rate_unit": "K/s",
+        "shear_deformation": "affine_simple_shear",
+        "shear_strain_range": [0, 0.15],
+        "NEB_images": 7,
+        "slip_plane_candidates": ["Zr-Zr", "Zr-Cu", "Cu-Cu"]
+      },
+      "output": {
+        "STZ_activation_energy": 0.98,
+        "activation_energy_unit": "eV",
+        "STZ_volume": 100,
+        "STZ_volume_unit": "Angstrom^3",
+        "gamma_surface": 1.45,
+        "gamma_surface_unit": "J/m^2",
+        "ideal_shear_strength": 4.2,
+        "ideal_shear_strength_unit": "GPa",
+        "local_shear_modulus": 28,
+        "local_shear_modulus_unit": "GPa",
+        "critical_free_volume": 0.035,
+        "critical_free_volume_unit": "dimensionless",
+        "energy_barrier_profile": "neb_barrier.dat",
+        "charge_density_shear": "rho_shear.cube"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Zr_sv + PAW_PBE_Cu",
+        "energy_cutoff": 450,
+        "energy_cutoff_unit": "eV",
+        "k_points": "Gamma_only",
+        "smearing": "Gaussian",
+        "smearing_width": 0.1,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "NEB_method": "CI-NEB",
+        "spring_constant": 5.0,
+        "spring_constant_unit": "eV/Angstrom^2",
+        "ionic_relaxation": true,
+        "ibrion": 1,
+        "ediffg": -0.02,
+        "ediffg_unit": "eV/Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT STZ activation energy and ideal shear strength to MD EAM potential validation and shear transformation rate theory parameters",
+        "data_transferred": [
+          "STZ_activation_energy",
+          "STZ_volume",
+          "gamma_surface",
+          "ideal_shear_strength",
+          "critical_free_volume"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "位错堆积与应变局部化模拟",
+      "description": "MD模拟Zr50Cu50金属玻璃中剪切转变区的演化、位错堆积和应变局部化过程",
+      "input": {
+        "composition": "Zr50Cu50",
+        "amorphous_cell": "melt_quenched",
+        "quench_rate": 1e12,
+        "quench_rate_unit": "K/s",
+        "system_sizes": ["10nm_cube", "20nm_cube", "40nm_cube"],
+        "atom_counts": [40000, 320000, 2560000],
+        "loading": "uniaxial_compression",
+        "strain_rate": 1e9,
+        "strain_rate_unit": "1/s",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "STZ_activation_energy": 0.98,
+        "activation_energy_unit": "eV",
+        "notch_geometry": "single_edge_notch",
+        "notch_depth": 2,
+        "notch_depth_unit": "nm"
+      },
+      "output": {
+        "yield_stress": 2.15,
+        "yield_stress_unit": "GPa",
+        "shear_band_width": 12,
+        "shear_band_width_unit": "nm",
+        "local_temperature_rise": 450,
+        "temperature_rise_unit": "K",
+        "von_mises_strain_field": "strain.vtk",
+        "STZ_density_map": "stz_density.vtk",
+        "shear_band_velocity": 850,
+        "shear_band_velocity_unit": "m/s",
+        "strain_localization_ratio": 15,
+        "localization_ratio_unit": "dimensionless",
+        "stress_strain_curve": "ss_MD.dat",
+        "atomic_shear_strain": "eta_shear.dat"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "potential": "EAM_ZrCu_Kim_Mendelev",
+        "potential_file": "ZrCu_Mendelev.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Nose-Hoover",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "pressure": 0,
+        "pressure_unit": "bar",
+        "deformation": "uniaxial_compression_z",
+        "strain_rate": 1e9,
+        "strain_rate_unit": "1/s",
+        "total_strain": 0.25,
+        "dump_interval": 1000,
+        "neighbor_skin": 2.5,
+        "neighbor_skin_unit": "Angstrom",
+        "STZ_analysis": "atomic_strain_tensor",
+        "cutoff_STZ": 0.1
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD shear band width, velocity, temperature rise and strain localization parameters to phase field model for mesoscale shear band propagation",
+        "data_transferred": [
+          "shear_band_width",
+          "shear_band_velocity",
+          "local_temperature_rise",
+          "strain_localization_ratio",
+          "yield_stress"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场剪切带扩展模拟",
+      "description": "基于应变软化本构和热-力耦合的相场模型，模拟剪切带的扩展动力学和温度场演化",
+      "input": {
+        "domain_size": {
+          "Lx": 200,
+          "Ly": 100,
+          "Lz": 1,
+          "unit": "um"
+        },
+        "grid_spacing": 0.5,
+        "grid_spacing_unit": "um",
+        "grid_points": "400x200x1",
+        "initial_notch": {"position": "left_edge", "angle": 45, "angle_unit": "deg"},
+        "constitutive_law": "J2_plasticity_with_thermal_softening",
+        "yield_stress": 2.15,
+        "yield_stress_unit": "GPa",
+        "shear_band_width": 12,
+        "shear_band_width_unit": "nm",
+        "thermal_conductivity": 4.0,
+        "thermal_conductivity_unit": "W/(m·K)",
+        "specific_heat": 380,
+        "specific_heat_unit": "J/(kg·K)",
+        "density": 6700,
+        "density_unit": "kg/m^3",
+        "strain_localization_ratio": 15,
+        "adiabatic_heating": true
+      },
+      "output": {
+        "shear_band_propagation_speed": 920,
+        "propagation_speed_unit": "m/s",
+        "peak_temperature_in_band": 780,
+        "peak_temperature_unit": "K",
+        "shear_band_path": "sb_path.vtk",
+        "strain_field_evolution": "strain_evo.vtk",
+        "temperature_field": "temperature.vtk",
+        "stress_drop_ratio": 0.65,
+        "stress_drop_unit": "dimensionless",
+        "band_width_evolution": "band_width.dat",
+        "energy_dissipation": 2.8,
+        "energy_dissipation_unit": "MJ/m^3",
+        "time_to_fracture": 1.2,
+        "fracture_time_unit": "us"
+      },
+      "parameters": {
+        "code": "custom_phase_field_solver",
+        "model": "phase_field_shear_band_with_thermal_coupling",
+        "order_parameter": "damage_d",
+        "phase_field_length_scale": 5,
+        "length_scale_unit": "um",
+        "fracture_energy_Gc": 45,
+        "fracture_energy_unit": "J/m^2",
+        "softening_model": "exponential",
+        "residual_strength": 0.05,
+        "time_integration": "implicit_BDF2",
+        "time_step": 1e-9,
+        "time_step_unit": "s",
+        "total_time": 5e-6,
+        "total_time_unit": "s",
+        "thermal_coupling": "fully_coupled",
+        "convection": false,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field shear band propagation parameters and thermal softening behavior to FE macro-scale failure prediction model",
+        "data_transferred": [
+          "shear_band_propagation_speed",
+          "peak_temperature_in_band",
+          "stress_drop_ratio",
+          "energy_dissipation",
+          "band_width_evolution"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "宏观剪切带传播与失效预测",
+      "description": "基于相场参数建立FE模型，预测宏观尺度剪切带的传播路径、速度和材料失效模式",
+      "input": {
+        "specimen_geometry": "SHPB_compression_sample",
+        "dimensions": {"diameter": 5, "height": 5, "unit": "mm"},
+        "mesh": "refined_near_notch",
+        "element_type": "C3D8R",
+        "element_size_min": 0.05,
+        "element_size_min_unit": "mm",
+        "material_model": "Johnson-Cook_with_thermal_softening",
+        "JC_parameters": {
+          "A": 2150,
+          "B": 850,
+          "n": 0.45,
+          "C": 0.02,
+          "m": 1.2,
+          "T_melt": 1280,
+          "T_melt_unit": "K",
+          "T_ref": 300,
+          "T_ref_unit": "K",
+          "stress_unit": "MPa"
+        },
+        "shear_band_velocity": 920,
+        "shear_band_velocity_unit": "m/s",
+        "loading": "compression_at_1e3_s-1",
+        "strain_rate": 1000,
+        "strain_rate_unit": "1/s"
+      },
+      "output": {
+        "macro_shear_band_angle": 42,
+        "angle_unit": "deg",
+        "macro_shear_band_velocity": 880,
+        "velocity_unit": "m/s",
+        "peak_temperature": 750,
+        "temperature_unit": "K",
+        "fracture_pattern": "diagonal_shear_fracture",
+        "stress_strain_curve": "ss_FE.dat",
+        "energy_absorption": 85,
+        "energy_absorption_unit": "MJ/m^3",
+        "fragment_count": 3,
+        "damage_field": "damage_FE.vtk",
+        "temperature_field": "temp_FE.vtk"
+      },
+      "parameters": {
+        "code": "Abaqus/Explicit",
+        "element_type": "C3D8R",
+        "hourglass_control": "enhanced",
+        "mass_scaling": 1e-6,
+        "mass_scaling_unit": "s",
+        "total_time": 50,
+        "total_time_unit": "us",
+        "output_interval": 0.5,
+        "output_interval_unit": "us",
+        "contact": "general_contact",
+        "friction_coefficient": 0.15,
+        "erosion": "element_deletion_at_0.9_damage",
+        "thermal_coupling": "adiabatic",
+        "CFL_number": 0.9
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE macro shear band prediction and failure analysis for material design and impact resistance optimization",
+        "data_transferred": [
+          "macro_shear_band_angle",
+          "macro_shear_band_velocity",
+          "peak_temperature",
+          "energy_absorption",
+          "fracture_pattern"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2015.02.015",
+    "authors": "Cheng YQ, Ma E",
+    "year": 2015,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "STZ activation energy",
+        "value": 0.98,
+        "unit": "eV",
+        "tolerance": 10
+      },
+      {
+        "name": "Shear band width (MD)",
+        "value": 12,
+        "unit": "nm",
+        "tolerance": 15
+      },
+      {
+        "name": "Shear band propagation speed (PF)",
+        "value": 920,
+        "unit": "m/s",
+        "tolerance": 15
+      },
+      {
+        "name": "Peak temperature in shear band",
+        "value": 750,
+        "unit": "K",
+        "tolerance": 10
+      },
+      {
+        "name": "Macro shear band angle (FE)",
+        "value": 42,
+        "unit": "deg",
+        "tolerance": 5
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

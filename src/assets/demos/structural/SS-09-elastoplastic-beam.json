@@ -1,0 +1,95 @@
+{
+  "id": "SS-09",
+  "name": "非线性弹塑性梁分析",
+  "nameEn": "Nonlinear Elastoplastic Beam Analysis",
+  "description": "悬臂梁在端部递增载荷作用下的弹塑性分析。梁截面为矩形(b=0.05m, h=0.05m)，材料为理想弹塑性钢(E=200GPa, σ_y=250MPa)。当载荷超过屈服载荷F_y时，截面开始进入塑性，最终在固定端形成塑性铰。验证屈服弯矩M_y=σ_y·Z=5208.3N·m、塑性弯矩M_p=σ_y·S=7812.5N·m及形状系数1.5。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "弹塑性",
+    "塑性铰",
+    "非线性分析",
+    "理想塑性"
+  ],
+  "geometry": {
+    "type": "beam",
+    "length": 0.5,
+    "width": 0.05,
+    "height": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ideal Plastic Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 250000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 15625.0,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-06
+  },
+  "theoretical": {
+    "max_displacement": 0.004167,
+    "max_stress": 250000000.0,
+    "formula": "M_y=σ_y·Z=5208.3N·m, M_p=σ_y·S=7812.5N·m, 形状系数=S/Z=1.5",
+    "reference": "Neal, The Plastic Methods of Structural Analysis, Ch. 3"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "屈服弯矩",
+        "value": 5208.3,
+        "unit": "N·m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "塑性弯矩",
+        "value": 7812.5,
+        "unit": "N·m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "形状系数",
+        "value": 1.5,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "屈服载荷",
+        "value": 10416.7,
+        "unit": "N",
+        "tolerance": 5.0
+      },
+      {
+        "name": "极限载荷",
+        "value": 15625.0,
+        "unit": "N",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "id": "FS-01",
+  "name": "旗形飘动",
+  "nameEn": "Flag Flutter",
+  "description": "模拟弹性薄板在均匀来流中的旗形飘动现象。薄板一端固定，另一端自由，在气流作用下产生涡激振动（VIV）。通过流固耦合分析验证Strouhal数St≈0.2，涡脱落频率f_vortex=St×U/D≈2Hz，以及板面位移响应幅值。采用分区耦合方法，流体域使用有限体积法，结构域使用有限元法，界面数据通过湿表面传递。",
+  "category": "fsi",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["VIV", "flag-flutter", "elastic-plate", "vortex-shedding"],
+  "fluid_domain": {
+    "type": "external",
+    "density": 1.225,
+    "viscosity": 1.81e-5,
+    "velocity": 5.0,
+    "pressure": 101325.0
+  },
+  "structure_domain": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.1,
+    "thickness": 0.0005,
+    "elastic_modulus": 10000000.0,
+    "density": 1100.0
+  },
+  "coupling": {
+    "method": "partitioned",
+    "interface": "wet_surface",
+    "time_step": 0.001,
+    "total_time": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Strouhal数",
+        "value": 0.2,
+        "unit": "-",
+        "tolerance": 15
+      },
+      {
+        "name": "涡脱落频率",
+        "value": 2.0,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "板尖端最大位移",
+        "value": 0.03,
+        "unit": "m",
+        "tolerance": 20
+      }
+    ]
+  }
+}

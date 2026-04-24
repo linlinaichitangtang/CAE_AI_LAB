@@ -1,0 +1,86 @@
+{
+  "id": "SS-38",
+  "name": "K因子线弹性断裂力学分析",
+  "nameEn": "LEFM Stress Intensity Factor Analysis",
+  "description": "单边缺口弯曲梁(SENB)的应力强度因子K_I精确计算分析。试样尺寸B=25mm, W=50mm, 跨距S=4W=200mm, 裂纹比a/W=0.5。基于线弹性断裂力学(LEFM)理论，计算K_I=σ√(πa)·F(a/W)，其中F(a/W)为几何修正因子。验证有限元J积分计算结果与理论解析解的一致性。本案例适用于断裂力学基础教学和K因子标定测试验证。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["LEFM", "K因子", "断裂力学", "SENB", "J积分", "应力强度因子"],
+  "geometry": {
+    "type": "senb",
+    "length": 0.2,
+    "width": 0.05,
+    "height": 0.025,
+    "radius": 0,
+    "thickness": 0.025,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 6,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Structural Steel (LEFM analysis)",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 450000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_supports",
+    "load_type": "point",
+    "load_face": "top_center",
+    "load_magnitude": 20000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0008,
+    "max_stress": 450000000,
+    "formula": "K_I = (P·S)/(B·W^(3/2)) · f(a/W), f(a/W) = 3(a/W)^(1/2)·[1.99-(a/W)(1-a/W)(2.15-3.93a/W+2.7a²/W²)]/[2(1+2a/W)(1-a/W)^(3/2)]",
+    "reference": "ASTM E399-20: Standard Test Method for Linear-Elastic Plane-Strain Fracture Toughness of Metallic Materials."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "应力强度因子K_I",
+        "value": 32000000,
+        "unit": "Pa·√m",
+        "tolerance": 3
+      },
+      {
+        "name": "几何修正因子f(a/W)",
+        "value": 2.66,
+        "unit": "",
+        "tolerance": 2
+      },
+      {
+        "name": "J积分值",
+        "value": 4876,
+        "unit": "J/m²",
+        "tolerance": 5
+      },
+      {
+        "name": "裂纹尖端张开位移CTOD",
+        "value": 0.00023,
+        "unit": "m",
+        "tolerance": 5
+      }
+    ]
+  }
+}

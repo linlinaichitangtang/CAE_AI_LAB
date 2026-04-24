@@ -1,0 +1,57 @@
+{
+  "id": "PP-40",
+  "name": "计算资源预估",
+  "nameEn": "Computational Resource Estimation - Memory and Time Prediction",
+  "description": "演示基于模型规模和分析类型预估计算资源需求(内存和计算时间)的功能。系统内置参考数据库，覆盖常见分析场景：(1)10万节点静力分析→内存2GB/计算时间5分钟；(2)10万节点瞬态分析→内存4GB/计算时间30分钟；(3)50万节点模态分析→内存8GB/计算时间15分钟。预估算法基于节点数、单元类型(线性/二次)、分析类型(静力/模态/瞬态/耦合)和输出频率四个因子，通过线性回归模型计算。用户输入模型参数后，系统实时显示预估内存(GB)、预估计算时间(分钟)和推荐硬件配置(核心数/内存)。同时提供资源需求柱状图对比不同分析方案的资源消耗，辅助工程师在精度与效率间做出合理权衡。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 3,
+  "tags": ["资源预估", "内存估算", "计算时间", "硬件配置", "线性回归", "资源对比"],
+  "visualization": {
+    "type": "resource_estimation",
+    "field": "mesh_quality",
+    "color_map": "plasma",
+    "view_mode": "2d_section",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 100000,
+    "elements": 85000,
+    "results_file": "results/postprocess/resource_estimation_reference.dat"
+  },
+  "display_settings": {
+    "title": "计算资源预估 - 内存与时间需求分析",
+    "axis_labels": ["节点数 (万)", "资源需求", "分析类型"],
+    "color_bar": {
+      "min": 0,
+      "max": 16,
+      "label": "预估内存 (GB)",
+      "n_levels": 8
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 1.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "参考数据条目数", "value": 12, "unit": "条", "tolerance": 0 },
+      { "name": "10万节点静力内存", "value": 2, "unit": "GB", "tolerance": 10 },
+      { "name": "10万节点静力时间", "value": 5, "unit": "min", "tolerance": 15 },
+      { "name": "10万节点瞬态内存", "value": 4, "unit": "GB", "tolerance": 10 },
+      { "name": "10万节点瞬态时间", "value": 30, "unit": "min", "tolerance": 15 },
+      { "name": "50万节点模态内存", "value": 8, "unit": "GB", "tolerance": 10 },
+      { "name": "50万节点模态时间", "value": 15, "unit": "min", "tolerance": 15 },
+      { "name": "预估模型R²拟合度", "value": 0.96, "unit": "", "tolerance": 3 },
+      { "name": "预估误差范围", "value": 15, "unit": "%", "tolerance": 20 },
+      { "name": "支持分析类型数", "value": 4, "unit": "种", "tolerance": 0 }
+    ]
+  }
+}

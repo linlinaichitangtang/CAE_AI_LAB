@@ -4,7 +4,7 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive};
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -234,6 +234,12 @@ pub fn run() {
             commands::ai::ai_chat,
             commands::ai::ai_chat_stream,
             commands::ai::test_ai_connection,
+            // V2.4: Agent commands
+            commands::agent::get_agent_status,
+            commands::agent::agent_invoke_tool,
+            commands::agent::get_agent_metrics,
+            commands::agent::reset_agent_state,
+            commands::agent::get_available_tools,
             // Material commands
             commands::materials::list_materials,
             commands::materials::get_material,
@@ -660,6 +666,16 @@ pub fn run() {
             commands::data_transfer::convert_units,
             // V2.3: Coordinate mapping (V2.3-022, KI-004)
             commands::param_mapping::map_coordinates,
+            // V2.5: ML Surrogate Model commands
+            commands::ml_predict::predict_material_properties,
+            commands::ml_predict::list_ml_models,
+            commands::ml_predict::run_accuracy_benchmark,
+            // V2.5: Simulation archive commands
+            commands::simulation_archive::archive_simulation_result,
+            commands::simulation_archive::query_simulation_archives,
+            commands::simulation_archive::get_archive_statistics,
+            commands::simulation_archive::export_simulation_archives,
+            commands::simulation_archive::delete_simulation_archive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

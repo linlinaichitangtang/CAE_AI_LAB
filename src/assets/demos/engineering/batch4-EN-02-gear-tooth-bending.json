@@ -1,0 +1,114 @@
+{
+  "id": "EN-02",
+  "name": "齿轮齿根弯曲疲劳分析",
+  "nameEn": "Spur Gear Tooth Root Bending Fatigue Analysis",
+  "description": "分析直齿圆柱齿轮齿根弯曲应力和疲劳寿命。齿轮参数：模数m=5mm，齿数z=30，齿宽b=30mm，压力角α=20°。采用Lewis公式计算齿根名义弯曲应力σ=F·t/(b·m·Y)，其中Y为齿形系数(Y=0.42)。切向力F=5000N。通过有限元分析验证齿根过渡圆角处的应力集中效应，理论应力集中系数Kt≈1.5-1.8。对比Lewis公式计算结果与FEA齿根最大应力，验证齿形系数Y的准确性。评估齿轮在脉动循环载荷下的弯曲疲劳安全系数。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["gear", "bending_fatigue", "lewis_formula", "stress_concentration", "tooth_root", "mechanical_design"],
+  "engineering_domain": "mechanical",
+  "design_code": "ISO 6336 齿轮承载能力计算",
+  "geometry": {
+    "type": "block",
+    "length": 0.015,
+    "width": 0.03,
+    "height": 0.055,
+    "dimension": "3d",
+    "detail_params": {
+      "module": 0.005,
+      "tooth_count": 30,
+      "tooth_width": 0.03,
+      "pressure_angle": 20,
+      "pitch_diameter": 0.15,
+      "addendum": 0.005,
+      "dedendum": 0.00625,
+      "root_fillet_radius": 0.001,
+      "tooth_form_factor_Y": 0.42
+    }
+  },
+  "mesh": {
+    "x_div": 8,
+    "y_div": 12,
+    "z_div": 20,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "20CrMnTi (Carburized)",
+    "elastic_modulus": 207000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 835000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 44,
+    "specific_heat": 470,
+    "fatigue_params": {
+      "ultimate_strength": 1080000000,
+      "fatigue_limit_bending": 500000000,
+      "surface_hardness_HRC": 60
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "tooth_tip",
+    "load_magnitude": 5000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 2e-5,
+    "max_stress": 794000000,
+    "formula": "Lewis formula: σ = F_t/(b·m·Y) where F_t = tangential force at pitch circle; F_t = 5000 N; σ_Lewis = 5000/(0.03×0.005×0.42) = 79.4 MPa; With stress concentration Kt≈1.6: σ_max = 1.6 × 79.4 = 127.0 MPa; ISO 6336 bending stress: σ_F = (F_t/b·m) × Y_Fa × Y_Sa × Y_ε × Y_β × K_A × K_V × K_Fα × K_Fβ; Y_Fa ≈ 2.5 (tooth form factor), Y_Sa ≈ 1.65 (stress correction); σ_F = (5000/(0.03×0.005)) × 2.5 × 1.65 × 1.0 × 1.0 × 1.0 × 1.0 × 1.0 × 1.0 = 33.33e6 × 4.125 = 137.5 MPa; Permissible bending stress: σ_FP = σ_Flim × Y_ST × Y_NT × Y_RrelT × Y_X / S_Fmin; σ_FP = 500 × 2.0 × 1.0 × 1.0 × 1.0 / 1.25 = 800 MPa; Safety factor: S_F = 800/137.5 = 5.82",
+    "reference": "ISO 6336 Calculation of load capacity of spur and helical gears; Shigley, J.E. Mechanical Engineering Design"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Lewis formula nominal bending stress",
+        "value": 79400000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "FEA tooth root maximum stress",
+        "value": 127000000,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "FEA stress concentration factor at root fillet",
+        "value": 1.6,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "ISO 6336 bending stress σ_F",
+        "value": 137500000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Bending fatigue safety factor S_F",
+        "value": 5.82,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "Maximum tooth tip displacement",
+        "value": 2e-5,
+        "unit": "m",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

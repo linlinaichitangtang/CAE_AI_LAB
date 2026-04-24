@@ -1,0 +1,92 @@
+{
+  "id": "SS-43",
+  "name": "地脚螺栓组受力分析",
+  "nameEn": "Anchor Bolt Group Analysis",
+  "description": "对设备底座地脚螺栓组进行受力分析与校核。底座尺寸2m×1.5m，8颗M24地脚螺栓（A_s=353mm²），承受竖向载荷V=200kN、弯矩M=50kN·m、水平剪力H=100kN。按弹性地基梁法计算螺栓拉力T_i=V/n+M·y_i/Σy²，校核最大螺栓拉力和剪力是否满足许用值。螺栓材料8.8级，σ_allow=320MPa。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["地脚螺栓", "螺栓连接", "弯矩分配", "设备基础"],
+  "geometry": {
+    "type": "block",
+    "length": 2.0,
+    "width": 1.5,
+    "height": 0.05,
+    "radius": 0.0,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 16,
+    "z_div": 2,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Grade 8.8 Bolt Steel",
+    "elastic_modulus": 2.06e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 640e6,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "bolt_anchor_locations",
+    "load_type": "point",
+    "load_face": "equipment_base_top",
+    "load_magnitude": 200000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 320e6,
+    "formula": "T_max = V/n + M·y_max/Σy² = 200000/8 + 50000×0.75/(4×0.75²) = 25000+22222 = 47222 N; σ_bolt = T/A_s = 47222/353 = 133.7 MPa; τ = H/(n·A_s) = 100000/(8×353) = 35.4 MPa",
+    "reference": "VDI 2230, GB 50017-2017 螺栓连接计算"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大螺栓拉力 Max Bolt Tension",
+        "value": 47222,
+        "unit": "N",
+        "tolerance": 5
+      },
+      {
+        "name": "螺栓拉应力 Bolt Tensile Stress",
+        "value": 133.7,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "单颗螺栓剪力 Shear per Bolt",
+        "value": 12500,
+        "unit": "N",
+        "tolerance": 5
+      },
+      {
+        "name": "螺栓剪应力 Bolt Shear Stress",
+        "value": 35.4,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "底板最大挠度 Base Plate Max Deflection",
+        "value": 0.05,
+        "unit": "mm",
+        "tolerance": 10
+      }
+    ]
+  }
+}

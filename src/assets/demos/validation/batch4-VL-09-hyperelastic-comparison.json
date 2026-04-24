@@ -1,0 +1,151 @@
+{
+  "id": "VL-09",
+  "name": "超弹性模型对比验证",
+  "nameEn": "Hyperelastic Model Comparison: Linear vs Mooney-Rivlin vs Ogden",
+  "description": "验证线弹性、Mooney-Rivlin和Ogden三种超弹性模型在大变形下的力学响应差异。采用橡胶块(0.05m×0.05m×0.05m)进行单轴拉伸至200%工程应变，分别采用线弹性(E=10MPa)、Mooney-Rivlin(C10=0.5MPa, C01=0.1MPa)和Ogden(μ1=1.0MPa, α1=2.0, μ2=0.1MPa, α2=-2.0)模型求解。对比三种模型在10%、50%、100%、200%应变下的名义应力-应变曲线，验证线弹性模型在大应变下严重偏离真实响应，MR和Ogden模型能正确捕捉橡胶非线性大变形行为。MR模型在200%应变下名义应力约为线弹性的40%，Ogden模型提供更精确的多参数拟合。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["hyperelastic", "mooney_rivlin", "ogden", "large_deformation", "rubber", "constitutive_model"],
+  "validation_type": "constitutive_model",
+  "test_config": {
+    "baseline": {
+      "description": "线弹性模型，E=10MPa，小应变假设",
+      "bc_type": "fixed-free_uniaxial_tension",
+      "material_type": "linear_elastic",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "Mooney-Rivlin模型，C10=0.5MPa, C01=0.1MPa，经典二参数橡胶模型",
+        "bc_type": "fixed-free_uniaxial_tension",
+        "material_type": "mooney_rivlin",
+        "mesh_density": 10
+      },
+      {
+        "description": "Ogden模型，μ1=1.0MPa, α1=2.0, μ2=0.1MPa, α2=-2.0，高精度多参数模型",
+        "bc_type": "fixed-free_uniaxial_tension",
+        "material_type": "ogden",
+        "mesh_density": 10
+      }
+    ],
+    "comparison_metrics": ["nominal_stress_at_50pct_strain", "nominal_stress_at_100pct_strain", "nominal_stress_at_200pct_strain", "stress_strain_curve_divergence"]
+  },
+  "geometry": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 10,
+    "element_type": "C3D8H"
+  },
+  "material": {
+    "name": "Natural Rubber (NR)",
+    "elastic_modulus": 10000000,
+    "poisson_ratio": 0.499,
+    "density": 1100,
+    "yield_stress": 0,
+    "thermal_expansion": 2.2e-4,
+    "thermal_conductivity": 0.16,
+    "specific_heat": 1800,
+    "hyperelastic_params": {
+      "mooney_rivlin": { "C10": 500000, "C01": 100000 },
+      "ogden": [
+        { "mu": 1000000, "alpha": 2.0 },
+        { "mu": 100000, "alpha": -2.0 }
+      ]
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "displacement_control",
+    "load_face": "x_max",
+    "load_magnitude": 0.1,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.1,
+    "max_stress": 4000000,
+    "formula": "Linear: σ = E·ε = 10e6 × 2.0 = 20 MPa (at 200% strain); Mooney-Rivlin uniaxial: σ_MR = 2(λ-λ⁻²)(C10+C01/λ) where λ=1+ε; at ε=2.0 (λ=3): σ_MR = 2(3-1/9)(0.5e6+0.1e6/3) = 2×2.889×0.533e6 = 3.08 MPa; at ε=1.0 (λ=2): σ_MR = 2(2-0.25)(0.5e6+0.05e6) = 2×1.75×0.55e6 = 1.925 MPa; at ε=0.5 (λ=1.5): σ_MR = 2(1.5-0.444)(0.5e6+0.0667e6) = 2×1.056×0.567e6 = 1.197 MPa; Ogden uniaxial: σ_Ogden = Σ(μi/αi)(λ^αi - λ^(-αi/2)); at λ=3: σ_Ogden = (1e6/2)(9-3^(-1)) + (0.1e6/(-2))(3^(-2)-3^(1)) = 0.5e6×8.667 + (-0.05e6)×(-2.889) = 4.333 + 0.144 = 4.48 MPa; Divergence ratio at 200%: Linear/MR ≈ 6.5, Linear/Ogden ≈ 4.5",
+    "reference": "Ogden, R.W. Non-linear Elastic Deformations; Treloar, L.R.G. The Physics of Rubber Elasticity"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Linear model stress at 50% strain",
+        "value": 5000000,
+        "unit": "Pa",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Mooney-Rivlin stress at 50% strain",
+        "value": 1197000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Ogden stress at 50% strain",
+        "value": 1380000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Linear model stress at 100% strain",
+        "value": 10000000,
+        "unit": "Pa",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Mooney-Rivlin stress at 100% strain",
+        "value": 1925000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Ogden stress at 100% strain",
+        "value": 2200000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Linear model stress at 200% strain",
+        "value": 20000000,
+        "unit": "Pa",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Mooney-Rivlin stress at 200% strain",
+        "value": 3080000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Ogden stress at 200% strain",
+        "value": 4480000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Linear/MR divergence ratio at 200% strain",
+        "value": 6.5,
+        "unit": "",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

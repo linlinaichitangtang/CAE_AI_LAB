@@ -1,0 +1,365 @@
+{
+  "id": "MS-19",
+  "name": "跨尺度不确定性传播",
+  "nameEn": "Cross-Scale Uncertainty Propagation",
+  "description": "通过Sobol敏感性分析方法研究DFT→MD→PF→FE跨尺度模拟链中不确定性的传播规律。识别各尺度的关键输入不确定性参数(DFT k点网格、MD势函数截断半径、PF界面宽度、FE网格密度)，采用蒙特卡洛方法(N=1000次采样)量化总不确定性U_total，并计算各参数的一阶和全阶Sobol指数。该案例为跨尺度模拟的可靠性和精度评估提供方法论框架。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["uncertainty quantification", "Sobol sensitivity", "Monte Carlo", "UQ", "cross-scale propagation", "reliability", "SALib"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Al FCC (benchmark)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT参数不确定性采样",
+      "description": "对DFT计算中的k点网格密度和能量截断进行参数化采样，评估其对弹性常数计算结果的不确定性贡献",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "atomic_number": 13,
+        "uncertain_parameters": {
+          "k_point_density": {
+            "range": [4, 24],
+            "distribution": "uniform",
+            "unit": "points_per_reciprocal_Angstrom"
+          },
+          "energy_cutoff": {
+            "range": [200, 600],
+            "distribution": "uniform",
+            "unit": "eV"
+          }
+        },
+        "number_of_samples": 1000,
+        "sampling_method": "Sobol_sequence"
+      },
+      "output": {
+        "elastic_constants_distribution": "Cij_distribution.dat",
+        "C11_mean": 108.2,
+        "C11_std": 2.8,
+        "C11_unit": "GPa",
+        "C12_mean": 62.1,
+        "C12_std": 1.9,
+        "C12_unit": "GPa",
+        "C44_mean": 28.3,
+        "C44_std": 1.5,
+        "C44_unit": "GPa",
+        "bulk_modulus_mean": 77.5,
+        "bulk_modulus_std": 2.2,
+        "bulk_modulus_unit": "GPa",
+        "sobol_indices_DFT": {
+          "S1_kpoints": 0.62,
+          "S1_cutoff": 0.28,
+          "ST_kpoints": 0.65,
+          "ST_cutoff": 0.31
+        },
+        "convergence_study": "convergence_vs_kpoints.dat"
+      },
+      "parameters": {
+        "k_points": "variable_4_to_24",
+        "energy_cutoff": "variable_200_to_600",
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Al",
+        "xc_functional": "PBE",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "parallel_jobs": 50,
+        "walltime_per_job": 30,
+        "walltime_unit": "minutes"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT elastic constants uncertainty distribution propagated to MD potential calibration",
+        "data_transferred": [
+          "C11_C12_C44_distributions",
+          "sobol_indices_DFT",
+          "bulk_modulus_distribution",
+          "parameter_correlation_matrix"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD势函数参数不确定性采样",
+      "description": "对EAM势函数的截断半径和温度控制参数进行采样，评估其对MD模拟弹性常数的不确定性贡献",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "10x10x10",
+        "atom_count": 4000,
+        "uncertain_parameters": {
+          "potential_cutoff": {
+            "range": [4.0, 7.0],
+            "distribution": "uniform",
+            "unit": "Angstrom"
+          },
+          "timestep": {
+            "range": [0.5, 2.0],
+            "distribution": "uniform",
+            "unit": "fs"
+          },
+          "thermostat_coupling": {
+            "range": [50, 500],
+            "distribution": "uniform",
+            "unit": "fs"
+          }
+        },
+        "DFT_reference_source": "DFT MS-19 Step 1",
+        "number_of_samples": 1000,
+        "sampling_method": "Sobol_sequence"
+      },
+      "output": {
+        "md_elastic_constants_distribution": "Cij_MD_distribution.dat",
+        "C11_MD_mean": 107.5,
+        "C11_MD_std": 3.5,
+        "C11_MD_unit": "GPa",
+        "bulk_modulus_MD_mean": 76.8,
+        "bulk_modulus_MD_std": 2.8,
+        "bulk_modulus_MD_unit": "GPa",
+        "error_vs_DFT": {
+          "mean_error": 1.2,
+          "std_error": 2.1,
+          "unit": "percent"
+        },
+        "sobol_indices_MD": {
+          "S1_cutoff": 0.45,
+          "S1_timestep": 0.15,
+          "S1_thermostat": 0.20,
+          "ST_cutoff": 0.48,
+          "ST_timestep": 0.18,
+          "ST_thermostat": 0.22
+        }
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "ensemble": "NPT",
+        "barostat": "Parrinello-Rahman",
+        "thermostat": "Nosé-Hoover",
+        "target_temperature": 300,
+        "target_temperature_unit": "K",
+        "equilibration_steps": 50000,
+        "production_steps": 200000,
+        "dump_interval": 5000,
+        "neighbor_skin": "variable",
+        "periodic_boundary": true,
+        "parallel_jobs": 100,
+        "walltime_per_job": 15,
+        "walltime_unit": "minutes"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD elastic constants uncertainty propagated to phase field gradient coefficient calibration",
+        "data_transferred": [
+          "Cij_MD_distributions",
+          "sobol_indices_MD",
+          "error_vs_DFT_distribution",
+          "cumulative_uncertainty_DFT_MD"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场参数不确定性采样",
+      "description": "对相场模型的界面宽度和梯度能系数进行采样，评估其对相场模拟结果的不确定性贡献",
+      "input": {
+        "model_type": "phase_field_fracture",
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 50,
+          "unit": "nm"
+        },
+        "grid_points": "200x100",
+        "uncertain_parameters": {
+          "interface_width": {
+            "range": [1.0, 5.0],
+            "distribution": "uniform",
+            "unit": "nm"
+          },
+          "gradient_coefficient": {
+            "range": [0.5e-10, 5.0e-10],
+            "distribution": "uniform",
+            "unit": "J/m"
+          },
+          "mobility": {
+            "range": [1e-14, 1e-12],
+            "distribution": "log_uniform",
+            "unit": "m^3/(J*s)"
+          }
+        },
+        "material_properties_source": "MD MS-19 Step 2",
+        "number_of_samples": 1000,
+        "sampling_method": "Sobol_sequence"
+      },
+      "output": {
+        "fracture_energy_distribution": "Gc_distribution.dat",
+        "fracture_energy_mean": 1.2,
+        "fracture_energy_std": 0.25,
+        "fracture_energy_unit": "J/m^2",
+        "critical_stress_distribution": "sigma_c_distribution.dat",
+        "critical_stress_mean": 5.8,
+        "critical_stress_std": 1.2,
+        "critical_stress_unit": "GPa",
+        "crack_path_variation": "crack_paths.vtk",
+        "sobol_indices_PF": {
+          "S1_interface_width": 0.35,
+          "S1_gradient_coeff": 0.30,
+          "S1_mobility": 0.15,
+          "ST_interface_width": 0.38,
+          "ST_gradient_coeff": 0.33,
+          "ST_mobility": 0.18
+        }
+      },
+      "parameters": {
+        "model": "phase_field_fracture_AT2",
+        "order_parameter": "d (damage: 0=intact, 1=fully_broken)",
+        "time_step": 0.1,
+        "time_step_unit": "ns",
+        "total_time": 10,
+        "total_time_unit": "ns",
+        "elastic_coupling": true,
+        "degradation_function": "quadratic_d=(1-d)^2",
+        "parallel_jobs": 50,
+        "walltime_per_job": 20,
+        "walltime_unit": "minutes"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field fracture properties uncertainty propagated to FE damage model parameters",
+        "data_transferred": [
+          "fracture_energy_distribution",
+          "critical_stress_distribution",
+          "sobol_indices_PF",
+          "cumulative_uncertainty_DFT_MD_PF"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE网格不确定性采样与总不确定性量化",
+      "description": "对FE模型的网格密度和单元类型进行采样，汇总全链路不确定性，计算总不确定性U_total和各尺度Sobol指数",
+      "input": {
+        "model_type": "single_edge_notch_tension_SENT",
+        "specimen_dimensions": {
+          "width": 10,
+          "height": 20,
+          "thickness": 1,
+          "unit": "mm"
+        },
+        "notch_length": 5,
+        "notch_length_unit": "mm",
+        "uncertain_parameters": {
+          "mesh_density": {
+            "range": [20, 200],
+            "distribution": "uniform",
+            "unit": "elements_along_width"
+          },
+          "element_type_options": ["C3D8", "C3D8R", "C3D20"]
+        },
+        "material_properties_source": "PF MS-19 Step 3",
+        "number_of_samples": 1000,
+        "sampling_method": "Sobol_sequence",
+        "upstream_uncertainty_sources": {
+          "DFT": "kpoints_and_cutoff",
+          "MD": "potential_cutoff_and_timestep",
+          "PF": "interface_width_and_gradient_coeff"
+        }
+      },
+      "output": {
+        "total_uncertainty_analysis": "UQ_summary.dat",
+        "critical_load_distribution": "Pc_distribution.dat",
+        "critical_load_mean": 450,
+        "critical_load_std": 35,
+        "critical_load_unit": "N",
+        "total_uncertainty_U_total": 7.8,
+        "U_total_unit": "percent",
+        "sobol_indices_global": {
+          "DFT_kpoints": {"S1": 0.18, "ST": 0.20},
+          "DFT_cutoff": {"S1": 0.08, "ST": 0.10},
+          "MD_potential_cutoff": {"S1": 0.12, "ST": 0.14},
+          "MD_timestep": {"S1": 0.05, "ST": 0.07},
+          "PF_interface_width": {"S1": 0.10, "ST": 0.12},
+          "PF_gradient_coeff": {"S1": 0.08, "ST": 0.10},
+          "FE_mesh_density": {"S1": 0.15, "ST": 0.17},
+          "FE_element_type": {"S1": 0.05, "ST": 0.06}
+        },
+        "uncertainty_budget_pie_chart": "uncertainty_budget.dat",
+        "most_sensitive_parameters": ["DFT_kpoints", "FE_mesh_density", "MD_potential_cutoff"],
+        "convergence_of_U_total": "U_total_vs_Nsamples.dat",
+        "confidence_interval_95pct": [412, 488],
+        "confidence_interval_unit": "N"
+      },
+      "parameters": {
+        "element_type": "variable_C3D8_to_C3D20",
+        "mesh_density": "variable_20_to_200",
+        "boundary_condition": "bottom_fixed_top_displacement_controlled",
+        "solver_type": "static_implicit",
+        "material_model": "linear_elastic_fracture_mechanics",
+        "fracture_toughness_source": "PF",
+        "geometric_nonlinearity": false,
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200,
+        "parallel_jobs": 100,
+        "walltime_per_job": 5,
+        "walltime_unit": "minutes",
+        "uq_library": "SALib_1.4",
+        "sobol_samples": "saltelli_1000"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Total uncertainty budget and Sobol indices for cross-scale model validation",
+        "data_transferred": [
+          "U_total",
+          "sobol_indices_global",
+          "uncertainty_budget",
+          "most_sensitive_parameters",
+          "confidence_intervals"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.commatsci.2019.109362",
+    "authors": "Sarkar A, Ghanem R, Red-Horse J",
+    "year": 2019,
+    "journal": "Computational Materials Science"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Total uncertainty U_total",
+        "value": 7.8,
+        "unit": "percent",
+        "tolerance": 30
+      },
+      {
+        "name": "DFT k-points Sobol S1 index",
+        "value": 0.18,
+        "unit": "dimensionless",
+        "tolerance": 25
+      },
+      {
+        "name": "FE mesh density Sobol S1 index",
+        "value": 0.15,
+        "unit": "dimensionless",
+        "tolerance": 25
+      },
+      {
+        "name": "Critical load mean",
+        "value": 450,
+        "unit": "N",
+        "tolerance": 15
+      },
+      {
+        "name": "95% confidence interval half-width",
+        "value": 38,
+        "unit": "N",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

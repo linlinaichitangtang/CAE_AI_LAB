@@ -1,0 +1,102 @@
+{
+  "id": "SS-11",
+  "name": "夹层板弯曲分析",
+  "nameEn": "Sandwich Panel Bending Analysis",
+  "description": "复合材料夹层板在均布载荷q=5000Pa下的弯曲分析。面板为1mm厚钢板(E=200GPa)，芯层为18mm厚泡沫(E=100MPa)，总厚度20mm。采用夹层梁理论(Allen公式)计算弯曲刚度D和挠度。需同时考虑弯曲变形和剪切变形（泡沫芯层剪切刚度较低）。该算例用于验证复合材料夹层结构的建模和分析能力。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "夹层板",
+    "复合材料",
+    "剪切变形",
+    "弯曲刚度"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.5,
+    "width": 0.1,
+    "height": 0.02,
+    "thickness": 0.001,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 8,
+    "z_div": 12,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Steel Face / Foam Core",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 150.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 0.035,
+    "specific_heat": 1200.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "z_max",
+    "load_magnitude": 5000.0,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.000338,
+    "max_stress": 8208.843,
+    "formula": "D=E_f·t_f·d²/2+E_c·h_c³/12, δ=5qL⁴/(384D)+qL²/(8A_c·G_c)",
+    "reference": "Allen, Analysis and Design of Structural Sandwich Panels, Ch. 4"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "总挠度",
+        "value": 0.000338,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "弯曲挠度",
+        "value": 0.0001125,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "剪切挠度",
+        "value": 0.0002257,
+        "unit": "m",
+        "tolerance": 10.0
+      },
+      {
+        "name": "面板最大应力",
+        "value": 8208.843,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "芯层剪应力",
+        "value": 69444.444,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "等效弯曲刚度",
+        "value": 36165.3,
+        "unit": "N·m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

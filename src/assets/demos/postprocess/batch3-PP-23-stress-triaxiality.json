@@ -1,0 +1,53 @@
+{
+  "id": "PP-23",
+  "name": "应力三轴度分布",
+  "nameEn": "Stress Triaxiality Distribution - Notched Tensile Specimen",
+  "description": "展示缺口拉伸试样中应力三轴度η=σ_m/σ_eq的空间分布规律，其中σ_m=(σ₁+σ₂+σ₃)/3为平均应力，σ_eq为Von Mises等效应力。试样采用标准CTOD试样几何，缺口根部半径r=0.25mm，材料为Q345钢(E=200GPa, ν=0.3, σ_y=345MPa)。在远场施加拉伸位移载荷下，缺口根部产生强烈的三轴应力状态，η峰值可达0.65以上，表明该区域具有明显脆性断裂倾向。远离缺口处η逐渐降至0.33以下，表现为延性断裂特征。通过蓝色(低三轴度)到红色(高三轴度)的色标映射，直观展示三轴度梯度分布，学习应力三轴度在断裂力学评估中的关键作用。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["应力三轴度", "断裂力学", "缺口试样", "延脆转变", "CTOD", "应力状态"],
+  "visualization": {
+    "type": "contour",
+    "field": "stress_triaxiality",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 20,
+      "fps": 5,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 28500,
+    "elements": 24200,
+    "results_file": "results/postprocess/notched_specimen_triaxiality.dat"
+  },
+  "display_settings": {
+    "title": "缺口拉伸试样 - 应力三轴度η分布",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0.0,
+      "max": 0.8,
+      "label": "应力三轴度 η",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 0.15, "y": 0.0, "z": 0.08 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -15, "yaw": 90 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "缺口根部最大三轴度η_max", "value": 0.65, "unit": "", "tolerance": 5 },
+      { "name": "远场三轴度η_far", "value": 0.33, "unit": "", "tolerance": 5 },
+      { "name": "延性区占比(η<0.33)", "value": 62, "unit": "%", "tolerance": 10 },
+      { "name": "脆性倾向区占比(η>0.5)", "value": 15, "unit": "%", "tolerance": 10 },
+      { "name": "缺口半径r", "value": 0.25, "unit": "mm", "tolerance": 0 },
+      { "name": "材料屈服强度σ_y", "value": 345, "unit": "MPa", "tolerance": 0 }
+    ]
+  }
+}

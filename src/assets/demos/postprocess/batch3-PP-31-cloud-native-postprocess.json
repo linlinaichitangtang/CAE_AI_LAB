@@ -1,0 +1,57 @@
+{
+  "id": "PP-31",
+  "name": "云原生后处理",
+  "nameEn": "Cloud-Native Post-Processing - WebAssembly Progressive Streaming",
+  "description": "演示基于WebAssembly的云原生有限元后处理系统在大规模模型上的渐进式流式加载和实时交互能力。测试模型为某汽车白车身BIW有限元模型，包含50万个节点和42万个单元，结果文件大小约2.8GB。后处理引擎编译为WebAssembly模块在浏览器端运行，采用八叉树空间索引和LOD(Level of Detail)技术实现渐进式加载：初始仅加载粗网格(约5%数据)实现快速首屏渲染，用户交互时按需加载精细网格。验证关键性能指标：初始渲染时间<3秒，交互操作(旋转/缩放/剖面)延迟<100ms，浏览器内存占用<500MB，支持Chrome/Firefox/Safari三大浏览器。展示应力云图、变形动画和剖面切割等核心功能。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["云原生", "WebAssembly", "渐进加载", "LOD", "流式传输", "大规模模型", "浏览器渲染"],
+  "visualization": {
+    "type": "cloud_native",
+    "field": "von_mises",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 60,
+      "fps": 15,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 500000,
+    "elements": 420000,
+    "results_file": "results/postprocess/biw_large_model_wasm.dat"
+  },
+  "display_settings": {
+    "title": "汽车白车身BIW - 云原生WebAssembly后处理",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 380,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 2.5, "y": 1.8, "z": 2.0 },
+      "target": { "x": 0.0, "y": 0.5, "z": 0.0 },
+      "rotation": { "pitch": -22, "yaw": 38 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "节点总数", "value": 500000, "unit": "个", "tolerance": 0 },
+      { "name": "单元总数", "value": 420000, "unit": "个", "tolerance": 0 },
+      { "name": "初始渲染时间", "value": 2.5, "unit": "s", "tolerance": 20 },
+      { "name": "旋转交互延迟", "value": 65, "unit": "ms", "tolerance": 30 },
+      { "name": "缩放交互延迟", "value": 45, "unit": "ms", "tolerance": 30 },
+      { "name": "剖面切割延迟", "value": 80, "unit": "ms", "tolerance": 25 },
+      { "name": "浏览器内存占用", "value": 420, "unit": "MB", "tolerance": 15 },
+      { "name": "WASM模块大小", "value": 4.5, "unit": "MB", "tolerance": 10 },
+      { "name": "LOD层级数", "value": 5, "unit": "层", "tolerance": 0 },
+      { "name": "全精度加载时间", "value": 12, "unit": "s", "tolerance": 20 }
+    ]
+  }
+}

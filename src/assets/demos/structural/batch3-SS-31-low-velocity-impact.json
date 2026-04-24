@@ -1,0 +1,86 @@
+{
+  "id": "SS-31",
+  "name": "CFRP层合板低速冲击响应",
+  "nameEn": "CFRP Laminate Low-Velocity Impact Response",
+  "description": "碳纤维增强复合材料(CFRP)[0/90]4层合板(0.15m×0.15m×0.004m)在低速冲击下的动态响应分析。冲击物质量5kg，冲击速度3m/s，冲击能量15J。分析层合板的冲击损伤、接触力历程、能量吸收和基体开裂/分层损伤模式。本案例适用于复合材料抗冲击设计、航空结构损伤容限评估的教学与学习。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["CFRP", "低速冲击", "层合板", "复合材料", "损伤", "接触力"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.15,
+    "width": 0.15,
+    "height": 0.004,
+    "radius": 0,
+    "thickness": 0.004,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 16,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "CFRP [0/90]4 Laminate",
+    "elastic_modulus": 135000000000,
+    "poisson_ratio": 0.3,
+    "density": 1580,
+    "yield_stress": 600000000,
+    "thermal_expansion": 2.0e-6,
+    "thermal_conductivity": 10,
+    "specific_heat": 800
+  },
+  "boundaryConditions": {
+    "fixed_face": "edges_clamped",
+    "load_type": "point",
+    "load_face": "center",
+    "load_magnitude": 15000,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0035,
+    "max_stress": 450000000,
+    "formula": "E_impact = 0.5·m·v² = 15J, F_max ≈ √(k·E_impact), k = contact stiffness",
+    "reference": "Abrate S. Impact on Composite Structures. Cambridge University Press, 1998."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大中心挠度",
+        "value": 0.0035,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "峰值接触力",
+        "value": 8500,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "冲击持续时间",
+        "value": 0.008,
+        "unit": "s",
+        "tolerance": 10
+      },
+      {
+        "name": "冲击能量",
+        "value": 15,
+        "unit": "J",
+        "tolerance": 2
+      }
+    ]
+  }
+}

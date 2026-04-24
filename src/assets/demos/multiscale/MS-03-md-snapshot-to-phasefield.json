@@ -1,0 +1,182 @@
+{
+  "id": "MS-03",
+  "name": "MD快照到相场初始场",
+  "nameEn": "MD Snapshot to Phase Field Initial Field",
+  "description": "展示如何将分子动力学模拟得到的原子级构型映射为相场模型的初始序参量场。以FCC铝10x10x10超胞（4000原子）为研究对象，先通过MD在高温下进行平衡模拟获得热平衡构型，然后通过局部结构序参量（如键取向序参数q6或中心对称参数CSP）识别局部晶序度，最终构建三维序参量η(x,y,z)场作为相场模拟的初始条件。该案例是典型的原子-介观尺度桥接教学示例。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["MD equilibration", "order parameter", "phase field initialization", "bond orientational order", "q6", "Al FCC"],
+  "scales": ["md", "phase_field"],
+  "material_system": "Al FCC",
+  "pipeline_steps": [
+    {
+      "step": "md",
+      "name": "FCC铝超胞MD平衡模拟",
+      "description": "构建10x10x10 FCC铝超胞（4000原子），在800K下进行NPT平衡模拟，输出原子坐标和速度",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "10x10x10",
+        "atom_count": 4000,
+        "target_temperature": 800,
+        "target_temperature_unit": "K",
+        "target_pressure": 0,
+        "target_pressure_unit": "bar"
+      },
+      "output": {
+        "equilibrated_configuration": "Al_4000atoms_equil.lammpstrj",
+        "final_box_dimensions": {
+          "Lx": 40.5,
+          "Ly": 40.5,
+          "Lz": 40.5,
+          "unit": "Angstrom"
+        },
+        "mean_kinetic_energy": 0.103,
+        "mean_kinetic_energy_unit": "eV/atom",
+        "mean_potential_energy": -3.54,
+        "mean_potential_energy_unit": "eV/atom",
+        "radial_distribution_function": "rdf_Al.dat",
+        "msd": 3.8e-10,
+        "msd_unit": "m^2/s",
+        "mean_square_displacement": "msd.dat"
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_mishin.eam.alloy",
+        "timestep": 1,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nosé-Hoover",
+        "thermostat_damping": 100,
+        "thermostat_damping_unit": "fs",
+        "barostat": "Parrinello-Rahman",
+        "barostat_damping": 1000,
+        "barostat_damping_unit": "fs",
+        "equilibration_steps": 50000,
+        "production_steps": 100000,
+        "dump_interval": 1000,
+        "cutoff_radius": 6.5,
+        "cutoff_radius_unit": "Angstrom",
+        "neighbor_skin": 1.0,
+        "neighbor_skin_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Local bond orientational order parameter q6 coarse-graining",
+        "data_transferred": [
+          "atom_positions",
+          "atom_velocities",
+          "box_dimensions",
+          "local_q6_values_per_atom",
+          "center_symmetry_parameter_per_atom"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "序参量场构建与相场初始化",
+      "description": "基于MD输出的原子坐标，计算每个原子的局部键取向序参数q6，通过粗粒化方法在规则网格上构建三维序参量η(x,y,z)场，作为相场模拟的初始条件",
+      "input": {
+        "atom_positions_source": "Al_4000atoms_equil.lammpstrj",
+        "box_dimensions": {
+          "Lx": 40.5,
+          "Ly": 40.5,
+          "Lz": 40.5,
+          "unit": "Angstrom"
+        },
+        "coarse_graining_grid": "50x50x50",
+        "local_order_parameter": "q6",
+        "q6_reference_value_FCC": 0.574,
+        "q6_reference_value_liquid": 0.2,
+        "neighbor_cutoff": 5.0,
+        "neighbor_cutoff_unit": "Angstrom"
+      },
+      "output": {
+        "order_parameter_field": "eta_field_3d.vtk",
+        "eta_statistics": {
+          "mean": 0.48,
+          "std": 0.12,
+          "min": 0.15,
+          "max": 0.62
+        },
+        "spatial_correlation_length": 8.5,
+        "spatial_correlation_length_unit": "Angstrom",
+        "phase_fraction_ordered": 0.72,
+        "phase_fraction_disordered": 0.28,
+        "interface_area": 1.2e4,
+        "interface_area_unit": "Angstrom^2"
+      },
+      "parameters": {
+        "interface_width": 2.0,
+        "interface_width_unit": "Angstrom",
+        "gradient_energy_coefficient": 1.5e-10,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility": 1.0e-14,
+        "mobility_unit": "m^3/(J*s)",
+        "driving_force": 5.0e6,
+        "driving_force_unit": "J/m^3",
+        "grid_spacing": 0.81,
+        "grid_spacing_unit": "Angstrom",
+        "time_step": 1.0,
+        "time_step_unit": "ps",
+        "total_steps": 10000,
+        "free_energy_functional": "Allen-Cahn double-well",
+        "well_height": 1.0e7,
+        "well_height_unit": "J/m^3"
+      },
+      "bridge_to_next": {
+        "mapping_method": "direct field initialization for subsequent phase field evolution",
+        "data_transferred": [
+          "order_parameter_field_eta_xyz",
+          "phase_fraction",
+          "interface_profile",
+          "spatial_correlation_data"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.72.104106",
+    "authors": "Mishin Y, Mehl MJ, Papaconstantopoulos DA",
+    "year": 2005,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Equilibrium lattice constant at 800K",
+        "value": 4.10,
+        "unit": "Angstrom",
+        "tolerance": 3
+      },
+      {
+        "name": "Mean potential energy per atom",
+        "value": -3.54,
+        "unit": "eV",
+        "tolerance": 5
+      },
+      {
+        "name": "q6 mean value (ordered regions)",
+        "value": 0.574,
+        "unit": "dimensionless",
+        "tolerance": 10
+      },
+      {
+        "name": "Ordered phase fraction",
+        "value": 0.72,
+        "unit": "dimensionless",
+        "tolerance": 15
+      },
+      {
+        "name": "Spatial correlation length",
+        "value": 8.5,
+        "unit": "Angstrom",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "id": "EN-06",
+  "name": "挡土墙主动土压力分析",
+  "nameEn": "Retaining Wall Active Earth Pressure Analysis",
+  "description": "分析悬臂式挡土墙在填土自重作用下的主动土压力分布和稳定性。挡墙高度H=4m，底板宽B=2.4m，立板厚t=0.3m。墙后填土参数：内摩擦角φ=30°，重度γ=18kN/m³，粘聚力c=0(无粘性土)。采用Rankine主动土压力理论计算：主动土压力系数Ka=tan²(45°-φ/2)=0.333，总主动土压力Pa=γH²Ka/2=48kN/m，作用点距墙底H/3=1.33m。通过有限元分析验证土压力分布(三角形分布)、墙身弯矩和挡墙位移，对比Rankine理论解与FEA结果。同时验算抗倾覆和抗滑移稳定性安全系数。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["retaining_wall", "earth_pressure", "rankine", "active_pressure", "stability", "geotechnical"],
+  "engineering_domain": "civil",
+  "design_code": "GB 50330-2013 建筑边坡工程技术规范; JGJ 120-2012 建筑基坑支护技术规程",
+  "geometry": {
+    "type": "block",
+    "length": 4.0,
+    "width": 2.4,
+    "height": 4.0,
+    "dimension": "3d",
+    "detail_params": {
+      "wall_height": 4.0,
+      "base_width": 2.4,
+      "stem_thickness": 0.3,
+      "base_thickness": 0.4,
+      "toe_width": 0.6,
+      "heel_width": 1.5,
+      "backfill_height": 3.8,
+      "soil_domain_width": 8.0,
+      "soil_domain_depth": 2.0
+    }
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 12,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "C30 Concrete + Granular Backfill",
+    "elastic_modulus": 30000000000,
+    "poisson_ratio": 0.2,
+    "density": 2500,
+    "yield_stress": 20100000,
+    "thermal_expansion": 1.0e-5,
+    "thermal_conductivity": 1.74,
+    "specific_heat": 920,
+    "soil_params": {
+      "friction_angle": 30,
+      "cohesion": 0,
+      "unit_weight": 18000,
+      "elastic_modulus_soil": 30000000,
+      "poisson_ratio_soil": 0.3,
+      "dilation_angle": 5,
+      "active_pressure_coefficient": 0.333
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "base_bottom",
+    "load_type": "gravity",
+    "load_face": "soil_domain",
+    "load_magnitude": 0,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.005,
+    "max_stress": 48000,
+    "formula": "Rankine active earth pressure: Ka = tan²(45° - φ/2) = tan²(30°) = 0.333; Lateral pressure at depth z: p_a(z) = γ·z·Ka = 18e3 × z × 0.333 = 5994·z Pa; Total active force per unit length: Pa = γ·H²·Ka/2 = 18e3 × 4² × 0.333/2 = 48000 N/m = 48 kN/m; Point of application: h_a = H/3 = 4/3 = 1.333 m from base; Overturning moment: M_ot = Pa × h_a = 48000 × 1.333 = 64000 N·m/m; Stabilizing moment (self-weight): W_wall ≈ (0.3×3.8 + 2.4×0.4) × 25e3 = (1.14 + 0.96) × 25e3 = 52500 N/m; M_st = W × B/2 = 52500 × 1.2 = 63000 N·m/m; Factor of safety against overturning: K_ot = M_st/M_ot = 63000/64000 = 0.984 (needs redesign); With proper geometry: K_ot should be ≥ 1.5; Factor of safety against sliding: K_sl = μ·W/Pa = 0.4×52500/48000 = 0.438 (needs redesign); Note: actual design includes soil on heel, increasing stabilizing forces significantly",
+    "reference": "Rankine, W.J.M. On the Stability of Loose Earth; GB 50330-2013 建筑边坡工程技术规范"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Rankine active pressure coefficient Ka",
+        "value": 0.333,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Total active earth pressure Pa",
+        "value": 48000,
+        "unit": "N/m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Lateral pressure at wall base",
+        "value": 23976,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Point of application from base",
+        "value": 1.333,
+        "unit": "m",
+        "tolerance": 3.0
+      },
+      {
+        "name": "FEA lateral pressure distribution (linear check)",
+        "value": 1.0,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Maximum wall deflection at top",
+        "value": 0.005,
+        "unit": "m",
+        "tolerance": 30.0
+      },
+      {
+        "name": "Overturning safety factor (with soil on heel)",
+        "value": 2.1,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Sliding safety factor (with soil on heel)",
+        "value": 1.5,
+        "unit": "",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

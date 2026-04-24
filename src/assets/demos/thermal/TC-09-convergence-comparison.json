@@ -1,0 +1,109 @@
+{
+  "id": "TC-09",
+  "name": "热力耦合收敛性对比验证",
+  "nameEn": "Thermo-Mechanical Coupling Convergence Comparison",
+  "description": "基准立方体(0.1m×0.1m×0.1m)热力耦合收敛性验证。底面固定约束，顶面自由。整体温升ΔT=200°C。对比Newton-Raphson全耦合方法和增量分离方法的收敛特性。理论解：自由热膨胀δ=α·L·ΔT=12×10⁻⁶×0.1×200=0.00024m=0.24mm。完全约束热应力σ=E·α·ΔT=200×10⁹×12×10⁻⁶×200=480MPa。分别使用粗网格(5×5×5)、中网格(10×10×10)、细网格(20×20×20)进行网格收敛性验证，确保数值解与理论解误差在容差范围内。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["convergence", "Newton_Raphson", "incremental_method", "mesh_refinement", "benchmark"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.1,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 10,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "thermal",
+    "load_face": "entire_body",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 493,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0.00024,
+    "max_stress": 480000000,
+    "max_temperature": 493,
+    "formula": "δ = α·L·ΔT (free expansion); σ = E·α·ΔT (fully constrained); e_mesh ∝ h² (convergence rate)",
+    "reference": "Bathe, Finite Element Procedures, Ch.8 - Nonlinear Analysis in Solid Mechanics"
+  },
+  "acceptance": {
+    "displacement_error_limit": 1.0,
+    "stress_error_limit": 2.0,
+    "temperature_error_limit": 0.1
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "free_expansion_displacement",
+        "value": 0.00024,
+        "unit": "m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "constrained_thermal_stress",
+        "value": 480000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "temperature_rise",
+        "value": 200,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "NR_convergence_iterations",
+        "value": 4,
+        "unit": "",
+        "tolerance": 50.0
+      },
+      {
+        "name": "incremental_convergence_iterations",
+        "value": 10,
+        "unit": "",
+        "tolerance": 50.0
+      },
+      {
+        "name": "mesh_convergence_ratio_fine_to_medium",
+        "value": 4,
+        "unit": "",
+        "tolerance": 30.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,329 @@
+{
+  "id": "MS-26",
+  "name": "高分子光刻胶",
+  "nameEn": "Photoresist Lithography Multiscale Simulation",
+  "description": "化学放大光刻胶(CAR)的多尺度模拟，涵盖光化学反应到微图案成形的完整链路。DFT计算光致产酸剂(PAG)的光分解反应路径和量子产率；MD模拟聚合物链在曝光后的去保护反应、酸扩散和分子溶胀过程；相场模型模拟曝光-烘烤-显影全流程中的浓度场演化；FE模型预测最终微图案截面形貌(CD、侧壁角度、LWR)。该案例为先进光刻工艺(如EUV)的光刻胶优化提供多尺度仿真工具。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["photoresist", "CAR", "lithography", "PAG", "acid diffusion", "EUV", "critical dimension", "photochemistry"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Chemically amplified photoresist (poly-HSQ/PAG system)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT光化学反应计算",
+      "description": "计算光致产酸剂(PAG)的光分解反应路径、过渡态和量子产率，为光刻胶曝光模型提供参数",
+      "input": {
+        "molecule_type": "triphenylsulfonium_triflate_PAG",
+        "protecting_group": "t-butoxycarbonyl_tBOC",
+        "polymer_backbone": "polyhydroxystyrene_PHS",
+        "excitation_wavelength": 13.5,
+        "excitation_wavelength_unit": "nm",
+        "solvent": "propylene_glycol_methyl_ether_acetate_PGMEA",
+        "calculation_types": ["ground_state", "excited_state_TDDFT", "NEB_reaction_path"]
+      },
+      "output": {
+        "photolysis_reaction_barrier": 1.85,
+        "reaction_barrier_unit": "eV",
+        "quantum_yield_PAG": 0.32,
+        "quantum_yield_unit": "dimensionless",
+        "absorption_cross_section": 2.5e-17,
+        "absorption_unit": "cm^2",
+        "acid_generation_efficiency": 0.28,
+        "efficiency_unit": "acid/photon",
+        "deprotection_barrier": 0.95,
+        "deprotection_barrier_unit": "eV",
+        "reaction_path": "reaction_path.dat",
+        "excited_state_lifetime": 150,
+        "lifetime_unit": "fs"
+      },
+      "parameters": {
+        "code": "VASP + Gaussian",
+        "xc_functional": "PBE0 (hybrid for excited states)",
+        "basis_set": "6-311++G(d,p)",
+        "tdft_states": 10,
+        "solvent_model": "PCM_PGMEA",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points": "Gamma_only",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "neb_images": 9,
+        "neb_spring_constant": 5.0,
+        "neb_spring_unit": "eV/Angstrom^2"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT quantum yield and reaction barriers to MD coarse-grained reaction rate constants via transition state theory",
+        "data_transferred": [
+          "quantum_yield_PAG",
+          "photolysis_reaction_barrier",
+          "deprotection_barrier",
+          "acid_generation_efficiency",
+          "excited_state_lifetime"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD分子溶胀与酸扩散模拟",
+      "description": "模拟光刻胶聚合物链在曝光后的去保护反应、酸分子扩散和薄膜溶胀过程",
+      "input": {
+        "polymer": "polyhydroxystyrene_PHS",
+        "protecting_group": "tBOC",
+        "PAG_loading": 5,
+        "PAG_loading_unit": "wt%",
+        "film_thickness": 50,
+        "film_thickness_unit": "nm",
+        "simulation_box": {
+          "Lx": 20,
+          "Ly": 20,
+          "Lz": 50,
+          "unit": "nm",
+          "atom_count": 850000
+        },
+        "acid_concentration_source": "DFT MS-26 Step 1",
+        "quantum_yield": 0.32,
+        "post_exposure_bake_temp": 110,
+        "PEB_temp_unit": "C",
+        "developer": "0.26N_TMAH"
+      },
+      "output": {
+        "acid_diffusion_coefficient": 1.2e-18,
+        "diffusion_unit": "m^2/s",
+        "deprotection_fraction": 0.65,
+        "deprotection_unit": "dimensionless",
+        "film_swelling_ratio": 1.08,
+        "swelling_unit": "dimensionless",
+        "polymer_density_change": -3.2,
+        "density_change_unit": "percent",
+        "glass_transition_deprotected": 135,
+        "Tg_unit": "C",
+        "acid_quenching_rate": 0.15,
+        "quenching_unit": "1/ns",
+        "polymer_chain_conformation": "chain_config.vtk"
+      },
+      "parameters": {
+        "force_field": "OPLS-AA with custom PAG parameters",
+        "force_field_file": "photoresist_OPLS.itp",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 1,
+        "target_pressure_unit": "atm",
+        "cutoff_radius": 12.0,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_xy", "vacuum_z"],
+        "total_steps": 10000000,
+        "dump_interval": 10000,
+        "reaction_model": "Monte_Carlo_reactive",
+        "reaction_probability": "Arrhenius_from_DFT"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD acid diffusion coefficient and deprotection kinetics to phase field reaction-diffusion model parameters",
+        "data_transferred": [
+          "acid_diffusion_coefficient",
+          "deprotection_fraction",
+          "film_swelling_ratio",
+          "glass_transition_deprotected",
+          "acid_quenching_rate"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场曝光-显影过程模拟",
+      "description": "基于反应扩散方程模拟光刻胶曝光、后烘(PEB)和显影全流程中的浓度场和溶解度演化",
+      "input": {
+        "domain_size": {
+          "Lx": 200,
+          "Ly": 200,
+          "Lz": 50,
+          "unit": "nm"
+        },
+        "grid_spacing": 1.0,
+        "grid_spacing_unit": "nm",
+        "grid_points": "200x200x50",
+        "exposure_wavelength": 13.5,
+        "exposure_wavelength_unit": "nm",
+        "dose_range": [10, 60],
+        "dose_unit": "mJ/cm^2",
+        "acid_diffusion_source": "MD MS-26 Step 2",
+        "acid_diffusion_coefficient": 1.2e-18,
+        "acid_diffusion_unit": "m^2/s",
+        "deprotection_kinetics_source": "MD MS-26 Step 2",
+        "PEB_temperature": 383,
+        "PEB_temperature_unit": "K",
+        "PEB_time": 60,
+        "PEB_time_unit": "s",
+        "developer_concentration": 0.26,
+        "developer_unit": "N TMAH"
+      },
+      "output": {
+        "acid_concentration_field": "acid_field.vtk",
+        "deprotection_field": "deprotection_field.vtk",
+        "dissolution_rate_map": "dissolution_rate.dat",
+        "latent_image": "latent_image.vtk",
+        "contrast_gamma": 4.2,
+        "threshold_dose_E0": 22,
+        "E0_unit": "mJ/cm^2",
+        "linewidth_roughness_LER": 2.8,
+        "LER_unit": "nm",
+        "process_window": "process_window.dat",
+        "exposure_latitude": 12,
+        "latitude_unit": "percent"
+      },
+      "parameters": {
+        "model": "reaction_diffusion_CAR",
+        "field_variables": ["acid_c", "deprotection_m", "inhibitor_q"],
+        "acid_generation_rate": "Dose_dependent_from_DFT",
+        "acid_diffusion": 1.2e-18,
+        "acid_diffusion_unit": "m^2/s",
+        "deprotection_rate_constant": 0.015,
+        "deprotection_rate_unit": "1/s",
+        "dissolution_model": "Mack_4_parameter",
+        "Rmax": 120,
+        "Rmax_unit": "nm/s",
+        "Rmin": 0.5,
+        "Rmin_unit": "nm/s",
+        "Mth": 0.25,
+        "n_dissolution": 5.2,
+        "time_step_PEB": 0.1,
+        "time_step_PEB_unit": "s",
+        "total_PEB_time": 60,
+        "total_PEB_time_unit": "s",
+        "time_step_develop": 0.01,
+        "time_step_develop_unit": "s",
+        "total_develop_time": 30,
+        "total_develop_time_unit": "s"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field dissolution rate map and deprotection field to FE surface evolution model",
+        "data_transferred": [
+          "dissolution_rate_map",
+          "deprotection_field",
+          "latent_image",
+          "contrast_gamma",
+          "linewidth_roughness_LER"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE微图案截面形貌预测",
+      "description": "基于有限元方法预测光刻胶微图案的最终截面形貌，包括关键尺寸(CD)、侧壁角度和线宽粗糙度(LWR)",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 200,
+          "Lz": 50,
+          "unit": "nm"
+        },
+        "mesh": "500x200x50",
+        "element_type": "C3D8",
+        "target_CD": 20,
+        "target_CD_unit": "nm",
+        "pitch": 40,
+        "pitch_unit": "nm",
+        "film_thickness": 50,
+        "film_thickness_unit": "nm",
+        "dissolution_rate_source": "PF MS-26 Step 3",
+        "substrate": "Si_with_SiO2_barlayer",
+        "development_time": 30,
+        "development_time_unit": "s"
+      },
+      "output": {
+        "pattern_profile": "pattern_profile.vtk",
+        "critical_dimension_CD": 19.8,
+        "CD_unit": "nm",
+        "sidewall_angle": 87.5,
+        "sidewall_angle_unit": "degrees",
+        "line_width_roughness_LWR": 2.8,
+        "LWR_unit": "nm_3sigma",
+        "line_edge_roughness_LER": 1.9,
+        "LER_unit": "nm_3sigma",
+        "pattern_transfer_error": 1.0,
+        "transfer_error_unit": "percent",
+        "footing_height": 2.5,
+        "footing_unit": "nm",
+        "top_loss": 3.2,
+        "top_loss_unit": "nm"
+      },
+      "parameters": {
+        "solver_type": "transient_implicit",
+        "material_model": "surface_erosion_dissolution",
+        "dissolution_rate_function": "Mack_4_parameter_from_PF",
+        "Rmax": 120,
+        "Rmax_unit": "nm/s",
+        "Rmin": 0.5,
+        "Rmin_unit": "nm/s",
+        "Mth": 0.25,
+        "n_dissolution": 5.2,
+        "surface_evolution": "level_set",
+        "re-meshing": true,
+        "re-mesh_interval": 100,
+        "time_step": 0.01,
+        "time_step_unit": "s",
+        "total_time": 30,
+        "total_time_unit": "s",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 200
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE pattern profile validation against SEM metrology and process window analysis",
+        "data_transferred": [
+          "critical_dimension_CD",
+          "sidewall_angle",
+          "line_width_roughness_LWR",
+          "pattern_profile",
+          "pattern_transfer_error"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.mee.2019.111254",
+    "authors": "Stokbro K, Thrysoe K, Petersen M, Nielsen CB, Bork NH, Schiøtz J",
+    "year": 2019,
+    "journal": "Microelectronic Engineering"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "PAG quantum yield",
+        "value": 0.32,
+        "unit": "dimensionless",
+        "tolerance": 20
+      },
+      {
+        "name": "Acid diffusion coefficient",
+        "value": 1.2e-18,
+        "unit": "m^2/s",
+        "tolerance": 25
+      },
+      {
+        "name": "Critical dimension CD",
+        "value": 19.8,
+        "unit": "nm",
+        "tolerance": 10
+      },
+      {
+        "name": "Sidewall angle",
+        "value": 87.5,
+        "unit": "degrees",
+        "tolerance": 5
+      },
+      {
+        "name": "Line width roughness LWR",
+        "value": 2.8,
+        "unit": "nm",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

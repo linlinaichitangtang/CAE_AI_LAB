@@ -1,0 +1,86 @@
+{
+  "id": "SS-33",
+  "name": "管道振动模态分析",
+  "nameEn": "Pipeline Vibration Modal Analysis",
+  "description": "钢制管道(外径OD=0.168m, 壁厚t=0.007m, 长度L=6m)的振动模态分析。管道内输送流体，需避免一阶固有频率与50Hz激励频率共振。通过模态分析确定管道固有频率和振型，验证管道系统的动力学安全性。本案例适用于管道工程设计、振动控制和流体诱发振动分析。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["管道振动", "模态分析", "固有频率", "共振", "流体诱发振动", "管道工程"],
+  "geometry": {
+    "type": "pipe",
+    "length": 6.0,
+    "width": 0.168,
+    "height": 0.168,
+    "radius": 0.084,
+    "thickness": 0.007,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 60,
+    "y_div": 16,
+    "z_div": 16,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Steel Pipe (API 5L X52)",
+    "elastic_modulus": 207000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 358000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "supports_at_1m_and_5m",
+    "load_type": "uniform",
+    "load_face": "outer_surface",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 45000000,
+    "formula": "f_n = (λ_n²/(2πL²))·√(EI/(m_L)), λ_1=π for simply supported, m_L = ρ·A + ρ_f·A_f",
+    "reference": "Blevins RD. Formulas for Natural Frequency and Mode Shape. Krieger Publishing, 1979."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "一阶固有频率f1",
+        "value": 12.5,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "二阶固有频率f2",
+        "value": 49.8,
+        "unit": "Hz",
+        "tolerance": 5
+      },
+      {
+        "name": "频率比f1/50Hz",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "最大振幅(共振时)",
+        "value": 0.002,
+        "unit": "m",
+        "tolerance": 5
+      }
+    ]
+  }
+}

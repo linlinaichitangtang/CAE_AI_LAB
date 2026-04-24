@@ -1,0 +1,80 @@
+{
+  "id": "EP-02",
+  "name": "塑封IC吸湿分层",
+  "nameEn": "Epoxy Molding Compound Moisture Delamination",
+  "description": "塑封IC（EMC）吸湿扩散与回流焊分层分析。封装尺寸：20mm×20mm×1.5mm。EMC材料参数：E=15GPa，ν=0.3，ρ=1850kg/m³，σ_y=70MPa，热导率k=0.7W/(m·K)，CTE=15ppm/K。Fick扩散定律：C(x,t)=C_sat×[1-erf(x/(2√(Dt)))]。饱和吸湿量C_sat=0.5%（MSL Level 3: 30°C/60%RH/192h）。扩散系数D=3.5e-13m²/s。特征扩散时间τ=L²/D=(0.0015)²/3.5e-13=6.43e6s≈74.4天。回流焊峰值温度260°C，蒸汽压p_v≈6.2MPa。界面分层判据：G/G_c>1，其中G_c=10J/m²（EMC/铜引线框架界面）。验证湿气浓度分布及分层风险。",
+  "category": "electronics_pkg",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["EMC", "moisture absorption", "Fick's law", "delamination", "MSL", "reflow"],
+  "geometry": {
+    "type": "block",
+    "length": 0.02,
+    "width": 0.02,
+    "height": 0.0015,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 16,
+    "y_div": 16,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Epoxy Molding Compound",
+    "elastic_modulus": 15000000000,
+    "poisson_ratio": 0.3,
+    "density": 1850,
+    "yield_stress": 70000000,
+    "ultimate_stress": 90000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_leadframe",
+    "load_type": "thermal",
+    "load_face": "all_surfaces",
+    "load_magnitude": 6.2
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 2e-5,
+    "max_stress": 70000000,
+    "formula": "C(x,t) = C_sat × [1 - erf(x/(2√(Dt)))], τ = L²/D",
+    "reference": "JEDEC J-STD-020; Wong et al., IEEE CPMT, 2001"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "饱和吸湿量",
+        "value": 0.005,
+        "unit": "mass fraction",
+        "tolerance": 10
+      },
+      {
+        "name": "特征扩散时间",
+        "value": 6430000,
+        "unit": "s",
+        "tolerance": 15
+      },
+      {
+        "name": "回流焊蒸汽压",
+        "value": 6200000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "界面能量释放率",
+        "value": 12,
+        "unit": "J/m²",
+        "tolerance": 20
+      }
+    ]
+  }
+}

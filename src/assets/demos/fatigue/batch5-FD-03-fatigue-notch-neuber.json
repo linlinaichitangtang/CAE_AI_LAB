@@ -1,0 +1,99 @@
+{
+  "id": "FD-03",
+  "name": "疲劳缺口系数与Neuber法则",
+  "nameEn": "Fatigue Notch Factor and Neuber Rule",
+  "description": "含缺口试样疲劳分析，重点验证疲劳缺口系数Kf和Neuber法则的应用。试样理论应力集中系数Kt=2.5，缺口敏感度q=0.8，由此计算疲劳缺口系数Kf=1+q(Kt-1)=2.2。名义应力S=150MPa，名义应力幅Sa=120MPa，R=-0.5。采用Neuber法则(σ·ε=Kf²·S²/E)将名义应力转换为局部缺口应力-应变，进而结合Basquin-Coffin-Manson方程进行缺口疲劳寿命预测。本案例适用于理解缺口效应、Neuber法则及局部应变法在疲劳设计中的应用。",
+  "category": "fatigue",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["Neuber法则", "缺口疲劳", "应力集中", "缺口敏感度", "局部应变法"],
+  "geometry": {
+    "type": "specimen",
+    "length": 0.12,
+    "width": 0.03,
+    "height": 0.01,
+    "radius": 0.005,
+    "notch_radius": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 10,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "AISI 1045 Steel (Notched Specimen)",
+    "elastic_modulus": 205000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 530000000,
+    "ultimate_stress": 725000000,
+    "fatigue_strength_coefficient": 1050000000,
+    "fatigue_strength_exponent": -0.09,
+    "endurance_limit": 310000000
+  },
+  "loading": {
+    "type": "constant_amplitude",
+    "mean_stress": 40000000,
+    "stress_amplitude": 120000000,
+    "stress_ratio": -0.5,
+    "frequency_hz": 10,
+    "temperature_K": 293,
+    "spectrum_blocks": []
+  },
+  "fatigue_model": {
+    "type": "neuber",
+    "parameters": {
+      "Kt": 2.5,
+      "q": 0.8,
+      "Kf": 2.2,
+      "sigma_f_prime": 1050000000,
+      "b": -0.09,
+      "epsilon_f_prime": 0.45,
+      "c": -0.56
+    }
+  },
+  "theoretical": {
+    "cycles_to_failure": 95000,
+    "formula": "Kf = 1 + q·(Kt - 1); Neuber: σ·ε = Kf²·S²/E; q = 1/(1 + √(a/r))",
+    "reference": "Neuber H. Theory of stress concentration for shear-strained prismatical bodies with arbitrary nonlinear stress-strain law. Journal of Applied Mechanics, 1961."
+  },
+  "acceptance": {
+    "life_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "疲劳缺口系数Kf",
+        "value": 2.2,
+        "unit": "",
+        "tolerance": 5
+      },
+      {
+        "name": "Neuber等效应力幅",
+        "value": 264000000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "缺口局部应力幅",
+        "value": 310000000,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "缺口疲劳寿命N_f",
+        "value": 95000,
+        "unit": "cycles",
+        "tolerance": 20
+      },
+      {
+        "name": "寿命缩减比(光滑/缺口)",
+        "value": 5.8,
+        "unit": "",
+        "tolerance": 20
+      }
+    ]
+  }
+}

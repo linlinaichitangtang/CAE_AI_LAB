@@ -1,0 +1,95 @@
+{
+  "id": "SS-37",
+  "name": "疲劳蠕变耦合交互分析",
+  "nameEn": "Creep-Fatigue Coupling Interaction Analysis",
+  "description": "Inconel 718镍基高温合金在923K(650°C)下的疲劳-蠕变耦合交互分析。应变幅Δε=1.0%，保载时间300s。采用应变控制对称循环，分析蠕变损伤和疲劳损伤的交互作用。基于线性损伤累积法则(D=min(D_f, D_c))和频率修正法评估蠕变-疲劳寿命。本案例适用于航空发动机热端部件、燃气轮机叶片的寿命预测与测试验证。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["蠕变疲劳耦合", "Inconel 718", "损伤累积", "高温合金", "保载", "交互作用"],
+  "geometry": {
+    "type": "bar",
+    "length": 0.05,
+    "width": 0.008,
+    "height": 0.008,
+    "radius": 0,
+    "thickness": 0.008,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Inconel 718 (Nickel Superalloy)",
+    "elastic_modulus": 185000000000,
+    "poisson_ratio": 0.3,
+    "density": 8190,
+    "yield_stress": 1034000000,
+    "thermal_expansion": 1.3e-5,
+    "thermal_conductivity": 11.4,
+    "specific_heat": 435
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 50000,
+    "load_direction": "X",
+    "temperature_bc": {
+      "type": "uniform",
+      "value": 923
+    }
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0005,
+    "max_stress": 1034000000,
+    "formula": "D_f = Σ(Δε_f/ε_f), D_c = Σ(Δt/t_r), D = D_f + D_c ≤ 1.0 (linear damage rule)",
+    "reference": "ASME Boiler and Pressure Vessel Code, Section III, Division 1, Subsection NH."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "疲劳损伤分数D_f",
+        "value": 0.65,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "蠕变损伤分数D_c",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "总损伤D",
+        "value": 0.9,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "蠕变疲劳寿命(循环数)",
+        "value": 850,
+        "unit": "cycles",
+        "tolerance": 15
+      },
+      {
+        "name": "平均应力松弛率",
+        "value": 150000000,
+        "unit": "Pa/s",
+        "tolerance": 15
+      }
+    ]
+  }
+}

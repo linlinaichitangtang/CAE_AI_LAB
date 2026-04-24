@@ -1,0 +1,98 @@
+{
+  "id": "SS-25",
+  "name": "高温蠕变分析",
+  "nameEn": "High Temperature Creep Analysis",
+  "description": "Inconel 718高温合金在923K(650°C)下的蠕变分析。采用Norton幂律蠕变模型ε̇=Aσⁿ，材料常数A=1.2e-15，n=5.0。试样在恒定应力σ=300MPa下进行蠕变试验。稳态蠕变率ε̇_ss=Aσⁿ=1.2e-15×(300e6)⁵=1.2e-15×2.43e27=2.92e-9 /s。达到1%应变所需时间t=0.01/2.92e-9≈3.43e6s(约39.7天)。该算例验证时间相关非线性分析能力。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": [
+    "蠕变",
+    "Norton幂律",
+    "Inconel 718",
+    "高温",
+    "时间相关"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.1,
+    "radius": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Inconel 718",
+    "elastic_modulus": 199000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 8190.0,
+    "yield_stress": 1034000000.0,
+    "thermal_expansion": 1.3e-05,
+    "thermal_conductivity": 11.4,
+    "specific_heat": 435.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 23562.0,
+    "load_direction": "X",
+    "temperature_bc": {
+      "type": "uniform",
+      "value": 923.0
+    }
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.001,
+    "max_stress": 300000000.0,
+    "formula": "Norton: ε̇=Aσⁿ, A=1.2e-15, n=5.0, ε̇_ss=1.2e-15×(300e6)⁵=2.92e-9/s, t_1%=0.01/ε̇_ss=3.43e6s",
+    "reference": "Norton, Creep of Steel at High Temperatures; ASM Handbook Vol. 8"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "稳态蠕变率",
+        "value": 2.92e-09,
+        "unit": "1/s",
+        "tolerance": 10.0
+      },
+      {
+        "name": "达到1%应变时间",
+        "value": 3430000.0,
+        "unit": "s",
+        "tolerance": 15.0
+      },
+      {
+        "name": "弹性应变",
+        "value": 0.001508,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "1000小时蠕变应变",
+        "value": 0.01051,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "最小蠕变速率对应的温度",
+        "value": 923.0,
+        "unit": "K",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

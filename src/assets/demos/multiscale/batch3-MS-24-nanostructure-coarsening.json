@@ -1,0 +1,327 @@
+{
+  "id": "MS-24",
+  "name": "纳米结构长大 Ostwald熟化",
+  "nameEn": "Nanostructure Coarsening via Ostwald Ripening",
+  "description": "镍基高温合金中γ'-Ni₃Al析出相的Ostwald熟化多尺度分析。DFT计算γ/γ'界面能γ_int和Ni、Al在γ基体中的扩散势垒；MD模拟纳米析出相的粗化过程，观测原子级溶质传输和界面迁移；相场模型基于Cahn-Hilliard方程模拟多析出相系统的Ostwald熟化动力学，验证LSW理论<r>³∝t；FE模型将微观组织演化映射到宏观硬度变化。该案例对理解高温合金长期服役性能退化具有重要工程意义。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["Ostwald ripening", "LSW theory", "Ni3Al precipitate", "Cahn-Hilliard", "coarsening", "nickel superalloy", "interface energy", "hardness"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Ni superalloy with γ'-Ni3Al precipitates",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT界面能与扩散势垒计算",
+      "description": "计算γ/γ'界面能γ_int和Ni、Al原子在γ基体中的空位迁移势垒",
+      "input": {
+        "crystal_structure": "FCC (γ matrix) / L12 (γ' precipitate)",
+        "lattice_constant_gamma": 3.52,
+        "lattice_constant_gamma_prime": 3.56,
+        "lattice_constant_unit": "Angstrom",
+        "lattice_misfit": 1.14,
+        "lattice_misfit_unit": "percent",
+        "interface_type": "coherent_gamma_gamma_prime",
+        "supercell": {
+          "atoms": 256,
+          "layers": 20
+        },
+        "diffusion_species": ["Ni", "Al"],
+        "neb_images": 7
+      },
+      "output": {
+        "interface_energy": 0.018,
+        "interface_energy_unit": "J/m^2",
+        "misfit_strain_energy": 2.5e6,
+        "misfit_energy_unit": "J/m^3",
+        "Ni_vacancy_migration_barrier": 1.28,
+        "Ni_barrier_unit": "eV",
+        "Al_vacancy_migration_barrier": 1.15,
+        "Al_barrier_unit": "eV",
+        "formation_energy_Ni3Al": -0.38,
+        "formation_energy_unit": "eV/atom",
+        "mixing_enthalpy": -0.22,
+        "mixing_enthalpy_unit": "eV/atom",
+        "interfacial_excess": "excess_profile.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotentials": ["PAW_PBE_Ni", "PAW_PBE_Al"],
+        "energy_cutoff": 450,
+        "energy_cutoff_unit": "eV",
+        "k_points": [12, 12, 1],
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 3,
+        "nsw": 100,
+        "neb_method": "CI-NEB",
+        "spring_constant": 5.0,
+        "spring_constant_unit": "eV/Angstrom^2"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT interface energy and diffusion barriers to MD interatomic potential parameters and simulation setup",
+        "data_transferred": [
+          "interface_energy",
+          "Ni_vacancy_migration_barrier",
+          "Al_vacancy_migration_barrier",
+          "formation_energy_Ni3Al",
+          "misfit_strain_energy"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD析出相粗化原子模拟",
+      "description": "在原子尺度模拟γ'-Ni₃Al纳米析出相的Ostwald熟化过程，观测溶质原子扩散和界面迁移",
+      "input": {
+        "crystal_structure": "FCC_L12",
+        "lattice_constant": 3.54,
+        "lattice_constant_unit": "Angstrom",
+        "simulation_box": {
+          "Lx": 30,
+          "Ly": 30,
+          "Lz": 30,
+          "unit": "nm",
+          "atom_count": 1800000
+        },
+        "precipitate_count": 8,
+        "precipitate_radius_range": [2, 6],
+        "precipitate_radius_unit": "nm",
+        "composition": "Ni-18Al (at%)",
+        "interface_energy_reference": 0.018,
+        "interface_energy_unit": "J/m^2",
+        "temperature": 1023,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "precipitate_evolution": "precipitate_evolution.vtk",
+        "radius_vs_time": "r_vs_t.dat",
+        "coarsening_rate_MD": 2.8e-30,
+        "coarsening_rate_unit": "m^3/s",
+        "interface_velocity": 0.012,
+        "interface_velocity_unit": "nm/ns",
+        "solute_concentration_profile": "c_profile.dat",
+        "diffusion_coefficient_MD": 3.5e-15,
+        "diffusion_coefficient_unit": "m^2/s",
+        "precipitate_size_distribution": "size_dist.dat",
+        "ripening_exponent_MD": 2.92
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Ni-Al)",
+        "potential_file": "NiAl_EAM_Mishin.eam.alloy",
+        "timestep": 2.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 0,
+        "target_pressure_unit": "bar",
+        "cutoff_radius": 5.5,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_x", "periodic_y", "periodic_z"],
+        "total_steps": 5000000,
+        "dump_interval": 10000,
+        "mean_square_displacement": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD coarsening kinetics and diffusion coefficient to phase field Cahn-Hilliard model parameters",
+        "data_transferred": [
+          "coarsening_rate_MD",
+          "diffusion_coefficient_MD",
+          "ripening_exponent_MD",
+          "solute_concentration_profile"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场Ostwald熟化动力学模拟",
+      "description": "基于Cahn-Hilliard方程模拟多析出相系统的Ostwald熟化，验证LSW理论<r>³∝t",
+      "input": {
+        "domain_size": {
+          "Lx": 500,
+          "Ly": 500,
+          "Lz": 500,
+          "unit": "nm"
+        },
+        "grid_spacing": 2.0,
+        "grid_spacing_unit": "nm",
+        "grid_points": "250x250x250",
+        "initial_precipitate_count": 200,
+        "initial_mean_radius": 5.0,
+        "initial_radius_unit": "nm",
+        "interface_energy_source": "DFT MS-24 Step 1",
+        "interface_energy": 0.018,
+        "interface_energy_unit": "J/m^2",
+        "diffusion_coefficient_source": "MD MS-24 Step 2",
+        "diffusion_coefficient": 3.5e-15,
+        "diffusion_coefficient_unit": "m^2/s",
+        "temperature": 1023,
+        "temperature_unit": "K",
+        "equilibrium_composition": {
+          "c_matrix": 0.155,
+          "c_precipitate": 0.25
+        }
+      },
+      "output": {
+        "microstructure_evolution": "ostwald_ripening.vtk",
+        "mean_radius_vs_time": "mean_r_vs_t.dat",
+        "LSW_exponent": 3.02,
+        "LSW_rate_constant": 2.5e-30,
+        "rate_constant_unit": "m^3/s",
+        "size_distribution": "size_dist_final.dat",
+        "distribution_skewness": 0.92,
+        "critical_radius_vs_time": "rc_vs_t.dat",
+        "volume_fraction": 0.12,
+        "coarsening_time_to_20nm": 8500,
+        "coarsening_time_unit": "hours"
+      },
+      "parameters": {
+        "model": "Cahn-Hilliard_with_elasticity",
+        "order_parameter": "composition_c_Al",
+        "interface_width": 4.0,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 0.018,
+        "gradient_energy_coefficient_unit": "J/m^2",
+        "mobility": 3.5e-15,
+        "mobility_unit": "m^2/s",
+        "chemical_free_energy": "regular_solution",
+        "interaction_parameter_Omega": 0.22,
+        "Omega_unit": "eV/atom",
+        "elastic_misfit": 0.0114,
+        "elastic_constants": {
+          "C11": 250,
+          "C12": 160,
+          "C44": 118,
+          "unit": "GPa"
+        },
+        "time_step": 10.0,
+        "time_step_unit": "s",
+        "total_time": 86400,
+        "total_time_unit": "s",
+        "fourier_spectral": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field precipitate size distribution to FE homogenized hardness via precipitation strengthening model",
+        "data_transferred": [
+          "mean_radius_vs_time",
+          "size_distribution",
+          "volume_fraction",
+          "LSW_rate_constant",
+          "coarsening_time_to_20nm"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE宏观硬度预测",
+      "description": "基于沉淀强化模型将相场预测的析出相尺寸分布映射到宏观硬度，评估Ostwald熟化对力学性能的影响",
+      "input": {
+        "domain_size": {
+          "Lx": 5,
+          "Ly": 5,
+          "Lz": 5,
+          "unit": "mm"
+        },
+        "mesh": "40x40x40",
+        "element_type": "C3D8",
+        "precipitate_size_source": "PF MS-24 Step 3",
+        "mean_radius_range": [5, 20],
+        "radius_unit": "nm",
+        "volume_fraction": 0.12,
+        "antiphase_boundary_energy": 0.18,
+        "apb_energy_unit": "J/m^2",
+        "burgers_vector": 2.54,
+        "burgers_vector_unit": "Angstrom",
+        "loading": "nanoindentation"
+      },
+      "output": {
+        "hardness_vs_time": "HV_vs_t.dat",
+        "hardness_initial": 385,
+        "hardness_unit": "HV",
+        "hardness_after_1000h": 342,
+        "hardness_unit": "HV",
+        "hardness_after_5000h": 298,
+        "hardness_unit": "HV",
+        "yield_strength_vs_time": "sigma_y_vs_t.dat",
+        "precipitation_hardening_contribution": 520,
+        "precipitation_hardening_unit": "MPa",
+        "Orowan_stress": 180,
+        "orowan_stress_unit": "MPa",
+        "strengthening_model_validation": "validation.dat"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "crystal_plasticity_with_precipitate_hardening",
+        "youngs_modulus": 200,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.31,
+        "strengthening_models": ["Orowan_looping", "shearing"],
+        "critical_radius_transition": 8.0,
+        "critical_radius_unit": "nm",
+        "boundary_condition": "rigid_indenter_displacement",
+        "indenter_radius": 100,
+        "indenter_radius_unit": "nm",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 500
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE hardness prediction validation against experimental data and precipitation strengthening theory",
+        "data_transferred": [
+          "hardness_vs_time",
+          "yield_strength_vs_time",
+          "precipitation_hardening_contribution",
+          "strengthening_model_validation"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2008.03.014",
+    "authors": "Ardell AJ",
+    "year": 2008,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Interface energy γ/γ'",
+        "value": 0.018,
+        "unit": "J/m^2",
+        "tolerance": 20
+      },
+      {
+        "name": "LSW exponent <r>^n proportional to t",
+        "value": 3.0,
+        "unit": "dimensionless",
+        "tolerance": 5
+      },
+      {
+        "name": "Al vacancy migration barrier",
+        "value": 1.15,
+        "unit": "eV",
+        "tolerance": 10
+      },
+      {
+        "name": "Coarsening rate constant",
+        "value": 2.5e-30,
+        "unit": "m^3/s",
+        "tolerance": 30
+      },
+      {
+        "name": "Initial hardness",
+        "value": 385,
+        "unit": "HV",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

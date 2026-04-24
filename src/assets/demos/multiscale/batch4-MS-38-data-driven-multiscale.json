@@ -1,0 +1,394 @@
+{
+  "id": "MS-38",
+  "name": "数据驱动多尺度",
+  "nameEn": "Data-Driven Multiscale Simulation with ML Potential",
+  "description": "基于机器学习势函数的数据驱动多尺度模拟全流程验证。以硅(Si)为模型体系，DFT生成1000个训练结构(包括体相、表面、缺陷和液态构型)的高精度参考数据；使用高斯近似势(GAP)框架训练机器学习势函数，通过SOAP描述符捕获局部化学环境；MD模拟验证GAP势函数的力预测精度(MAE<0.1eV/A)和热力学性质再现能力；FE模型集成ML增强的本构关系，验证宏观力学性能预测的一致性。该案例为数据驱动的多尺度材料模拟方法论提供完整的测试基准。",
+  "category": "multiscale",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["data-driven", "machine learning potential", "GAP", "Gaussian Approximation Potential", "SOAP descriptor", "force MAE", "ML constitutive law", "active learning"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Silicon (Si) - Diamond Cubic",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT训练数据集生成",
+      "description": "生成GAP训练所需的DFT参考数据集，包括体相、表面、缺陷和液态等多种构型",
+      "input": {
+        "crystal_structure": "diamond_cubic",
+        "lattice_constant": 5.43,
+        "lattice_constant_unit": "Angstrom",
+        "training_configurations": {
+          "bulk_unstrained": 150,
+          "bulk_strained": 200,
+          "surface_111": 100,
+          "surface_100": 80,
+          "surface_110": 70,
+          "vacancy": 80,
+          "interstitial": 60,
+          "liquid_1800K": 120,
+          "amorphous": 80,
+          "grain_boundary": 60
+        },
+        "total_training_structures": 1000,
+        "supercell_sizes": ["2x2x2", "3x3x3", "4x4x4"],
+        "temperature_range": [0, 1800],
+        "temperature_unit": "K",
+        "strain_range": [-0.08, 0.08],
+        "k_points_bulk": [8, 8, 8],
+        "k_points_surface": [4, 4, 1]
+      },
+      "output": {
+        "training_database": "si_gap_training.db",
+        "total_configurations": 1000,
+        "total_atoms": 156000,
+        "energy_range": [-5.43, -3.85],
+        "energy_range_unit": "eV/atom",
+        "force_components": 468000,
+        "force_range": [-6.0, 6.0],
+        "force_range_unit": "eV/Angstrom",
+        "virial_components": 24000,
+        "energy_distribution": "energy_hist.dat",
+        "force_distribution": "force_hist.dat",
+        "configuration_diversity_score": 0.88,
+        "DFT_reference_energy_diamond": -5.43,
+        "reference_energy_unit": "eV/atom",
+        "DFT_bulk_modulus": 97.8,
+        "bulk_modulus_unit": "GPa"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Si",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "k_points_bulk": [8, 8, 8],
+        "k_points_surface": [4, 4, 1],
+        "k_points_large": "Gamma_only",
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-7,
+        "scf_convergence_unit": "eV",
+        "ibrion": -1,
+        "isif": 2,
+        "nsw": 0,
+        "nsw_for_liquid": 5000,
+        "potim": 1.0,
+        "potim_unit": "fs",
+        "encut_for_MD": 400,
+        "encut_MD_unit": "eV"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT training dataset (energies, forces, virials) to GAP fitting via SOAP descriptors and sparse Gaussian process regression",
+        "data_transferred": [
+          "training_database",
+          "total_configurations",
+          "energy_range",
+          "force_range",
+          "configuration_diversity_score",
+          "DFT_bulk_modulus"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "GAP势函数训练与MD验证",
+      "description": "训练高斯近似势(GAP)并验证力预测精度(MAE<0.1eV/A)和热力学性质再现能力",
+      "input": {
+        "training_database": "si_gap_training.db",
+        "total_configurations": 1000,
+        "ML_framework": "GAP",
+        "descriptor": "SOAP",
+        "SOAP_parameters": {
+          "atom_cutoff": 6.0,
+          "atom_cutoff_unit": "Angstrom",
+          "l_max": 6,
+          "n_max": 6,
+          "soap_sigma": 0.5,
+          "radial_basis": "GTO"
+        },
+        "sparse_method": "CUR_matrix_decomposition",
+        "sparse_points": 2000,
+        "kernel": "Squared_Exponential",
+        "regularization_sigma": 0.01,
+        "test_set": "200_structures_excluded_from_training",
+        "validation_properties": ["forces", "energies", "virials", "phonons", "liquid_rdf"]
+      },
+      "output": {
+        "GAP_force_MAE": 0.068,
+        "force_MAE_unit": "eV/Angstrom",
+        "GAP_force_RMSE": 0.095,
+        "force_RMSE_unit": "eV/Angstrom",
+        "GAP_energy_MAE": 2.1,
+        "energy_MAE_unit": "meV/atom",
+        "GAP_energy_RMSE": 3.2,
+        "energy_RMSE_unit": "meV/atom",
+        "GAP_virial_MAE": 0.15,
+        "virial_MAE_unit": "GPa",
+        "phonon_GAP_vs_DFT_RMSE": 0.25,
+        "phonon_RMSE_unit": "THz",
+        "liquid_rdf_GAP_vs_DFT": 0.032,
+        "rdf_error_unit": "dimensionless",
+        "GAP_speedup_vs_DFT": 1200,
+        "speedup_unit": "x",
+        "melting_point_GAP": 1680,
+        "melting_point_unit": "K",
+        "melting_point_DFT": 1690,
+        "melting_point_DFT_unit": "K",
+        "GAP_model_file": "Si_GAP.xml"
+      },
+      "parameters": {
+        "code": "QUIP/GAP_fit + LAMMPS_pair_gap",
+        "GAP_fit": {
+          "descriptor": "SOAP",
+          "soap_cutoff": 6.0,
+          "soap_cutoff_unit": "Angstrom",
+          "soap_l_max": 6,
+          "soap_n_max": 6,
+          "soap_sigma": 0.5,
+          "sparse_method": "CUR",
+          "n_sparse": 2000,
+          "covariance_threshold": 1e-8,
+          "regularisation": {"energy": 0.01, "force": 0.1, "virial": 0.001}
+        },
+        "MD_validation": {
+          "code": "LAMMPS",
+          "pair_style": "gap",
+          "pair_coeff": "* * Si_GAP.xml Si",
+          "timestep": 1.0,
+          "timestep_unit": "fs",
+          "ensemble": "NPT",
+          "thermostat": "Nose-Hoover",
+          "temperature": 300,
+          "temperature_unit": "K",
+          "liquid_temperature": 1800,
+          "liquid_temperature_unit": "K",
+          "production_steps": 200000,
+          "dump_interval": 1000
+        }
+      },
+      "bridge_to_next": {
+        "mapping_method": "GAP-predicted elastic constants, defect properties and equation of state to phase field model parameter validation",
+        "data_transferred": [
+          "GAP_force_MAE",
+          "GAP_energy_MAE",
+          "GAP_speedup_vs_DFT",
+          "melting_point_GAP",
+          "GAP_model_file"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "ML势函数性质验证",
+      "description": "基于GAP势函数预测的弹性常数和缺陷性质，通过相场模型验证ML势函数在介观尺度的一致性",
+      "input": {
+        "domain_size": {
+          "Lx": 50,
+          "Ly": 50,
+          "Lz": 50,
+          "unit": "Angstrom"
+        },
+        "grid_spacing": 0.5,
+        "grid_spacing_unit": "Angstrom",
+        "grid_points": "100x100x100",
+        "elastic_constants_GAP": {
+          "C11": 165,
+          "C12": 63,
+          "C44": 79,
+          "unit": "GPa"
+        },
+        "elastic_constants_DFT": {
+          "C11": 167,
+          "C12": 64,
+          "C44": 80,
+          "unit": "GPa"
+        },
+        "elastic_constants_EDIP": {
+          "C11": 151,
+          "C12": 57,
+          "C44": 76,
+          "unit": "GPa"
+        },
+        "defect_properties": {
+          "vacancy_formation_GAP": 3.65,
+          "vacancy_formation_DFT": 3.62,
+          "unit": "eV",
+          "interstitial_formation_GAP": 3.25,
+          "interstitial_formation_DFT": 3.20,
+          "unit": "eV"
+        },
+        "bulk_modulus_GAP": 97,
+        "bulk_modulus_unit": "GPa"
+      },
+      "output": {
+        "C11_error_GAP_vs_DFT": 1.2,
+        "C11_error_unit": "percent",
+        "C44_error_GAP_vs_DFT": 1.25,
+        "C44_error_unit": "percent",
+        "bulk_modulus_error_GAP_vs_DFT": 0.8,
+        "bulk_modulus_error_unit": "percent",
+        "vacancy_formation_error": 0.8,
+        "vacancy_error_unit": "percent",
+        "strain_field_vacancy_GAP": "vacancy_GAP.vtk",
+        "strain_field_vacancy_DFT": "vacancy_DFT.vtk",
+        "strain_field_agreement": 97.5,
+        "agreement_unit": "percent",
+        "dislocation_core_width_GAP": 8.5,
+        "core_width_unit": "Angstrom",
+        "dislocation_core_width_DFT": 8.2,
+        "core_width_DFT_unit": "Angstrom",
+        "GAP_advantage_over_EDIP": ["elastic_constants", "defect_energies", "surface_properties"]
+      },
+      "parameters": {
+        "code": "custom_phase_field_elastic_defect",
+        "model": "phase_field_elastic_with_defects",
+        "order_parameter": "strain_field_epsilon",
+        "elastic_solver": "FFT_based",
+        "grid_size": "100x100x100",
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 500,
+        "vacancy_relaxation": true,
+        "dislocation_core_model": "Peierls-Nabarro",
+        "anisotropy": "cubic",
+        "benchmark_potentials": ["GAP", "DFT", "EDIP"]
+      },
+      "bridge_to_next": {
+        "mapping_method": "GAP-validated elastic constants and defect properties to FE constitutive model with ML-enhanced parameters",
+        "data_transferred": [
+          "C11_error_GAP_vs_DFT",
+          "C44_error_GAP_vs_DFT",
+          "strain_field_agreement",
+          "bulk_modulus_error_GAP_vs_DFT",
+          "GAP_advantage_over_EDIP"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "ML增强本构关系FE验证",
+      "description": "FE模型集成GAP预测的材料参数，验证ML增强本构关系在宏观尺度的一致性",
+      "input": {
+        "domain_size": {
+          "Lx": 5,
+          "Ly": 5,
+          "Lz": 5,
+          "unit": "mm"
+        },
+        "mesh": "50x50x50",
+        "element_type": "C3D8",
+        "constitutive_models": {
+          "GAP_based": {
+            "C11": 165,
+            "C12": 63,
+            "C44": 79,
+            "unit": "GPa"
+          },
+          "DFT_reference": {
+            "C11": 167,
+            "C12": 64,
+            "C44": 80,
+            "unit": "GPa"
+          },
+          "EDIP_reference": {
+            "C11": 151,
+            "C12": 57,
+            "C44": 76,
+            "unit": "GPa"
+          }
+        },
+        "loading": "uniaxial_tension",
+        "max_strain": 0.03,
+        "temperature": 300,
+        "temperature_unit": "K",
+        "ML_enhanced_plasticity": "GAP_trained_yield_surface"
+      },
+      "output": {
+        "youngs_modulus_GAP": 130.2,
+        "youngs_modulus_unit": "GPa",
+        "youngs_modulus_DFT": 131.5,
+        "youngs_modulus_EDIP": 118.5,
+        "youngs_modulus_unit": "GPa",
+        "GAP_vs_DFT_modulus_error": 1.0,
+        "modulus_error_unit": "percent",
+        "GAP_vs_EDIP_modulus_error": 9.9,
+        "modulus_error_unit": "percent",
+        "poisson_ratio_GAP": 0.277,
+        "poisson_ratio_DFT": 0.278,
+        "shear_modulus_GAP": 51,
+        "shear_modulus_unit": "GPa",
+        "stress_strain_GAP": "ss_GAP.dat",
+        "stress_strain_DFT": "ss_DFT.dat",
+        "stress_strain_EDIP": "ss_EDIP.dat",
+        "overall_GAP_accuracy": 98.5,
+        "accuracy_unit": "percent",
+        "computational_cost_comparison": "cost.dat"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "solver_type": "static_implicit",
+        "material_model": "anisotropic_linear_elastic",
+        "boundary_condition": "displacement_controlled_uniaxial",
+        "strain_increment": 0.0005,
+        "convergence_tolerance": 1e-10,
+        "max_iterations": 500,
+        "geometric_nonlinearity": false,
+        "benchmark_comparison": ["GAP", "DFT", "EDIP"],
+        "output_requests": ["S", "E", "U", "RF"]
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE ML-enhanced constitutive validation results for data-driven multiscale methodology assessment",
+        "data_transferred": [
+          "youngs_modulus_GAP",
+          "GAP_vs_DFT_modulus_error",
+          "overall_GAP_accuracy",
+          "computational_cost_comparison"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1103/PhysRevB.87.184115",
+    "authors": "Bartok AP, Payne MC, Kondor R, Csanyi G",
+    "year": 2013,
+    "journal": "Physical Review B"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "GAP force MAE",
+        "value": 0.068,
+        "unit": "eV/Angstrom",
+        "tolerance": 30
+      },
+      {
+        "name": "GAP energy MAE",
+        "value": 2.1,
+        "unit": "meV/atom",
+        "tolerance": 30
+      },
+      {
+        "name": "GAP speedup vs DFT",
+        "value": 1200,
+        "unit": "x",
+        "tolerance": 40
+      },
+      {
+        "name": "GAP vs DFT modulus error (FE)",
+        "value": 1.0,
+        "unit": "percent",
+        "tolerance": 50
+      },
+      {
+        "name": "Overall GAP accuracy",
+        "value": 98.5,
+        "unit": "percent",
+        "tolerance": 3
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

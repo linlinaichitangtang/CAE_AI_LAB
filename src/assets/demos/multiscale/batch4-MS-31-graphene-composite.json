@@ -1,0 +1,255 @@
+{
+  "id": "MS-31",
+  "name": "石墨烯增强复合材料",
+  "nameEn": "Graphene Reinforced Composite Multiscale Analysis",
+  "description": "石墨烯-环氧树脂纳米复合材料的跨尺度力学性能预测。首先通过DFT计算石墨烯与环氧树脂分子间的界面结合能(γ_int≈0.5J/m²)，确定界面粘结强度；随后建立含单壁碳纳米管(SWCNT)和石墨烯片的环氧树脂MD模型，模拟纳米增强相在基体中的分散行为和界面载荷传递机制；利用Halpin-Tsai模型将纳米尺度有效刚度均质化为宏观等效弹性模量E_eff；最终通过FE模型预测复合材料层合板的宏观强度和失效模式。该案例展示了从量子力学到工程结构的多尺度材料设计方法。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["graphene", "epoxy composite", "interface binding energy", "Halpin-Tsai", "SWCNT", "nanoreinforcement", "stiffness homogenization", "laminate strength"],
+  "scales": ["dft", "md", "fe"],
+  "material_system": "Graphene-Epoxy Nanocomposite (SWCNT + Graphene in DGEBA epoxy)",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "石墨烯-环氧界面结合能计算",
+      "description": "DFT计算石墨烯表面与环氧树脂单体(DGEBA)的吸附能和界面结合能，确定界面粘结强度",
+      "input": {
+        "graphene_model": "periodic_graphene_slab_4x4",
+        "graphene_layers": 2,
+        "vacuum_gap": 20,
+        "vacuum_gap_unit": "Angstrom",
+        "epoxy_molecule": "DGEBA_monomer_C21H24O2",
+        "adsorption_configurations": ["parallel", "tilted_30deg", "tilted_60deg", "perpendicular"],
+        "separation_distances": [2.5, 3.0, 3.5, 4.0, 4.5],
+        "separation_unit": "Angstrom",
+        "vdW_correction": "DFT-D3_Grimme",
+        "k_points": [4, 4, 1]
+      },
+      "output": {
+        "optimal_adsorption_distance": 3.35,
+        "distance_unit": "Angstrom",
+        "adsorption_energy_E_ads": -0.82,
+        "adsorption_energy_unit": "eV/molecule",
+        "interface_binding_energy_gamma_int": 0.52,
+        "binding_energy_unit": "J/m^2",
+        "charge_transfer": 0.015,
+        "charge_transfer_unit": "e",
+        "optimal_orientation": "parallel",
+        "electron_density_difference": "delta_rho.cube",
+        "binding_energy_curve": "binding_curve.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE",
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "vdW_correction": "DFT-D3_BJ",
+        "k_points": [4, 4, 1],
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-6,
+        "scf_convergence_unit": "eV",
+        "ibrion": 2,
+        "isif": 2,
+        "ediffg": -0.01,
+        "ediffg_unit": "eV/Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT interface binding energy gamma_int and optimal adsorption configuration to MD force field parameterization (REBO for graphene + OPLS-AA for epoxy with LJ cross terms)",
+        "data_transferred": [
+          "interface_binding_energy_gamma_int",
+          "optimal_adsorption_distance",
+          "optimal_orientation",
+          "charge_transfer"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "纳米增强相分散与载荷传递模拟",
+      "description": "建立含SWCNT和石墨烯片的环氧树脂MD模型，模拟纳米增强相的分散行为和界面载荷传递机制",
+      "input": {
+        "matrix": "crosslinked_DGEBA_epoxy",
+        "crosslink_density": 0.85,
+        "crosslink_density_unit": "fraction",
+        "reinforcement": {
+          "SWCNT": {"count": 3, "chirality": "(10,10)", "length": 8, "length_unit": "nm", "diameter": 1.36, "diameter_unit": "nm"},
+          "graphene_sheets": {"count": 2, "size": "5x5", "size_unit": "nm", "layers": 1}
+        },
+        "total_atoms": 85000,
+        "box_size": {"Lx": 15, "Ly": 15, "Lz": 15, "unit": "nm"},
+        "volume_fraction": 0.03,
+        "volume_fraction_unit": "dimensionless",
+        "interface_gamma_int": 0.52,
+        "interface_gamma_int_unit": "J/m^2"
+      },
+      "output": {
+        "effective_youngs_modulus_E_eff": 4.8,
+        "modulus_unit": "GPa",
+        "matrix_modulus": 3.2,
+        "matrix_modulus_unit": "GPa",
+        "reinforcement_ratio": 1.50,
+        "stress_strain_curve": "ss_MD.dat",
+        "interface_debonding_stress": 85,
+        "debonding_stress_unit": "MPa",
+        "load_transfer_efficiency": 0.72,
+        "load_transfer_efficiency_unit": "dimensionless",
+        "dispersion_quality_index": 0.85,
+        "radial_distribution_function": "rdf.dat",
+        "mean_square_displacement": "msd.dat"
+      },
+      "parameters": {
+        "code": "LAMMPS",
+        "graphene_potential": "AIREBO",
+        "SWCNT_potential": "AIREBO",
+        "epoxy_potential": "OPLS-AA",
+        "cross_interaction": "LJ_9-6_with_D3_parameters",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Nose-Hoover",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "pressure": 0,
+        "pressure_unit": "atm",
+        "equilibration_steps": 2000000,
+        "production_steps": 5000000,
+        "deformation_rate": 1e8,
+        "deformation_rate_unit": "1/s",
+        "strain_direction": "uniaxial_tension_z"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD effective stiffness E_eff and reinforcement ratio to Halpin-Tsai homogenization model for macro-scale FE constitutive parameters",
+        "data_transferred": [
+          "effective_youngs_modulus_E_eff",
+          "reinforcement_ratio",
+          "interface_debonding_stress",
+          "load_transfer_efficiency",
+          "volume_fraction"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "宏观层合板强度预测",
+      "description": "基于Halpin-Tsai均质化模型和MD有效刚度，建立FE层合板模型预测宏观强度和失效模式",
+      "input": {
+        "laminate_configuration": "[0/45/-45/90]_s",
+        "ply_thickness": 0.125,
+        "ply_thickness_unit": "mm",
+        "total_plies": 8,
+        "laminate_thickness": 1.0,
+        "laminate_thickness_unit": "mm",
+        "panel_dimensions": {"Lx": 100, "Ly": 25, "unit": "mm"},
+        "effective_properties": {
+          "E11": 142,
+          "E22": 10.5,
+          "G12": 5.8,
+          "nu12": 0.28,
+          "unit": "GPa"
+        },
+        "E_eff_from_MD": 4.8,
+        "E_eff_from_MD_unit": "GPa",
+        "halpin_tsai_parameters": {
+          "E_matrix": 3.2,
+          "E_fiber": 230,
+          "xi_shape_factor": 2.0,
+          "unit": "GPa"
+        },
+        "interface_strength": 85,
+        "interface_strength_unit": "MPa",
+        "loading": "uniaxial_tension"
+      },
+      "output": {
+        "laminate_strength_Xt": 1580,
+        "strength_unit": "MPa",
+        "failure_strain": 0.014,
+        "failure_mode": "matrix_cracking_followed_by_delamination",
+        "stress_strain_curve": "ss_FE.dat",
+        "damage_initiation_load": 1200,
+        "damage_initiation_unit": "MPa",
+        "delamination_onset": 0.008,
+        "delamination_onset_unit": "strain",
+        "stiffness_degradation": 0.35,
+        "degradation_unit": "fraction",
+        "damage_field": "damage.vtk",
+        "interlaminar_shear_stress": "tau_xz.dat"
+      },
+      "parameters": {
+        "code": "Abaqus/Standard",
+        "element_type": "SC8R",
+        "mesh_size": 0.5,
+        "mesh_size_unit": "mm",
+        "material_model": "Hashin_damage_criterion",
+        "damage_evolution": "energy_based",
+        "fracture_energy_G_Ic": 0.28,
+        "fracture_energy_G_IIc": 0.79,
+        "fracture_energy_unit": "kJ/m^2",
+        "cohesive_zone": "Cohesive_Surface_Interaction",
+        "cohesive_stiffness": 1e6,
+        "cohesive_stiffness_unit": "MPa/mm",
+        "solver": "static_implicit",
+        "step_size": 0.001,
+        "max_increment": 1000,
+        "convergence_tolerance": 1e-8
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE laminate strength prediction and failure mode analysis for composite design optimization feedback",
+        "data_transferred": [
+          "laminate_strength_Xt",
+          "failure_strain",
+          "failure_mode",
+          "damage_initiation_load",
+          "delamination_onset"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.compscitech.2017.03.020",
+    "authors": "Li Y, Waas AM, Arruda EM",
+    "year": 2017,
+    "journal": "Composites Science and Technology"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Interface binding energy gamma_int",
+        "value": 0.52,
+        "unit": "J/m^2",
+        "tolerance": 15
+      },
+      {
+        "name": "MD effective Young's modulus E_eff",
+        "value": 4.8,
+        "unit": "GPa",
+        "tolerance": 10
+      },
+      {
+        "name": "Load transfer efficiency",
+        "value": 0.72,
+        "unit": "dimensionless",
+        "tolerance": 10
+      },
+      {
+        "name": "Laminate tensile strength",
+        "value": 1580,
+        "unit": "MPa",
+        "tolerance": 8
+      },
+      {
+        "name": "Failure strain",
+        "value": 0.014,
+        "unit": "dimensionless",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 10
+  }
+}

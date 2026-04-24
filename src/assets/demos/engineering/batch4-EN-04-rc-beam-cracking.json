@@ -1,0 +1,131 @@
+{
+  "id": "EN-04",
+  "name": "钢筋混凝土梁开裂分析",
+  "nameEn": "Reinforced Concrete Beam Cracking Analysis",
+  "description": "分析钢筋混凝土简支梁在四点弯曲载荷下的开裂行为和裂缝宽度。梁尺寸：L=4m，b=0.2m，h=0.4m，有效高度h₀=0.365m。混凝土C30(f_c=30MPa, f_t=2.01MPa, E_c=30GPa)，受拉纵筋3φ16(A_s=603mm², f_y=400MPa, E_s=200GPa)。跨中集中载荷P=120kN(四点弯曲，加载点距支座1.2m)。按GB50010-2010计算裂缝宽度w_max，验证FEA开裂区域分布和裂缝间距。开裂弯矩M_cr=0.292×f_t×b×h²，使用阶段裂缝宽度w_max=1.5mm限值校核。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["rc_beam", "cracking", "crack_width", "concrete", "rebar", "gb50010", "civil_engineering"],
+  "engineering_domain": "civil",
+  "design_code": "GB50010-2010 混凝土结构设计规范",
+  "geometry": {
+    "type": "beam",
+    "length": 4.0,
+    "width": 0.2,
+    "height": 0.4,
+    "dimension": "3d",
+    "detail_params": {
+      "effective_depth": 0.365,
+      "clear_cover": 0.025,
+      "rebar_diameter": 0.016,
+      "rebar_count": 3,
+      "rebar_area": 6.03e-4,
+      "loading_span": 1.2,
+      "support_to_support": 4.0
+    }
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 8,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "C30 Concrete + HRB400 Rebar",
+    "elastic_modulus": 30000000000,
+    "poisson_ratio": 0.2,
+    "density": 2500,
+    "yield_stress": 20100000,
+    "thermal_expansion": 1.0e-5,
+    "thermal_conductivity": 1.74,
+    "specific_heat": 920,
+    "rc_params": {
+      "concrete_grade": "C30",
+      "f_c": 30000000,
+      "f_t": 2010000,
+      "f_ck": 20100000,
+      "E_c": 30000000000,
+      "rebar_grade": "HRB400",
+      "f_y": 400000000,
+      "E_s": 200000000000,
+      "A_s": 6.03e-4,
+      "reinforcement_ratio": 0.00826
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "supports_at_x=0.8_and_x=3.2",
+    "load_type": "point",
+    "load_face": "midspan",
+    "load_magnitude": 120000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.008,
+    "max_stress": 20100000,
+    "formula": "Cracking moment: M_cr = 0.292 × f_t × b × h² = 0.292 × 2.01e6 × 0.2 × 0.4² = 0.292 × 2.01e6 × 0.032 = 18780 N·m; Service moment: M_s = P×a/2 = 120000×1.2/2 = 72000 N·m (four-point bending); Steel stress: σ_s = M_s/(0.87×A_s×h₀) = 72000/(0.87×6.03e-4×0.365) = 72000/1.916e-4 = 375.8 MPa; Effective reinforcement ratio: ρ_te = A_s/(0.5×b×h) = 6.03e-4/(0.5×0.2×0.4) = 0.01508; Strain non-uniformity coefficient: ψ = 1.1 - 0.65×f_tk/(ρ_te×σ_s) = 1.1 - 0.65×2.01e6/(0.01508×375.8e6) = 1.1 - 0.231 = 0.869; Crack width (GB50010): w_max = α_cr × ψ × σ_s/Es × (1.9c + 0.08d_eq/ρ_te) = 1.9 × 0.869 × 375.8e6/200e9 × (1.9×25 + 0.08×16/0.01508) = 1.9 × 0.869 × 1.879e-3 × (47.5 + 84.9) = 1.9 × 0.869 × 1.879e-3 × 132.4 = 0.413 mm; Crack spacing: l_cr = 1.9c + 0.08d_eq/ρ_te = 47.5 + 84.9 = 132.4 mm; w_max = 0.413 mm < 1.5 mm limit (satisfied)",
+    "reference": "GB50010-2010 混凝土结构设计规范; Hsu, T.T.C. Unified Theory of Reinforced Concrete"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Cracking moment M_cr",
+        "value": 18780,
+        "unit": "N·m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Service moment M_s",
+        "value": 72000,
+        "unit": "N·m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "Rebar stress at service load",
+        "value": 375800000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Maximum crack width w_max",
+        "value": 0.000413,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Average crack spacing",
+        "value": 0.1324,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Crack width check (w_max/w_limit)",
+        "value": 0.275,
+        "unit": "",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Midspan deflection at service load",
+        "value": 0.008,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Neutral axis depth ratio (cracked section)",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

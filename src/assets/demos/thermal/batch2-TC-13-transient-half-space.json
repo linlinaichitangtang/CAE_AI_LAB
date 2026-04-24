@@ -1,0 +1,115 @@
+{
+  "id": "TC-13",
+  "name": "非稳态导热(半无限大体)",
+  "nameEn": "Transient Heat Conduction in Semi-Infinite Body",
+  "description": "半无限大钢体非稳态导热经典解析解验证。钢制半无限大物体初始温度T_i=293K(20°C)，表面温度突然升高至T_s=573K(300°C)并保持不变。材料为碳钢，热扩散系数α=k/(ρ·c_p)=50/(7850×490)=1.172×10⁻⁵m²/s。采用解析解T(x,t)=T_s+(T_i-T_s)·erf(x/(2√(αt)))验证。在x=0.01m、t=100s处：2√(αt)=2×√(1.172e-5×100)=2×0.0342=0.0685m，erf(0.01/0.0685)=erf(0.146)=0.163，T=573+(293-573)×0.163=573-45.6=527.4K。该案例用于验证瞬态热分析程序对半无限大物体温度场的求解精度。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["transient", "semi_infinite", "erf_function", "analytical_solution", "carbon_steel"],
+  "geometry": {
+    "type": "block",
+    "length": 0.2,
+    "width": 0.05,
+    "height": 0.05,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 573,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-8,
+    "time_step": 0.5,
+    "total_time": 100
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 573,
+    "formula": "T(x,t) = T_s + (T_i - T_s) * erf(x / (2*sqrt(alpha*t))); alpha = k / (rho * c_p)",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.5 - Transient Conduction"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 2.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "thermal_diffusivity",
+        "value": 1.172e-5,
+        "unit": "m^2/s",
+        "tolerance": 0.5
+      },
+      {
+        "name": "surface_temperature",
+        "value": 573,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "temperature_at_x0_01m_t100s",
+        "value": 527.4,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "temperature_at_x0_05m_t100s",
+        "value": 421.8,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "temperature_at_x0_1m_t100s",
+        "value": 331.2,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "erf_argument_at_x0_01m",
+        "value": 0.146,
+        "unit": "",
+        "tolerance": 1.0
+      },
+      {
+        "name": "penetration_depth_at_100s",
+        "value": 0.136,
+        "unit": "m",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

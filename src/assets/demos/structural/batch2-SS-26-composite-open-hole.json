@@ -1,0 +1,103 @@
+{
+  "id": "SS-26",
+  "name": "复合材料开口板分析",
+  "nameEn": "Composite Open Hole Tension Analysis",
+  "description": "含中心圆孔CFRP层合板的拉伸强度分析。铺层顺序[0/45/-45/90]s，板宽W=50mm，孔径D=10mm，D/W=0.2。材料体系T800/3900-2，单层厚度t_ply=0.13mm，共8层总厚度1.04mm。各向同性板应力集中系数Kt≈3.0，但复合材料由于各向异性Kt≈2.8。孔边存在层间应力集中，导致分层起始。该算例验证复合材料渐进损伤分析能力。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": [
+    "复合材料",
+    "开口板",
+    "应力集中",
+    "分层",
+    "渐进损伤"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.15,
+    "width": 0.05,
+    "thickness": 0.00104,
+    "radius": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 20,
+    "z_div": 8,
+    "element_type": "S4R"
+  },
+  "material": {
+    "name": "T800/3900-2 CFRP",
+    "elastic_modulus": 162000000000.0,
+    "poisson_ratio": 0.32,
+    "density": 1580.0,
+    "yield_stress": 0.0,
+    "thermal_expansion": 2.4e-07,
+    "thermal_conductivity": 7.0,
+    "specific_heat": 800.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 50000.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.00015,
+    "max_stress": 840000000.0,
+    "formula": "Kt≈2.8 (orthotropic), σ_net=P/((W-D)·t)=50000/(0.04×0.00104)=300MPa, σ_max=Kt×σ_net=840MPa",
+    "reference": "Tan, Progressive Failure Analysis of Composite Laminates; ASTM D5766"
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "净截面应力",
+        "value": 300000000.0,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "孔边应力集中系数Kt",
+        "value": 2.8,
+        "unit": "",
+        "tolerance": 10.0
+      },
+      {
+        "name": "孔边最大应力",
+        "value": 840000000.0,
+        "unit": "Pa",
+        "tolerance": 15.0
+      },
+      {
+        "name": "开孔拉伸强度OHT",
+        "value": 450000000.0,
+        "unit": "Pa",
+        "tolerance": 15.0
+      },
+      {
+        "name": "分层起始载荷",
+        "value": 35000.0,
+        "unit": "N",
+        "tolerance": 15.0
+      },
+      {
+        "name": "孔边层间剪应力τ_xz",
+        "value": 45000000.0,
+        "unit": "Pa",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

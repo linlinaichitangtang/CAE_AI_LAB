@@ -1,0 +1,63 @@
+{
+  "id": "RW-03",
+  "name": "转向架疲劳",
+  "nameEn": "Bogie Frame Fatigue Analysis",
+  "description": "模拟焊接转向架构架的疲劳寿命评估。首先进行模态分析确定构架的固有频率和振型，然后按EN 13749标准施加疲劳载荷谱，包括垂向载荷、横向载荷、扭转载荷和制动载荷等工况组合。采用名义应力法或热点应力法进行S-N曲线验证，计算构架在各载荷工况下的疲劳寿命和损伤度。验证关键焊缝位置的疲劳强度满足无限寿命要求。",
+  "category": "railway",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["bogie-frame", "fatigue", "EN-13749", "S-N", "welded-structure", "modal-analysis"],
+  "geometry": {
+    "type": "bogie_frame",
+    "wheelbase": 2.5,
+    "gauge": 1.435,
+    "frame_length": 3.5,
+    "frame_width": 2.2,
+    "plate_thickness": 0.012,
+    "weld_type": "butt_and_fillet"
+  },
+  "material": {
+    "name": "S355J2W",
+    "elastic_modulus": 210000000000.0,
+    "yield_strength": 355000000.0,
+    "tensile_strength": 510000000.0,
+    "density": 7850.0,
+    "fatigue_class_FAT": 80
+  },
+  "loading": {
+    "vertical_load_per_bogie": 170000.0,
+    "lateral_load": 60000.0,
+    "twist_load": 40000.0,
+    "braking_load": 30000.0,
+    "load_cycles": 2000000.0,
+    "load_spectrum": "EN_13749"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "一阶弯曲固有频率",
+        "value": 45.0,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "一阶扭转固有频率",
+        "value": 65.0,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "最大热点应力幅",
+        "value": 120.0,
+        "unit": "MPa",
+        "tolerance": 15
+      },
+      {
+        "name": "疲劳损伤度D",
+        "value": 0.5,
+        "unit": "-",
+        "tolerance": 25
+      }
+    ]
+  }
+}

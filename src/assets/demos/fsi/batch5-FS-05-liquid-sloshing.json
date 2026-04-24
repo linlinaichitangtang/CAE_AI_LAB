@@ -1,0 +1,59 @@
+{
+  "id": "FS-05",
+  "name": "液罐晃动",
+  "nameEn": "Liquid Sloshing in Tank",
+  "description": "模拟矩形液罐在地震激励下的液体晃动响应。液罐尺寸2m×1m×1m，水深0.8m，采用正弦扫频激励模拟地震作用。验证一阶晃动频率f₁=√(gπ/L)×tanh(πh/L)/(2π)≈0.6Hz，以及液面最大波高和罐壁动压力分布。流体域使用VOF方法捕捉自由面，结构域为刚性罐壁，采用整体耦合方法。分析不同激励频率下的共振响应。",
+  "category": "fsi",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["sloshing", "free-surface", "seismic", "VOF", "tank"],
+  "fluid_domain": {
+    "type": "internal",
+    "density": 998.0,
+    "viscosity": 1.0e-3,
+    "velocity": 0.5,
+    "pressure": 101325.0
+  },
+  "structure_domain": {
+    "type": "block",
+    "length": 2.0,
+    "width": 1.0,
+    "thickness": 0.005,
+    "elastic_modulus": 210000000000.0,
+    "density": 7850.0
+  },
+  "coupling": {
+    "method": "monolithic",
+    "interface": "wet_surface",
+    "time_step": 0.005,
+    "total_time": 30.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "一阶晃动频率",
+        "value": 0.6,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "共振时最大波高",
+        "value": 0.15,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "罐壁最大动压力",
+        "value": 8500.0,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "晃动力矩",
+        "value": 2500.0,
+        "unit": "N·m",
+        "tolerance": 20
+      }
+    ]
+  }
+}

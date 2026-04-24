@@ -1,0 +1,162 @@
+{
+  "id": "VL-14",
+  "name": "缩减积分vs完全积分对比",
+  "nameEn": "Reduced vs Full Integration: C3D8R vs C3D8 vs C3D8I",
+  "description": "验证缩减积分(C3D8R)、完全积分(C3D8)和非协调模式(C3D8I)三种六面体单元在悬臂梁弯曲问题上的精度差异。采用悬臂梁(1m×0.1m×0.1m)端部集中载荷，对比三种单元的弯曲位移精度、剪切锁定程度和沙漏(hourglass)控制效果。C3D8完全积分存在剪切锁定，弯曲位移偏小约10-15%；C3D8R缩减积分无剪切锁定但需要沙漏控制，弯曲精度高但可能出现零能量模式；C3D8I非协调模式单元综合最优，弯曲精度高且无沙漏问题。通过网格细化研究(4×2×2到20×10×10)验证收敛行为。",
+  "category": "validation",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["integration_scheme", "reduced_integration", "full_integration", "incompatible_modes", "shear_locking", "hourglass", "element_type"],
+  "validation_type": "solver_algorithm",
+  "test_config": {
+    "baseline": {
+      "description": "C3D8I非协调模式单元，弯曲精度最优参考",
+      "bc_type": "fixed-free_cantilever",
+      "material_type": "linear_elastic_steel",
+      "mesh_density": 10
+    },
+    "variants": [
+      {
+        "description": "C3D8完全积分线性六面体，存在剪切锁定",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "C3D8R缩减积分六面体，需沙漏控制",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 10
+      },
+      {
+        "description": "C3D8I非协调模式，粗网格(4×2×2)",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 4
+      },
+      {
+        "description": "C3D8R细网格(20×10×10)收敛验证",
+        "bc_type": "fixed-free_cantilever",
+        "material_type": "linear_elastic_steel",
+        "mesh_density": 20
+      }
+    ],
+    "comparison_metrics": ["tip_displacement_error", "shear_locking_ratio", "hourglass_energy_ratio", "convergence_rate"]
+  },
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 4,
+    "z_div": 4,
+    "element_type": "C3D8I"
+  },
+  "material": {
+    "name": "Structural Steel Q235",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 1000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.0002,
+    "max_stress": 6000000,
+    "formula": "I = bh³/12 = 8.333e-6 m⁴; δ_exact = FL³/(3EI) = 1000×1³/(3×200e9×8.333e-6) = 2.0e-4 m; σ_exact = FL·(h/2)/I = 1000×1×0.05/8.333e-6 = 6.0e6 Pa; C3D8 (full integration, 2×2×2 Gauss): shear locking causes underestimation; δ_C3D8/δ_exact ≈ 0.85-0.90 for 10×4×4 mesh; error ≈ 10-15%; C3D8R (reduced integration, 1×1×1 Gauss): no shear locking; δ_C3D8R/δ_exact ≈ 0.98-1.02; hourglass energy should be < 5% of total strain energy with proper control; C3D8I (incompatible modes): enhanced strain formulation; δ_C3D8I/δ_exact ≈ 0.995-1.005 even for coarse mesh; Convergence rate: C3D8 ~ O(h²) for bending (suboptimal due to locking); C3D8R ~ O(h²) (optimal for displacements); C3D8I ~ O(h²) (optimal, best accuracy per DOF)",
+    "reference": "Bathe, K.J. Finite Element Procedures; Simo, J.C. & Hughes, T.J.R. Computational Inelasticity; Wilson, E.L. Incompatible displacement modes"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Theoretical tip displacement",
+        "value": 0.0002,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "C3D8 tip displacement (10×4×4 mesh)",
+        "value": 0.000174,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "C3D8 displacement error",
+        "value": 13.0,
+        "unit": "%",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D8R tip displacement (10×4×4 mesh)",
+        "value": 0.000198,
+        "unit": "m",
+        "tolerance": 5.0
+      },
+      {
+        "name": "C3D8R displacement error",
+        "value": 1.0,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D8I tip displacement (10×4×4 mesh)",
+        "value": 0.000199,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "C3D8I displacement error",
+        "value": 0.5,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D8R hourglass energy ratio",
+        "value": 2.0,
+        "unit": "%",
+        "tolerance": 50.0
+      },
+      {
+        "name": "C3D8 shear locking ratio (shear/bending energy)",
+        "value": 0.18,
+        "unit": "",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D8I coarse mesh (4×2×2) displacement error",
+        "value": 3.0,
+        "unit": "%",
+        "tolerance": 30.0
+      },
+      {
+        "name": "C3D8R fine mesh (20×10×10) displacement error",
+        "value": 0.3,
+        "unit": "%",
+        "tolerance": 50.0
+      }
+    ]
+  }
+}

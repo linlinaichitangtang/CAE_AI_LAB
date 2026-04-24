@@ -1,0 +1,134 @@
+{
+  "id": "TC-25",
+  "name": "激光粉末床熔化快速成形",
+  "nameEn": "Laser Powder Bed Fusion (LPBF) Additive Manufacturing - Ti-6Al-4V",
+  "description": "选区激光熔化(SLM/LPBF)增材制造过程热-力耦合分析。Ti-6Al-4V粉末床，激光功率P=200W，扫描速度v=800mm/s，光斑直径d=0.08mm，道间距h=0.1mm，层厚t_layer=0.03mm。材料物性：固态k_s=6.7W/(m·K)，液态k_l=30W/(m·K)，熔点T_melt=1923K，沸点T_boil=3560K，密度ρ=4430kg/m³。线能量密度E=P/v=200/0.8=250J/m。体能量密度E_v=P/(v·h·t)=200/(0.0008×0.0001×0.00003)=8.33e10J/m³。熔池峰值温度T_max≈3500K，冷却速率dT/dt≈1×10⁶K/s。快速凝固产生残余应力σ_res≈600MPa，需分析热应力分布及变形。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 5,
+  "tags": ["LPBF", "SLM", "additive_manufacturing", "Ti_6Al_4V", "melt_pool", "residual_stress", "rapid_solidification", "laser_processing"],
+  "geometry": {
+    "type": "block",
+    "length": 0.005,
+    "width": 0.002,
+    "height": 0.001,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 50,
+    "y_div": 20,
+    "z_div": 10,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Ti-6Al-4V (Powder Bed)",
+    "elastic_modulus": 114000000000,
+    "poisson_ratio": 0.34,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "thermal_expansion": 8.6e-6,
+    "thermal_conductivity": 6.7,
+    "specific_heat": 526
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "top_surface",
+    "load_magnitude": 5e9,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 473,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 5e9,
+      "convection_coeff": 50,
+      "heat_source": 8.33e13,
+      "emissivity": 0.4
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 1e-4,
+    "total_time": 0.01
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 600000000,
+    "max_temperature": 3500,
+    "formula": "E_line = P/v = 250 J/m; E_vol = P/(v*h*t_layer) = 8.33e10 J/m^3; T_melt(Ti64) = 1923K; cooling_rate ~ v^2/(4*alpha); residual_stress ~ E*alpha*(T_max - T_sub)/(1-nu)",
+    "reference": "King et al., Overview of Modelling and Simulation of Metal Powder Bed Fusion Process, Acta Materialia, 2018"
+  },
+  "acceptance": {
+    "displacement_error_limit": 30.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "laser_power",
+        "value": 200,
+        "unit": "W",
+        "tolerance": 0.1
+      },
+      {
+        "name": "scan_speed",
+        "value": 0.8,
+        "unit": "m/s",
+        "tolerance": 0.1
+      },
+      {
+        "name": "linear_energy_density",
+        "value": 250,
+        "unit": "J/m",
+        "tolerance": 1.0
+      },
+      {
+        "name": "volumetric_energy_density",
+        "value": 8.33e10,
+        "unit": "J/m^3",
+        "tolerance": 5.0
+      },
+      {
+        "name": "melt_pool_peak_temperature",
+        "value": 3500,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "melting_temperature_Ti6Al4V",
+        "value": 1923,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "cooling_rate",
+        "value": 1e6,
+        "unit": "K/s",
+        "tolerance": 30.0
+      },
+      {
+        "name": "residual_stress",
+        "value": 600000000,
+        "unit": "Pa",
+        "tolerance": 25.0
+      },
+      {
+        "name": "layer_thickness",
+        "value": 3e-5,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "hatch_spacing",
+        "value": 1e-4,
+        "unit": "m",
+        "tolerance": 0.5
+      }
+    ]
+  }
+}

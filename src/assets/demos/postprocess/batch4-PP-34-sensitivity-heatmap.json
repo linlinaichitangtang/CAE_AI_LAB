@@ -1,0 +1,56 @@
+{
+  "id": "PP-34",
+  "name": "参数敏感度热图",
+  "nameEn": "Parameter Sensitivity Heatmap - Multi-Input Multi-Output Analysis",
+  "description": "展示5个输入参数(板厚t、弹性模量E、外载荷F、工作温度T、约束刚度K)对3个输出响应(最大位移δ、最大应力σ、基频f₁)的敏感度矩阵热图分析。采用局部敏感度方法(归一化偏导数)，计算5x3=15个敏感度系数，以矩阵热图形式呈现。颜色强度映射敏感度系数大小：深红色表示强正敏感，深蓝色表示强负敏感，白色表示不敏感。同时生成龙卷风图(Tornado Chart)按敏感度绝对值降序排列，直观识别关键影响因素。分析结果表明：板厚t对位移和应力的敏感度最高(|S|=0.68)，外载荷F对频率几乎无影响(|S|=0.03)。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["敏感度分析", "热图矩阵", "龙卷风图", "参数影响", "多输入多输出", "归一化偏导数"],
+  "visualization": {
+    "type": "heatmap",
+    "field": "sensitivity",
+    "color_map": "cool",
+    "view_mode": "2d_section",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 28000,
+    "elements": 24000,
+    "results_file": "results/postprocess/sensitivity_heatmap_analysis.dat"
+  },
+  "display_settings": {
+    "title": "参数敏感度矩阵热图与龙卷风图",
+    "axis_labels": ["输入参数", "输出响应", "敏感度系数"],
+    "color_bar": {
+      "min": -1.0,
+      "max": 1.0,
+      "label": "归一化敏感度系数",
+      "n_levels": 20
+    },
+    "camera": {
+      "position": { "x": 0.0, "y": 0.0, "z": 1.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": 0, "yaw": 0 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "输入参数数量", "value": 5, "unit": "个", "tolerance": 0 },
+      { "name": "输出响应数量", "value": 3, "unit": "个", "tolerance": 0 },
+      { "name": "敏感度矩阵维度", "value": 15, "unit": "系数", "tolerance": 0 },
+      { "name": "板厚对位移敏感度", "value": -0.68, "unit": "", "tolerance": 10 },
+      { "name": "板厚对应力敏感度", "value": -0.55, "unit": "", "tolerance": 10 },
+      { "name": "载荷对频率敏感度", "value": 0.03, "unit": "", "tolerance": 30 },
+      { "name": "温度对应力敏感度", "value": 0.42, "unit": "", "tolerance": 10 },
+      { "name": "弹性模量对频率敏感度", "value": 0.58, "unit": "", "tolerance": 10 },
+      { "name": "龙卷风图排名首位参数", "value": 1, "unit": "板厚t", "tolerance": 0 }
+    ]
+  }
+}

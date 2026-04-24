@@ -1,0 +1,94 @@
+{
+  "id": "AC-05",
+  "name": "风机叶片噪声预测",
+  "nameEn": "Fan Blade Noise Prediction",
+  "description": "六叶片轴流风机在3000rpm转速下的气动噪声预测。叶片通过频率BPF=6×50=300Hz是主要噪声源。分析旋转噪声（离散 tones）和涡脱落噪声（宽频）的叠加效应。预测1m距离处的总声压级SPL，验证BPF处的声压级峰值及宽频噪声谱特性。",
+  "category": "acoustic",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["fan-noise", "blade-passing-frequency", "aerodynamic-noise", "BPF", "vortex-shedding"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.05,
+    "width": null,
+    "height": null,
+    "radius": 0.15,
+    "thickness": 0.002,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 25,
+    "y_div": 30,
+    "z_div": 30,
+    "element_type": "FLUID30"
+  },
+  "material": {
+    "name": "Air (STP)",
+    "elastic_modulus": 1.42e5,
+    "poisson_ratio": 0.0,
+    "density": 1.225,
+    "yield_stress": null,
+    "speed_of_sound": 343,
+    "bulk_modulus": 1.42e5
+  },
+  "boundaryConditions": {
+    "fixed_face": "duct_walls",
+    "load_type": "velocity",
+    "load_face": "blade_surfaces",
+    "load_magnitude": 25.13,
+    "load_direction": "rotational",
+    "frequency_hz": 300,
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "harmonic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-6,
+    "frequency_range": [50, 3000]
+  },
+  "theoretical": {
+    "max_displacement": null,
+    "max_stress": null,
+    "natural_frequency": 300,
+    "formula": "BPF = N_blades * RPM / 60; SPL_rotational ~ 10*log10(N_blades * M_tip^5 * D^2); SPL_vortex ~ broadband spectrum",
+    "reference": "Blevins, Formulas for Natural Frequency and Mode Shape; ISO 13347, Industrial Fans"
+  },
+  "acceptance": {
+    "frequency_error_limit": 5,
+    "spl_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "blade_passing_frequency_BPF",
+        "value": 300,
+        "unit": "Hz",
+        "tolerance": 2
+      },
+      {
+        "name": "tip_speed",
+        "value": 47.12,
+        "unit": "m/s",
+        "tolerance": 2
+      },
+      {
+        "name": "SPL_at_1m_total",
+        "value": 78,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "SPL_at_BPF_peak",
+        "value": 72,
+        "unit": "dB",
+        "tolerance": 5
+      },
+      {
+        "name": "overall_sound_power_level",
+        "value": 94,
+        "unit": "dB",
+        "tolerance": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "CP-03",
+  "name": "压杆稳定",
+  "nameEn": "Column Stability Check",
+  "description": "按GB 50017钢结构设计标准进行压杆稳定验算。钢柱截面为H型钢，计算长度系数μ=1.0，长细比λ=KL/r=80。查GB 50017稳定系数表得φ=0.688。验算稳定条件σ=N/(φA)≤f，其中N为轴心压力，A为截面面积，f为钢材强度设计值。分析不同长细比下稳定系数的变化规律，以及截面分类对稳定系数的影响。",
+  "category": "compliance",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["column-stability", "GB-50017", "buckling", "slenderness", "steel-column"],
+  "geometry": {
+    "type": "h_section_column",
+    "section": "HW200×200",
+    "height": 4.0,
+    "effective_length_factor": 1.0,
+    "section_area": 0.0064,
+    "moment_of_inertia_strong": 4.77e-5,
+    "radius_of_gyration": 0.086
+  },
+  "material": {
+    "name": "Q355B",
+    "elastic_modulus": 206000000000.0,
+    "yield_strength": 355000000.0,
+    "design_strength": 305000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "axial_compression": 800000.0,
+    "eccentricity": 0.0,
+    "slenderness_ratio": 80.0,
+    "stability_coefficient_phi": 0.688
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "长细比λ",
+        "value": 80.0,
+        "unit": "-",
+        "tolerance": 0
+      },
+      {
+        "name": "稳定系数φ",
+        "value": 0.688,
+        "unit": "-",
+        "tolerance": 5
+      },
+      {
+        "name": "稳定应力σ=N/(φA)",
+        "value": 181.7,
+        "unit": "MPa",
+        "tolerance": 10
+      },
+      {
+        "name": "稳定应力比",
+        "value": 0.60,
+        "unit": "-",
+        "tolerance": 10
+      }
+    ]
+  }
+}

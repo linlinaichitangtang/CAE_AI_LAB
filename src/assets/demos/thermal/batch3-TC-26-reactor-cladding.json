@@ -1,0 +1,134 @@
+{
+  "id": "TC-26",
+  "name": "核反应堆包壳热工分析",
+  "nameEn": "Nuclear Reactor Cladding Thermal Analysis - Zr-4 with ZrO₂ Oxide Growth",
+  "description": "压水堆Zr-4合金包壳管稳态热工及氧化层生长分析。包壳几何：内径R_i=4.6mm，外径R_o=5.2mm，壁厚δ=0.6mm。冷却剂温度T_coolant=573K(300°C)，对流换热系数h_cool=30000W/(m²·K)，热流密度q=1.5×10⁶W/m²。Zr-4物性：k=16W/(m·K)，α=6.0×10⁻⁶/K，E=99GPa。包壳外壁温度T_outer=T_coolant+q/h_cool=573+1.5e6/30000=573+50=623K。包壳内壁温度T_inner=T_outer+q·δ/k=623+1.5e6×0.0006/16=623+56.25=679.3K。ZrO₂氧化层抛物线生长规律：Δw=k_p·√t，k_p≈2.0×10⁻⁸kg/(m²·s^0.5)，10000h后氧化层厚度约30μm。氧化层热阻导致包壳温度进一步升高。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 4,
+  "tags": ["nuclear_cladding", "Zr_4", "ZrO2_oxidation", "parabolic_growth", "PWR", "heat_flux", "oxide_layer", "fuel_rod"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.01,
+    "width": null,
+    "height": null,
+    "radius": 0.0052,
+    "thickness": 0.0006,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 10,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Zircaloy-4 (Zr-4 Cladding)",
+    "elastic_modulus": 99000000000,
+    "poisson_ratio": 0.35,
+    "density": 6500,
+    "yield_stress": 380000000,
+    "thermal_expansion": 6.0e-6,
+    "thermal_conductivity": 16,
+    "specific_heat": 330
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "outer_surface",
+    "load_magnitude": 30000,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 573,
+      "T_boundary": null,
+      "T_ambient": 573,
+      "heat_flux": 1.5e6,
+      "convection_coeff": 30000,
+      "heat_source": 1.5e8,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-8,
+    "time_step": 100,
+    "total_time": 36000000
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 200000000,
+    "max_temperature": 679.3,
+    "formula": "T_outer = T_coolant + q/h_cool = 573 + 50 = 623K; T_inner = T_outer + q*delta/k = 623 + 56.25 = 679.3K; Delta_w = k_p * sqrt(t); oxide_R = delta_ox/k_ZrO2",
+    "reference": "IAEA, Fuel Performance in Water Reactors, IAEA-TECDOC-1654, 2010; Limback, Andersson, ABB Atom Report, 1996"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 20.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "cladding_inner_radius",
+        "value": 0.0046,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "cladding_outer_radius",
+        "value": 0.0052,
+        "unit": "m",
+        "tolerance": 0.1
+      },
+      {
+        "name": "wall_thickness",
+        "value": 0.0006,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "outer_surface_temperature",
+        "value": 623,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "inner_surface_temperature",
+        "value": 679.3,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "coolant_temperature",
+        "value": 573,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "heat_flux",
+        "value": 1.5e6,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "convection_coefficient",
+        "value": 30000,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "oxide_thickness_at_10000h",
+        "value": 3e-5,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "parabolic_rate_constant",
+        "value": 2e-8,
+        "unit": "kg/(m^2*s^0.5)",
+        "tolerance": 15.0
+      }
+    ]
+  }
+}

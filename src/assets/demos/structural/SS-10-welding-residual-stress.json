@@ -1,0 +1,94 @@
+{
+  "id": "SS-10",
+  "name": "焊接接头残余应力分析",
+  "nameEn": "Welding Joint Residual Stress Analysis",
+  "description": "钢板对接焊接头的残余应力分析。板尺寸0.2m×0.1m×0.01m，焊接热输入Q=2000J/mm，沿板中心线施焊。焊接过程中局部高温导致不均匀热膨胀，冷却后在焊缝及热影响区(HAZ)产生残余拉应力，远场产生压应力。残余应力峰值可达材料屈服强度(约300-500MPa)。该算例用于验证热-力耦合非线性分析能力。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": [
+    "焊接",
+    "残余应力",
+    "热影响区",
+    "热力耦合"
+  ],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.1,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 4,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Q345 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 345000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 45.0,
+    "specific_heat": 500.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "y_mid",
+    "load_magnitude": 0.0,
+    "load_direction": "Y",
+    "temperature_bc": {
+      "type": "welding",
+      "heat_input": 2000000.0,
+      "peak_temperature": 1773.0,
+      "ambient_temperature": 293.0
+    }
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-05
+  },
+  "theoretical": {
+    "max_displacement": 0.0005,
+    "max_stress": 345000000.0,
+    "formula": "残余应力σ_res ≤ σ_y, 热循环T(x,t)由热传导方程确定",
+    "reference": "Masubuchi, Analysis of Welded Structures, Ch. 2-3"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "焊缝区残余应力",
+        "value": 345000000.0,
+        "unit": "Pa",
+        "tolerance": 15.0
+      },
+      {
+        "name": "热影响区宽度",
+        "value": 0.015,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "焊缝峰值温度",
+        "value": 1773.0,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "角变形",
+        "value": 0.003,
+        "unit": "rad",
+        "tolerance": 25.0
+      }
+    ]
+  }
+}

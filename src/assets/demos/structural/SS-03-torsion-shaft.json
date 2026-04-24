@@ -1,0 +1,82 @@
+{
+  "id": "SS-03",
+  "name": "圆轴扭转分析",
+  "nameEn": "Circular Shaft Torsion Analysis",
+  "description": "等截面圆轴在两端扭矩T=500N·m作用下的扭转分析。验证扭转剪应力公式τ_max=TR/J和扭转角公式θ=TL/(GJ)。极惯性矩J=πR⁴/2。该算例用于验证有限元程序对扭转问题的求解能力，是轴类零件设计分析的基础案例。",
+  "category": "structural",
+  "usage": "learning",
+  "difficulty": 1,
+  "tags": [
+    "扭转",
+    "圆轴",
+    "剪应力",
+    "极惯性矩"
+  ],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.5,
+    "radius": 0.025,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Q235 Steel",
+    "elastic_modulus": 200000000000.0,
+    "poisson_ratio": 0.3,
+    "density": 7850.0,
+    "yield_stress": 235000000.0,
+    "thermal_expansion": 1.2e-05,
+    "thermal_conductivity": 50.0,
+    "specific_heat": 490.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "point",
+    "load_face": "x_max",
+    "load_magnitude": 500.0,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-08
+  },
+  "theoretical": {
+    "max_displacement": 0.0,
+    "max_stress": 20371832.716,
+    "formula": "τ_max=TR/J, J=πR⁴/2=6.1359×10⁻⁷ m⁴, θ=TL/(GJ)",
+    "reference": "Timoshenko, Mechanics of Materials, Eq. 3.9-3.10"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "最大扭转剪应力",
+        "value": 20371832.716,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "扭转角",
+        "value": 0.005297,
+        "unit": "rad",
+        "tolerance": 5.0
+      },
+      {
+        "name": "极惯性矩",
+        "value": 6.136e-07,
+        "unit": "m⁴",
+        "tolerance": 0.1
+      }
+    ]
+  }
+}

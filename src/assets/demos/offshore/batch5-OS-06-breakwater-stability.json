@@ -1,0 +1,63 @@
+{
+  "id": "OS-06",
+  "name": "防波堤稳定",
+  "nameEn": "Breakwater Stability Analysis",
+  "description": "模拟抛石防波堤在波浪作用下的稳定性分析。采用Hudson公式计算护面块石的稳定性：N_s=H_s/(ΔD_n·K_D)，其中N_s为稳定性数，H_s为有效波高，Δ为相对密度，D_n为名义直径，K_D为损伤系数。验证在给定设计波高下护面块石所需的最小重量，以及防波堤在极端海况下的抗滑移和抗倾覆稳定性。按港口工程相关规范进行校核。",
+  "category": "offshore",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["breakwater", "Hudson-formula", "stability", "rubble-mound", "coastal"],
+  "geometry": {
+    "type": "rubble_mound",
+    "crest_height": 8.0,
+    "crest_width": 6.0,
+    "water_depth": 6.0,
+    "slope_seaward": 1.5,
+    "slope_leeward": 1.33,
+    "core_diameter": 0.3,
+    "armor_layer_thickness": 1.5
+  },
+  "material": {
+    "name": "Rock Armor",
+    "density": 2650.0,
+    "porosity": 0.4,
+    "friction_angle": 40.0,
+    "K_D": 3.5,
+    "damage_number": 0.0
+  },
+  "loading": {
+    "significant_wave_height": 4.5,
+    "wave_period": 9.0,
+    "wave_direction": 90.0,
+    "storm_surge": 1.0,
+    "water_level": 7.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "稳定性数N_s",
+        "value": 2.1,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "护面块石最小重量",
+        "value": 8500.0,
+        "unit": "kg",
+        "tolerance": 15
+      },
+      {
+        "name": "抗滑移安全系数",
+        "value": 1.8,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "抗倾覆安全系数",
+        "value": 2.2,
+        "unit": "-",
+        "tolerance": 10
+      }
+    ]
+  }
+}

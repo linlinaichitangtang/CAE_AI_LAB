@@ -1,0 +1,313 @@
+{
+  "id": "MS-22",
+  "name": "晶界迁移 GBM",
+  "nameEn": "Grain Boundary Migration",
+  "description": "Al Σ5(310) CSL晶界的迁移动力学多尺度分析。通过DFT计算晶界能γ_gb和迁移势垒，为MD模拟提供参数基准；MD模拟在原子尺度直接观测晶界迁移过程，提取迁移率M和激活能Q；相场模型基于Cahn-Hilliard-Allen-Cahn方程描述宏观晶粒长大动力学，验证Burke-Turner关系d²∝Dt；FE模型将微观组织演化映射到宏观力学性能。该案例展示了从原子尺度晶界结构到宏观晶粒长大的完整多尺度链路，对理解金属再结晶和晶粒细化具有重要参考价值。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["grain boundary migration", "CSL boundary", "Burke-Turner", "Al", "grain growth", "Cahn-Hilliard", "migration mobility"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Al FCC Σ5(310) CSL boundary",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "DFT晶界能与迁移势垒计算",
+      "description": "计算Al Σ5(310) CSL晶界的晶界能γ_gb和原子跃迁势垒，为MD和相场模型提供热力学参数",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "boundary_type": "Sigma5(310)",
+        "misorientation_angle": 36.9,
+        "misorientation_angle_unit": "degrees",
+        "rotation_axis": "[001]",
+        "supercell": {
+          "atoms_per_grain": 120,
+          "vacuum": 12,
+          "vacuum_unit": "Angstrom",
+          "repeat_along_gb": 4
+        },
+        "neb_images": 7
+      },
+      "output": {
+        "grain_boundary_energy": 0.325,
+        "gb_energy_unit": "J/m^2",
+        "gb_structure": "gb_structure.cif",
+        "migration_barrier": 0.48,
+        "migration_barrier_unit": "eV",
+        "gb_excess_volume": 0.08,
+        "gb_excess_volume_unit": "Angstrom^3/atom",
+        "segregation_energy": null,
+        "electron_density_difference": "delta_rho.dat",
+        "bond_length_distribution": "bond_dist.dat"
+      },
+      "parameters": {
+        "code": "VASP",
+        "xc_functional": "PBE",
+        "pseudopotential": "PAW_PBE_Al",
+        "energy_cutoff": 400,
+        "energy_cutoff_unit": "eV",
+        "k_points": [8, 4, 1],
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "ibrion": 1,
+        "isif": 3,
+        "nsw": 100,
+        "neb_method": "CI-NEB",
+        "spring_constant": 5.0,
+        "spring_constant_unit": "eV/Angstrom^2"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT grain boundary energy and migration barrier to MD interatomic potential validation and simulation setup",
+        "data_transferred": [
+          "grain_boundary_energy",
+          "migration_barrier",
+          "gb_structure",
+          "gb_excess_volume"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "MD晶界迁移原子模拟",
+      "description": "在原子尺度模拟Al Σ5(310) CSL晶界的迁移过程，提取迁移率M和激活能Q",
+      "input": {
+        "crystal_structure": "FCC",
+        "lattice_constant": 4.05,
+        "lattice_constant_unit": "Angstrom",
+        "simulation_box": {
+          "Lx": 80,
+          "Ly": 40,
+          "Lz": 200,
+          "unit": "Angstrom",
+          "atom_count": 320000
+        },
+        "boundary_type": "Sigma5(310)",
+        "misorientation": 36.9,
+        "misorientation_unit": "degrees",
+        "gb_energy_reference": 0.325,
+        "gb_energy_unit": "J/m^2",
+        "driving_force_method": "stored_energy_gradient",
+        "temperature_range": [600, 900],
+        "temperature_unit": "K"
+      },
+      "output": {
+        "gb_position_history": "gb_position.dat",
+        "migration_rate": "migration_rate.dat",
+        "mobility_M": 3.2e-13,
+        "mobility_unit": "m^4/(J*s)",
+        "activation_energy_Q": 0.52,
+        "activation_energy_unit": "eV",
+        "gb_velocity_at_800K": 15.8,
+        "gb_velocity_unit": "m/s",
+        "arrhenius_plot": "arrhenius.dat",
+        "atom_shuffling_mechanism": "shuffle_vacancy.dat",
+        "stress_at_gb": "stress_gb.dat"
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "timestep": 2.0,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nose-Hoover",
+        "barostat": "Parrinello-Rahman",
+        "target_pressure": 0,
+        "target_pressure_unit": "bar",
+        "cutoff_radius": 6.0,
+        "cutoff_radius_unit": "Angstrom",
+        "boundary_conditions": ["periodic_x", "periodic_y", "periodic_z"],
+        "total_steps": 2000000,
+        "dump_interval": 5000,
+        "driving_force": 0.05,
+        "driving_force_unit": "eV/atom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD mobility M and activation energy Q to phase field grain boundary mobility parameter via Arrhenius scaling",
+        "data_transferred": [
+          "mobility_M",
+          "activation_energy_Q",
+          "gb_velocity_at_800K",
+          "arrhenius_plot"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "相场晶粒长大动力学模拟",
+      "description": "基于多序参量相场模型模拟多晶Al的晶粒长大过程，验证Burke-Turner关系d²∝Dt",
+      "input": {
+        "domain_size": {
+          "Lx": 1000,
+          "Ly": 1000,
+          "Lz": 1000,
+          "unit": "nm"
+        },
+        "grid_spacing": 5.0,
+        "grid_spacing_unit": "nm",
+        "grid_points": "200x200x200",
+        "initial_grain_count": 500,
+        "initial_grain_size": 50,
+        "initial_grain_size_unit": "nm",
+        "mobility_source": "MD MS-22 Step 2",
+        "mobility_M": 3.2e-13,
+        "mobility_unit": "m^4/(J*s)",
+        "activation_energy_Q": 0.52,
+        "activation_energy_unit": "eV",
+        "gb_energy": 0.325,
+        "gb_energy_unit": "J/m^2",
+        "temperature": 800,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "microstructure_evolution": "grain_growth.vtk",
+        "grain_size_distribution": "grain_size_dist.dat",
+        "average_grain_size_vs_time": "d_vs_t.dat",
+        "burke_turner_exponent": 2.05,
+        "grain_growth_rate_constant": 8.5e-15,
+        "growth_rate_unit": "m^2/s",
+        "final_grain_count": 85,
+        "grain_size_distribution_type": "log-normal",
+        "texture_evolution": "texture.dat",
+        "gb_area_fraction": 0.12
+      },
+      "parameters": {
+        "model": "multi_order_parameter_Allen_Cahn",
+        "order_parameters": 30,
+        "interface_width": 15.0,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 0.325,
+        "gradient_energy_coefficient_unit": "J/m^2",
+        "mobility_model": "Arrhenius_M=M0*exp(-Q/kT)",
+        "M0": 3.2e-13,
+        "M0_unit": "m^4/(J*s)",
+        "time_step": 0.01,
+        "time_step_unit": "s",
+        "total_time": 3600,
+        "total_time_unit": "s",
+        "noise_term": false,
+        "anisotropic_gb_energy": true,
+        "misorientation_dependency": "Read-Shockley"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field grain size distribution and texture to FE homogenized mechanical properties via Hall-Petch relation",
+        "data_transferred": [
+          "average_grain_size_vs_time",
+          "grain_size_distribution",
+          "burke_turner_exponent",
+          "texture_evolution",
+          "grain_growth_rate_constant"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "FE宏观力学性能预测",
+      "description": "基于Hall-Petch关系将相场预测的晶粒尺寸映射到宏观屈服强度，验证晶粒细化强化效果",
+      "input": {
+        "domain_size": {
+          "Lx": 10,
+          "Ly": 10,
+          "Lz": 10,
+          "unit": "mm"
+        },
+        "mesh": "50x50x50",
+        "element_type": "C3D8",
+        "grain_size_source": "PF MS-22 Step 3",
+        "initial_grain_size": 50,
+        "final_grain_size": 120,
+        "grain_size_unit": "nm",
+        "hall_petch_coefficient_k": 0.14,
+        "hall_petch_unit": "MPa*m^0.5",
+        "sigma0_single_crystal": 10,
+        "sigma0_unit": "MPa",
+        "loading": "uniaxial_tension"
+      },
+      "output": {
+        "stress_strain_curve": "stress_strain.dat",
+        "yield_strength_initial": 138,
+        "yield_strength_unit": "MPa",
+        "yield_strength_final": 103,
+        "yield_strength_unit": "MPa",
+        "hall_petch_validation": "hp_validation.dat",
+        "grain_size_effect": "grain_size_effect.dat",
+        "strain_localization": "strain_localization.vtk",
+        "texture_induced_anisotropy": 1.08,
+        "anisotropy_unit": "ratio"
+      },
+      "parameters": {
+        "solver_type": "static_implicit",
+        "material_model": "von_Mises_plasticity_with_Hall_Petch",
+        "youngs_modulus": 70,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.35,
+        "hardening_law": "Ludwick",
+        "hardening_coefficients": {
+          "K": 150,
+          "n": 0.25
+        },
+        "boundary_condition": "displacement_controlled_tension",
+        "strain_rate": 1e-3,
+        "strain_rate_unit": "1/s",
+        "convergence_tolerance": 1e-8,
+        "max_iterations": 1000
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE yield strength validation against Hall-Petch prediction from phase field grain size",
+        "data_transferred": [
+          "yield_strength_initial",
+          "yield_strength_final",
+          "hall_petch_validation",
+          "grain_size_effect"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2005.12.020",
+    "authors": "Mishin Y, Asta M, Li J",
+    "year": 2006,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Grain boundary energy",
+        "value": 0.325,
+        "unit": "J/m^2",
+        "tolerance": 15
+      },
+      {
+        "name": "Migration activation energy",
+        "value": 0.52,
+        "unit": "eV",
+        "tolerance": 15
+      },
+      {
+        "name": "Burke-Turner exponent",
+        "value": 2.0,
+        "unit": "dimensionless",
+        "tolerance": 10
+      },
+      {
+        "name": "GB mobility M",
+        "value": 3.2e-13,
+        "unit": "m^4/(J*s)",
+        "tolerance": 25
+      },
+      {
+        "name": "Hall-Petch yield strength",
+        "value": 103,
+        "unit": "MPa",
+        "tolerance": 10
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 15
+  }
+}

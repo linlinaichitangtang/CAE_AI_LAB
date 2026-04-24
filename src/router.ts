@@ -239,6 +239,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/AIChatView.vue')
   },
   {
+    path: '/ml-prediction',
+    name: 'MLPrediction',
+    component: () => import('./views/MLPredictionView.vue')
+  },
+  {
+    path: '/simulation-archive',
+    name: 'SimulationArchive',
+    component: () => import('./views/SimulationArchiveView.vue')
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('./views/SettingsView.vue')

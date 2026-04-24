@@ -1,0 +1,62 @@
+{
+  "id": "CP-06",
+  "name": "风荷载校核",
+  "nameEn": "Wind Load Check",
+  "description": "按GB 50009建筑结构荷载规范进行风荷载校核。建筑高度H=50m，宽度B=30m，矩形平面。体型系数μ_s=1.3（迎风面+背风面），风振系数β_z=1.55（H=50m处），风压高度变化系数μ_z=1.67（B类地面粗糙度，H=50m）。基本风压w₀=0.5kN/m²。风荷载标准值w_k=β_z·μ_s·μ_z·w₀。验证等效静风荷载和结构风荷载响应。",
+  "category": "compliance",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["wind-load", "GB-50009", "wind-pressure", "gust-factor", "exposure-category"],
+  "geometry": {
+    "type": "rectangular_building",
+    "height": 50.0,
+    "width": 30.0,
+    "depth": 20.0,
+    "plan_area": 600.0,
+    "windward_area": 1000.0,
+    "roof_type": "flat"
+  },
+  "material": {
+    "name": "RC Frame-Shear Wall",
+    "concrete_grade": "C40",
+    "steel_grade": "HRB400",
+    "fundamental_period": 0.8
+  },
+  "loading": {
+    "basic_wind_pressure": 500.0,
+    "terrain_category": "B",
+    "shape_coefficient_mu_s": 1.3,
+    "height_variation_coefficient_mu_z": 1.67,
+    "gust_factor_beta_z": 1.55,
+    "return_period": 50,
+    "topography_factor": 1.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "风荷载标准值w_k",
+        "value": 1688.0,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "基底总风剪力",
+        "value": 844.0,
+        "unit": "kN",
+        "tolerance": 15
+      },
+      {
+        "name": "基底倾覆力矩",
+        "value": 25320.0,
+        "unit": "kN·m",
+        "tolerance": 15
+      },
+      {
+        "name": "顶点风致位移角",
+        "value": 0.0008,
+        "unit": "rad",
+        "tolerance": 20
+      }
+    ]
+  }
+}

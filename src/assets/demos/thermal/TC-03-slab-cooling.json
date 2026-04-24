@@ -1,0 +1,109 @@
+{
+  "id": "TC-03",
+  "name": "板坯瞬态冷却分析",
+  "nameEn": "Steel Slab Transient Cooling Analysis",
+  "description": "一块0.2m×0.2m×0.05m的钢板坯，初始温度1273K(1000°C)，突然置于300K(27°C)环境中对流冷却。对流换热系数h=50W/(m²·K)。毕奥数Bi=hL_c/k=50×0.0167/50=0.0167≪0.1，满足集总参数法条件。热扩散系数α=k/(ρ·c_p)=50/(7850×490)=1.302×10⁻⁵m²/s。时间常数τ=ρ·c_p·V/(h·A)=7850×490×0.05/(50×2)=1921.25s。冷却至500K所需时间可由集总参数公式T(t)=T_∞+(T_i-T_∞)exp(-t/τ)计算。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["transient", "cooling", "lumped_capacitance", "Biot_number", "steel_slab"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.2,
+    "height": 0.05,
+    "radius": null,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 10,
+    "y_div": 10,
+    "z_div": 6,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "all_surfaces",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 1273,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 0,
+      "convection_coeff": 50,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 10,
+    "total_time": 6000
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 1273,
+    "formula": "Bi = hL_c/k; T(t) = T_∞ + (T_i - T_∞)·exp(-t/τ); τ = ρ·c_p·L_c/h",
+    "reference": "Incropera, Fundamentals of Heat and Mass Transfer, Ch.5 - Transient Conduction"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Biot_number",
+        "value": 0.0167,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_diffusivity",
+        "value": 1.302e-5,
+        "unit": "m²/s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "time_constant",
+        "value": 1921.25,
+        "unit": "s",
+        "tolerance": 5.0
+      },
+      {
+        "name": "temperature_at_1000s",
+        "value": 775.5,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "temperature_at_3000s",
+        "value": 470.3,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "temperature_at_6000s",
+        "value": 342.6,
+        "unit": "K",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

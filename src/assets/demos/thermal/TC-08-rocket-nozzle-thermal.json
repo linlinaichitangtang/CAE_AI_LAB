@@ -1,0 +1,109 @@
+{
+  "id": "TC-08",
+  "name": "火箭发动机喷嘴热防护分析",
+  "nameEn": "Rocket Engine Nozzle Thermal Protection Analysis",
+  "description": "火箭发动机收敛-扩张喷嘴热防护分析。喷嘴喉部半径R_throat=0.05m，入口半径0.08m，出口半径0.1m，总长0.3m。燃气温度T_gas=3500K，燃气侧对流换热系数h_gas≈5000W/(m²·K)(喉部最高)。喷嘴壁面采用烧蚀材料+主动冷却双层结构。内层烧蚀材料(碳/碳复合材料)：k=40W/(m·K)，外层主动冷却通道。喉部热流密度峰值q≈h·(T_gas-T_wall)=5000×(3500-1800)=8.5MW/m²。冷却剂(液氢)温度T_coolant=20K，对流换热系数h_coolant=10000W/(m²·K)。壁面最高温度控制在1800K以下，热应力σ≈E·α·ΔT≈200×10⁹×5×10⁻⁶×(1800-300)=1.5GPa(需考虑蠕变松弛)。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["rocket_nozzle", "thermal_protection", "ablation", "active_cooling", "extreme_temperature"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.3,
+    "width": 0.2,
+    "height": 0.3,
+    "radius": 0.05,
+    "thickness": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 24,
+    "z_div": 8,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "C/C Composite (Ablative Layer)",
+    "elastic_modulus": 20000000000,
+    "poisson_ratio": 0.2,
+    "density": 1600,
+    "yield_stress": 50000000,
+    "thermal_expansion": 5e-6,
+    "thermal_conductivity": 40,
+    "specific_heat": 1200
+  },
+  "boundaryConditions": {
+    "fixed_face": "inlet_flange",
+    "load_type": "convection",
+    "load_face": "inner_wall",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 8500000,
+      "convection_coeff": 5000,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-5,
+    "time_step": 0.01,
+    "total_time": 60
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 1500000000,
+    "max_temperature": 1800,
+    "formula": "q = h_gas·(T_gas - T_wall); T_wall = T_coolant + q·(1/h_coolant + t/k); σ = E·α·ΔT",
+    "reference": "Huzel, Huang, Modern Engineering for Design of Liquid-Propellant Rocket Engines, Ch.8 - Cooling"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 25.0,
+    "temperature_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "peak_heat_flux_throat",
+        "value": 8500000,
+        "unit": "W/m²",
+        "tolerance": 15.0
+      },
+      {
+        "name": "max_wall_temperature",
+        "value": 1800,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "gas_temperature",
+        "value": 3500,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "coolant_temperature",
+        "value": 20,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 1500000000,
+        "unit": "Pa",
+        "tolerance": 25.0
+      },
+      {
+        "name": "nozzle_throat_radius",
+        "value": 0.05,
+        "unit": "m",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

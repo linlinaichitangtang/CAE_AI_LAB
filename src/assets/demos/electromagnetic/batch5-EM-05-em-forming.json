@@ -1,0 +1,86 @@
+{
+  "id": "EM-05",
+  "name": "电磁成形",
+  "nameEn": "Electromagnetic Forming",
+  "description": "电磁成形（EMF）过程分析。线圈放电参数：放电时间τ=100μs，峰值电流I_peak=100kA。成形工件：铝合金板（AA6061-T6），厚度t=1mm=0.001m，直径D=0.1m。Al材料：E=69GPa，ν=0.33，ρ=2700kg/m³，σ_y=276MPa，σ_u=310MPa，电导率σ_e=2.5e7S/m。Lorentz力产生峰值磁压力：p_peak=μ₀I²/(2d²)≈B²/(2μ₀)，其中B≈μ₀NI/(2πr)≈2T。峰值压力p≈B²/(2μ₀)=4/(2×4π×1e-7)=1.59e6Pa≈1.6MPa（简化估算，实际可达100MPa量级取决于线圈设计）。工件获得速度v≈p×τ/(ρ×t)=1.6e6×1e-4/(2700×0.001)=59m/s。验证成形深度及应变分布。",
+  "category": "electromagnetic",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["electromagnetic forming", "Lorentz force", "pulse discharge", "high velocity", "aluminum"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.001,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "AA6061-T6 Aluminum",
+    "elastic_modulus": 69000000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "electrical_conductivity": 25000000,
+    "relative_permeability": 1.0
+  },
+  "electromagnetic_bc": {
+    "current": 100000,
+    "voltage": 10000,
+    "frequency_hz": 5000,
+    "magnetic_flux_density": 2.0
+  },
+  "boundaryConditions": {
+    "fixed_face": "sheet_clamped_edge",
+    "load_type": "electromagnetic_force",
+    "load_magnitude": 100000000
+  },
+  "solver": {
+    "type": "coupled_em_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_stress": 310000000,
+    "magnetic_force": 100000000,
+    "temperature_rise": 30,
+    "formula": "p = B²/(2μ₀), v = pτ/(ρt), F_Lorentz = J × B",
+    "reference": "Psyk et al., J. Materials Processing Technology, 2011; EMSA Handbook"
+  },
+  "acceptance": {
+    "force_error_limit": 15,
+    "temperature_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "峰值磁压力",
+        "value": 100000000,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "工件速度",
+        "value": 59,
+        "unit": "m/s",
+        "tolerance": 25
+      },
+      {
+        "name": "成形深度",
+        "value": 0.015,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "最大等效塑性应变",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 20
+      }
+    ]
+  }
+}

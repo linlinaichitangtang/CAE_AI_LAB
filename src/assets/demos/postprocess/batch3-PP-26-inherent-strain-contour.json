@@ -1,0 +1,54 @@
+{
+  "id": "PP-26",
+  "name": "固有应变等值线",
+  "nameEn": "Inherent Strain Contour - Welding Residual Stress Equivalent Load",
+  "description": "展示焊接残余应力分析的固有应变法后处理结果。以T型接头焊接为例，板材尺寸300mm x 200mm x 12mm，焊道长度200mm，材料为Q235钢(E=200GPa, ν=0.3, σ_y=235MPa)。固有应变法将完整热-力耦合焊接仿真等效为在焊缝区域施加固有应变ε*(包括塑性应变、相变应变和热应变)，通过一次弹性静力分析即可获得与完整焊接仿真相当的残余应力场。后处理展示焊缝及热影响区的固有应变ε*分布，纵向固有应变ε*_x在焊缝中心最大可达-0.008，横向固有应变ε*_y表现为拉压交替分布。通过等值线图和云图对比固有应变法与完整热-力仿真结果的吻合度。",
+  "category": "postprocess",
+  "usage": "learning",
+  "difficulty": 4,
+  "tags": ["固有应变", "焊接残余应力", "等效载荷", "T型接头", "热影响区", "简化分析"],
+  "visualization": {
+    "type": "contour",
+    "field": "inherent_strain",
+    "color_map": "cool",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "coupled",
+    "nodes": 42000,
+    "elements": 36500,
+    "results_file": "results/postprocess/weld_inherent_strain.dat"
+  },
+  "display_settings": {
+    "title": "T型接头焊接 - 固有应变ε*分布等值线",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": -0.010,
+      "max": 0.005,
+      "label": "固有应变 ε*",
+      "n_levels": 15
+    },
+    "camera": {
+      "position": { "x": 0.20, "y": 0.15, "z": 0.18 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -30, "yaw": 45 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "焊缝中心最大纵向固有应变|ε*_x|_max", "value": 0.008, "unit": "", "tolerance": 10 },
+      { "name": "固有应变影响区宽度", "value": 25, "unit": "mm", "tolerance": 15 },
+      { "name": "残余应力最大值(固有应变法)", "value": 285, "unit": "MPa", "tolerance": 8 },
+      { "name": "残余应力最大值(完整仿真)", "value": 298, "unit": "MPa", "tolerance": 5 },
+      { "name": "两种方法相对误差", "value": 4.4, "unit": "%", "tolerance": 20 },
+      { "name": "计算效率提升倍数", "value": 50, "unit": "倍", "tolerance": 20 },
+      { "name": "焊道长度", "value": 200, "unit": "mm", "tolerance": 0 }
+    ]
+  }
+}

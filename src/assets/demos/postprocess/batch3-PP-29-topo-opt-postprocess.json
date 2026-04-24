@@ -1,0 +1,56 @@
+{
+  "id": "PP-29",
+  "name": "拓扑优化结果处理",
+  "nameEn": "Topology Optimization Post-Processing - Density Field to CAD",
+  "description": "演示拓扑优化结果从密度场到可制造几何的完整后处理流程。以L型支架为例，设计域尺寸100mm x 80mm x 20mm，载荷F=5000N施加于端部，固定端全约束，体积约束分数为40%。优化采用SIMP方法，惩罚因子p=3，得到连续密度场ρ∈[0,1]。后处理步骤：(1)密度场云图展示材料分布；(2)阈值分割(ρ>0.3)提取优化构型；(3)Marching Cubes算法进行等值面提取和几何重建；(4)表面平滑处理消除锯齿效应；(5)导出STEP格式CAD模型用于详细设计。对比展示优化前(原始设计域)和优化后(轻量化构型)的效果，质量减少约55%。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["拓扑优化", "密度场", "Marching Cubes", "CAD导出", "SIMP方法", "轻量化设计"],
+  "visualization": {
+    "type": "comparison",
+    "field": "displacement",
+    "color_map": "viridis",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 15,
+      "fps": 3,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 64000,
+    "elements": 58000,
+    "results_file": "results/postprocess/topo_opt_density_field.dat"
+  },
+  "display_settings": {
+    "title": "L型支架拓扑优化 - 密度场→几何重建→CAD导出",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0.0,
+      "max": 1.0,
+      "label": "相对密度 ρ",
+      "n_levels": 10
+    },
+    "camera": {
+      "position": { "x": 0.12, "y": 0.10, "z": 0.15 },
+      "target": { "x": 0.05, "y": 0.04, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": 55 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "体积约束分数", "value": 40, "unit": "%", "tolerance": 0 },
+      { "name": "优化后实际体积分数", "value": 39.8, "unit": "%", "tolerance": 2 },
+      { "name": "质量减少比例", "value": 55, "unit": "%", "tolerance": 5 },
+      { "name": "密度阈值ρ_threshold", "value": 0.3, "unit": "", "tolerance": 0 },
+      { "name": "最大位移(优化前)", "value": 0.85, "unit": "mm", "tolerance": 5 },
+      { "name": "最大位移(优化后)", "value": 0.92, "unit": "mm", "tolerance": 5 },
+      { "name": "刚度损失", "value": 8.2, "unit": "%", "tolerance": 15 },
+      { "name": "STEP导出文件大小", "value": 2.8, "unit": "MB", "tolerance": 20 },
+      { "name": "Marching Cubes三角面片数", "value": 12500, "unit": "个", "tolerance": 15 }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "MD-01",
+  "name": "两目标Pareto",
+  "nameEn": "Two-Objective Pareto Optimization",
+  "description": "采用NSGA-II遗传算法求解两目标优化问题：同时最小化结构质量和最大化结构刚度。设计变量为梁截面的高度、宽度和壁厚。通过100个体×200代的进化计算获得Pareto前沿，验证Pareto前沿的收敛性和均匀分布性。分析质量-刚度之间的权衡关系，为决策者提供多方案选择。",
+  "category": "mdo",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["NSGA-II", "Pareto-front", "multi-objective", "genetic-algorithm"],
+  "design_variables": [
+    {
+      "name": "截面高度",
+      "lower_bound": 0.05,
+      "upper_bound": 0.3,
+      "initial": 0.15
+    },
+    {
+      "name": "截面宽度",
+      "lower_bound": 0.03,
+      "upper_bound": 0.2,
+      "initial": 0.1
+    },
+    {
+      "name": "壁厚",
+      "lower_bound": 0.002,
+      "upper_bound": 0.01,
+      "initial": 0.005
+    }
+  ],
+  "objectives": [
+    {
+      "name": "结构质量",
+      "type": "minimize"
+    },
+    {
+      "name": "结构刚度(1/δ)",
+      "type": "maximize"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "最大应力",
+      "type": "inequality",
+      "limit": 250000000.0
+    },
+    {
+      "name": "最大位移",
+      "type": "inequality",
+      "limit": 0.01
+    }
+  ],
+  "optimization_method": {
+    "type": "nsga2",
+    "population": 100,
+    "generations": 200
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Pareto前沿解数量",
+        "value": 60,
+        "unit": "-",
+        "tolerance": 30
+      },
+      {
+        "name": "最小质量",
+        "value": 2.5,
+        "unit": "kg",
+        "tolerance": 20
+      },
+      {
+        "name": "最大刚度",
+        "value": 500000.0,
+        "unit": "N/m",
+        "tolerance": 20
+      },
+      {
+        "name": "Pareto前沿收敛指标IGD",
+        "value": 0.02,
+        "unit": "-",
+        "tolerance": 25
+      }
+    ]
+  }
+}

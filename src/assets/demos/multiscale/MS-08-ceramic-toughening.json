@@ -1,0 +1,352 @@
+{
+  "id": "MS-08",
+  "name": "陶瓷增韧全链路",
+  "nameEn": "Ceramic Toughening Full Chain",
+  "description": "氮化硅(Si3N4)陶瓷增韧全链路多尺度模拟：从DFT计算界面能出发，通过分子动力学模拟裂纹尖端原子尺度的断裂行为，利用相场方法预测裂纹扩展路径和增韧机制，最终通过有限元方法计算宏观断裂韧性和R曲线行为。该案例展示从原子键断裂到宏观断裂韧性的跨尺度预测，对结构陶瓷增韧设计具有重要指导意义。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["ceramic", "toughening", "crack propagation", "fracture toughness", "Si3N4", "interface energy", "R-curve", "full chain"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Ceramic Si3N4",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "Si3N4界面能与断裂性质计算",
+      "description": "使用DFT计算Si3N4的表面能、晶界能和理想断裂强度，为断裂力学多尺度模拟提供基础参数",
+      "input": {
+        "crystal_structure": "beta-Si3N4",
+        "space_group": "P63/m",
+        "lattice_constants": {
+          "a": 7.608,
+          "c": 2.911,
+          "unit": "Angstrom"
+        },
+        "atoms_per_unit_cell": 14,
+        "cleavage_plane": "(001)",
+        "grain_boundary_type": "Sigma3 twin"
+      },
+      "output": {
+        "surface_energy_001": 1.8,
+        "surface_energy_unit": "J/m^2",
+        "surface_energy_100": 2.1,
+        "surface_energy_100_unit": "J/m^2",
+        "grain_boundary_energy": 1.2,
+        "gb_energy_unit": "J/m^2",
+        "interface_energy_beta_Si3N4_amorphous": 2.0,
+        "interface_energy_unit": "J/m^2",
+        "ideal_fracture_strength": 45,
+        "ideal_strength_unit": "GPa",
+        "elastic_constants": {
+          "C11": 433,
+          "C12": 135,
+          "C13": 115,
+          "C33": 425,
+          "C44": 108,
+          "unit": "GPa"
+        },
+        "bulk_modulus": 250,
+        "bulk_modulus_unit": "GPa",
+        "shear_modulus": 123,
+        "shear_modulus_unit": "GPa"
+      },
+      "parameters": {
+        "k_points": [8, 8, 12],
+        "energy_cutoff": 600,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Si, PAW_PBE_N",
+        "xc_functional": "PBE",
+        "smearing": "Gaussian",
+        "smearing_width": 0.05,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "vacuum_slab_thickness": 15,
+        "vacuum_thickness_unit": "Angstrom",
+        "k_points_slab": [8, 8, 1],
+        "vdw_correction": "DFT-D3"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Surface energy and ideal strength to Tersoff potential calibration for fracture",
+        "data_transferred": [
+          "surface_energy_001",
+          "interface_energy",
+          "ideal_fracture_strength",
+          "elastic_constants",
+          "bulk_modulus"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "Si3N4裂纹尖端分子动力学模拟",
+      "description": "使用Tersoff势函数模拟Si3N4中裂纹尖端的原子级断裂过程，捕捉裂纹扩展路径和增韧机制",
+      "input": {
+        "crack_geometry": "mode_I_edge_crack",
+        "specimen_dimensions": {
+          "Lx": 50,
+          "Ly": 100,
+          "Lz": 5,
+          "unit": "nm"
+        },
+        "crack_length": 25,
+        "crack_length_unit": "nm",
+        "crack_plane": "(001)",
+        "crack_front_direction": "[010]",
+        "atom_count": 750000,
+        "loading": "displacement_controlled",
+        "strain_rate": 1e8,
+        "strain_rate_unit": "1/s",
+        "temperature": 300,
+        "temperature_unit": "K",
+        "grain_boundary_presence": true,
+        "gb_spacing": 20,
+        "gb_spacing_unit": "nm"
+      },
+      "output": {
+        "critical_stress_intensity_factor": 4.5,
+        "KIC_unit": "MPa*sqrt(m)",
+        "crack_velocity": 800,
+        "crack_velocity_unit": "m/s",
+        "process_zone_size": 15,
+        "process_zone_unit": "nm",
+        "bridging_particles": 3,
+        "bridging_count": "per_um",
+        "crack_deflection_angle": 35,
+        "deflection_angle_unit": "degree",
+        "energy_release_rate": 65,
+        "energy_release_rate_unit": "J/m^2",
+        "amorphous_zone_at_tip": 2,
+        "amorphous_zone_unit": "nm",
+        "crack_path": "crack_path_md.vtk",
+        "stress_field": "stress_field_md.vtk"
+      },
+      "parameters": {
+        "potential": "Tersoff (Matsunaga Si-N)",
+        "potential_file": "SiN_Tersoff_Matsunaga.tersoff",
+        "timestep": 0.5,
+        "timestep_unit": "fs",
+        "ensemble": "NVT_with_boundary_layer",
+        "boundary_layer_temperature": 300,
+        "boundary_temperature_unit": "K",
+        "thermostat": "Nosé-Hoover",
+        "thermostat_damping": 100,
+        "thermostat_damping_unit": "fs",
+        "cutoff_radius": 3.5,
+        "cutoff_radius_unit": "Angstrom",
+        "total_strain": 0.05,
+        "strain_increment": 0.0001,
+        "dump_interval": 2000,
+        "neighbor_skin": 1.0,
+        "neighbor_skin_unit": "Angstrom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Crack tip process zone and energy release rate to phase field fracture parameters",
+        "data_transferred": [
+          "critical_stress_intensity_factor",
+          "process_zone_size",
+          "crack_deflection_data",
+          "energy_release_rate",
+          "bridging_toughening_contribution"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "Si3N4裂纹扩展相场模拟",
+      "description": "基于MD裂纹尖端分析结果，使用相场断裂模型模拟Si3N4的裂纹扩展路径和增韧机制（桥接、偏转、分叉）",
+      "input": {
+        "domain_size": {
+          "Lx": 200,
+          "Ly": 400,
+          "unit": "um"
+        },
+        "grid_points": "400x800",
+        "initial_crack_length": 100,
+        "initial_crack_length_unit": "um",
+        "microstructure_source": "polycrystalline_Si3N4_grain_structure",
+        "grain_size_mean": 0.5,
+        "grain_size_unit": "um",
+        "grain_boundary_energy_source": "DFT",
+        "process_zone_size_source": "MD",
+        "loading": "mode_I_displacement"
+      },
+      "output": {
+        "crack_propagation_path": "crack_path_pf.vtk",
+        "R_curve": "R_curve.dat",
+        "R_curve_values": {
+          "KIC_initiation": 4.5,
+          "KIC_plateau": 7.0,
+          "unit": "MPa*sqrt(m)"
+        },
+        "toughening_ratio": 1.56,
+        "toughening_mechanisms": {
+          "crack_deflection": 0.3,
+          "grain_bridging": 0.5,
+          "crack_branching": 0.1,
+          "transformation": 0.0,
+          "unit": "MPa*sqrt(m) contribution"
+        },
+        "process_zone_width": 50,
+        "process_zone_width_unit": "um",
+        "crack_velocity_vs_K": "crack_velocity.dat",
+        "bridging_stress_distribution": "bridging_stress.dat"
+      },
+      "parameters": {
+        "model": "Phase field fracture (AT2 variant)",
+        "degradation_function": "quadratic_d=(1-d)^2",
+        "history_variable": true,
+        "interface_width_l": 4.0,
+        "interface_width_unit": "um",
+        "fracture_energy_Gc": 65,
+        "fracture_energy_unit": "J/m^2",
+        "gradient_energy_coefficient": 2.6e-7,
+        "gradient_energy_coefficient_unit": "J/m",
+        "length_scale_parameter": 4.0,
+        "length_scale_unit": "um",
+        "elastic_properties": {
+          "E": 300,
+          "E_unit": "GPa",
+          "nu": 0.24
+        },
+        "anisotropic_grain_properties": true,
+        "grain_boundary_fracture_energy_ratio": 0.5,
+        "time_step": 0.1,
+        "time_step_unit": "us",
+        "total_time": 100,
+        "total_time_unit": "us",
+        "solver": "staggered_scheme",
+        "alternate_max_iterations": 50,
+        "convergence_tolerance": 1e-6
+      },
+      "bridge_to_next": {
+        "mapping_method": "R-curve and effective toughness to FE fracture mechanics parameters",
+        "data_transferred": [
+          "R_curve",
+          "KIC_plateau",
+          "toughening_ratio",
+          "process_zone_width",
+          "crack_path_geometry"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "Si3N4宏观断裂韧性有限元预测",
+      "description": "基于相场输出的R曲线和增韧参数，建立宏观有限元模型预测Si3N4陶瓷的断裂韧性和载荷-位移响应",
+      "input": {
+        "specimen_geometry": "SENB_single_edge_notch_bend",
+        "specimen_dimensions": {
+          "length": 40,
+          "width": 8,
+          "thickness": 4,
+          "unit": "mm"
+        },
+        "notch_depth": 4,
+        "notch_depth_unit": "mm",
+        "notch_radius": 0.15,
+        "notch_radius_unit": "mm",
+        "span": 32,
+        "span_unit": "mm",
+        "material_properties": {
+          "youngs_modulus": 300,
+          "youngs_modulus_unit": "GPa",
+          "poisson_ratio": 0.24,
+          "density": 3200,
+          "density_unit": "kg/m^3"
+        },
+        "fracture_toughness_source": "Phase field R-curve MS-08 Step 3",
+        "KIC_initiation": 4.5,
+        "KIC_initiation_unit": "MPa*sqrt(m)",
+        "KIC_plateau": 7.0,
+        "KIC_plateau_unit": "MPa*sqrt(m)"
+      },
+      "output": {
+        "load_displacement_curve": "load_displacement_SENB.dat",
+        "fracture_toughness_KIC": 7.0,
+        "KIC_unit": "MPa*sqrt(m)",
+        "critical_load": 850,
+        "critical_load_unit": "N",
+        "critical_displacement": 0.12,
+        "critical_displacement_unit": "mm",
+        "crack_extension_at_peak": 0.8,
+        "crack_extension_unit": "mm",
+        "R_curve_FE": "R_curve_FE.dat",
+        "stress_field": "stress_field_SENB.vtk",
+        "crack_path_FE": "crack_path_SENB.vtk"
+      },
+      "parameters": {
+        "element_type": "CPS8R",
+        "mesh_density": "200x40",
+        "mesh_refinement_zone": "notch_tip_2mm",
+        "minimum_element_size": 0.05,
+        "minimum_element_size_unit": "mm",
+        "boundary_condition": "three_point_bending",
+        "loading": "displacement_controlled",
+        "displacement_rate": 0.001,
+        "displacement_rate_unit": "mm/min",
+        "solver_type": "static_implicit_Riks",
+        "cohesive_zone_model": "traction_separation",
+        "cohesive_strength": 1200,
+        "cohesive_strength_unit": "MPa",
+        "cohesive_fracture_energy": 65,
+        "cohesive_fracture_energy_unit": "J/m^2",
+        "R_curve_implementation": "user_subroutine_UMAT",
+        "max_iterations": 500,
+        "convergence_tolerance": 1e-8
+      },
+      "bridge_to_next": {
+        "mapping_method": "KIC comparison with experimental SENB test data",
+        "data_transferred": [
+          "fracture_toughness_KIC",
+          "load_displacement_curve",
+          "R_curve",
+          "crack_extension"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2015.03.025",
+    "authors": "Becher PF, Sun EY, Plucknett KP",
+    "year": 1998,
+    "journal": "Journal of the American Ceramic Society"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Interface energy",
+        "value": 2.0,
+        "unit": "J/m^2",
+        "tolerance": 15
+      },
+      {
+        "name": "Process zone size (MD)",
+        "value": 15,
+        "unit": "nm",
+        "tolerance": 25
+      },
+      {
+        "name": "KIC initiation",
+        "value": 4.5,
+        "unit": "MPa*sqrt(m)",
+        "tolerance": 15
+      },
+      {
+        "name": "KIC plateau (toughened)",
+        "value": 7.0,
+        "unit": "MPa*sqrt(m)",
+        "tolerance": 15
+      },
+      {
+        "name": "Toughening ratio",
+        "value": 1.56,
+        "unit": "dimensionless",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 20
+  }
+}

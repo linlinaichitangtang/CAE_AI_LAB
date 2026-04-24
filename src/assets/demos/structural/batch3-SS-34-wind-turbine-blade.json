@@ -1,0 +1,86 @@
+{
+  "id": "SS-34",
+  "name": "风电叶片预弯静力学分析",
+  "nameEn": "Wind Turbine Blade Pre-Bend Static Analysis",
+  "description": "40m长风电叶片的预弯设计静力学分析。叶片采用玻璃纤维/环氧树脂复合材料(E=40GPa)，设计预弯曲量为2m，工作转速12rpm。分析叶片在自重和气动载荷联合作用下的变形和应力分布，验证预弯设计能否有效避免运行中叶尖与塔架碰撞。本案例适用于风力发电叶片结构设计教学与工程演示。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["风电叶片", "预弯", "复合材料", "气动载荷", "玻璃纤维", "风力发电"],
+  "geometry": {
+    "type": "blade",
+    "length": 40.0,
+    "width": 3.5,
+    "height": 1.2,
+    "radius": 0,
+    "thickness": 0.05,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 80,
+    "y_div": 14,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Glass/Epoxy Composite (blade structure)",
+    "elastic_modulus": 40000000000,
+    "poisson_ratio": 0.28,
+    "density": 1850,
+    "yield_stress": 500000000,
+    "thermal_expansion": 8.5e-6,
+    "thermal_conductivity": 0.7,
+    "specific_heat": 1000
+  },
+  "boundaryConditions": {
+    "fixed_face": "root",
+    "load_type": "uniform",
+    "load_face": "outer_surface",
+    "load_magnitude": 150000,
+    "load_direction": "Z",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 4.5,
+    "max_stress": 180000000,
+    "formula": "δ_total = δ_pre-bend + δ_aero + δ_gravity, δ_aero = q·L⁴/(8EI), ω = 2π·rpm/60",
+    "reference": "Burton T, Jenkins N, Sharpe D, Bossanyi E. Wind Energy Handbook. John Wiley & Sons, 2011."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "叶尖总位移(含预弯)",
+        "value": 4.5,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "预弯曲量",
+        "value": 2.0,
+        "unit": "m",
+        "tolerance": 2
+      },
+      {
+        "name": "叶根最大应力",
+        "value": 180000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "离心力(12rpm)",
+        "value": 850000,
+        "unit": "N",
+        "tolerance": 5
+      }
+    ]
+  }
+}

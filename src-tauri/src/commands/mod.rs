@@ -80,7 +80,14 @@ pub mod multiscale_integration;
 pub mod workflow_template;
 pub mod high_throughput;
 pub mod ai_recommend;
+pub mod agent;
 pub mod nightly_ci;
 pub mod multiscale_workspace;
 pub mod solver_manager;
 pub mod calculix_job;
+
+// ============================================================================
+// V2.5 - AI × ML 免仿真预测 (ML Surrogate Model)
+// ============================================================================
+pub mod ml_predict;
+pub mod simulation_archive;

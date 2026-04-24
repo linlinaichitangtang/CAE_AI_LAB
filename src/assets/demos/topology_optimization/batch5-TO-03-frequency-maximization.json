@@ -1,0 +1,85 @@
+{
+  "id": "TO-03",
+  "name": "模态频率最大化",
+  "nameEn": "Modal Frequency Maximization",
+  "description": "悬臂板模态频率最大化拓扑优化问题。在给定体积分数约束下，通过SIMP方法寻找使结构一阶固有频率最大的材料分布。悬臂板一端固定，自由端无约束。优化目标为最大化第一阶弯曲模态频率f1，通过与实体悬臂板的一阶频率对比验证优化效果。频率优化中需注意局部模态问题（灰度单元导致的低频模态），通过适当的惩罚参数和过滤半径抑制灰度区域。优化后结构应呈现根部粗壮、端部纤细的渐变形态，一阶频率相比实体板应有显著提升。",
+  "category": "topology_optimization",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["SIMP", "频率优化", "模态分析", "悬臂板", "固有频率"],
+  "design_domain": {
+    "type": "plate",
+    "length": 0.3,
+    "width": 0.1,
+    "height": 0.01,
+    "dimension": "2d"
+  },
+  "mesh": {
+    "x_div": 120,
+    "y_div": 40,
+    "z_div": 1,
+    "element_type": "CPS4"
+  },
+  "material": {
+    "name": "Titanium Alloy Ti-6Al-4V",
+    "elastic_modulus": 113800000000,
+    "poisson_ratio": 0.342,
+    "density": 4430
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "maximize_frequency",
+    "volume_fraction": 0.3,
+    "penalization": 3,
+    "filter_radius": 0.006,
+    "max_iterations": 100,
+    "convergence_tolerance": 0.01
+  },
+  "boundaryConditions": {
+    "fixed_face": "left_face",
+    "load_type": "point",
+    "load_face": "",
+    "load_magnitude": 0,
+    "load_direction": ""
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.3,
+      "unit": "ratio"
+    },
+    {
+      "type": "frequency",
+      "value": 500,
+      "unit": "Hz"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "first_natural_frequency_optimized",
+        "value": 1850,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "first_natural_frequency_solid",
+        "value": 980,
+        "unit": "Hz",
+        "tolerance": 10
+      },
+      {
+        "name": "frequency_improvement_ratio",
+        "value": 1.89,
+        "unit": "ratio",
+        "tolerance": 20
+      },
+      {
+        "name": "final_volume_fraction",
+        "value": 0.3,
+        "unit": "ratio",
+        "tolerance": 5
+      }
+    ]
+  }
+}

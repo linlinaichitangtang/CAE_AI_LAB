@@ -1,0 +1,134 @@
+{
+  "id": "TC-31",
+  "name": "液氢储罐深冷热分析",
+  "nameEn": "LH₂ Cryogenic Tank Thermal Analysis - Stainless Steel 304L Support Strut",
+  "description": "液氢(LH₂)储罐深冷系统热分析。LH₂温度T_LH2=20K(-253°C)，环境温度T_env=293K(20°C)，温差ΔT=273K。储罐材料为304L不锈钢，支撑杆热桥分析。304L物性：E=193GPa(20K时更高)，α=14.5×10⁻⁶/K(室温)，k=8W/(m·K)(20K)，ρ=7900kg/m³。热应力σ=E·α·ΔT=193e9×14.5e-6×273=764MPa。支撑杆截面积A=5e-4m²，长度L=0.5m，热漏Q=k·A·ΔT/L=8×5e-4×273/0.5=2.184W。设计目标热漏<1W，需采用热 intercept + 低热导率支撑(GFRP)或多层绝热。验证支撑结构在深冷环境下的热应力与热漏水平。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 5,
+  "tags": ["cryogenic", "LH2", "liquid_hydrogen", "thermal_strut", "304L_stainless", "heat_leak", "thermal_stress", "deep_cold"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.5,
+    "width": null,
+    "height": null,
+    "radius": 0.0126,
+    "thickness": 0.002,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 40,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Stainless Steel 304L (Cryogenic Grade)",
+    "elastic_modulus": 193000000000,
+    "poisson_ratio": 0.29,
+    "density": 7900,
+    "yield_stress": 290000000,
+    "thermal_expansion": 14.5e-6,
+    "thermal_conductivity": 8,
+    "specific_heat": 200
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "warm_end",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 293,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-8,
+    "time_step": 10,
+    "total_time": 3600
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 764000000,
+    "max_temperature": 293,
+    "formula": "sigma = E * alpha * Delta_T = 193e9 * 14.5e-6 * 273 = 764 MPa; Q_leak = k * A * Delta_T / L = 8 * 5e-4 * 273 / 0.5 = 2.184W; Delta_T = T_env - T_LH2 = 273K",
+    "reference": "Barron, Cryogenic Heat Transfer, Taylor & Francis, 1999; NASA SP-8118, Cryogenic Tank Design"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "LH2_temperature",
+        "value": 20,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "ambient_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "temperature_difference",
+        "value": 273,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "thermal_stress",
+        "value": 764000000,
+        "unit": "Pa",
+        "tolerance": 10.0
+      },
+      {
+        "name": "heat_leak_SS304L",
+        "value": 2.184,
+        "unit": "W",
+        "tolerance": 10.0
+      },
+      {
+        "name": "heat_leak_target",
+        "value": 1.0,
+        "unit": "W",
+        "tolerance": 1.0
+      },
+      {
+        "name": "strut_length",
+        "value": 0.5,
+        "unit": "m",
+        "tolerance": 0.5
+      },
+      {
+        "name": "strut_cross_section_area",
+        "value": 5e-4,
+        "unit": "m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "thermal_conductivity_at_20K",
+        "value": 8,
+        "unit": "W/(m*K)",
+        "tolerance": 15.0
+      },
+      {
+        "name": "thermal_expansion_coefficient",
+        "value": 14.5e-6,
+        "unit": "1/K",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

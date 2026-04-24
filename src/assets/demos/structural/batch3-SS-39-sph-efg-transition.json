@@ -1,0 +1,92 @@
+{
+  "id": "SS-39",
+  "name": "SPH/EFG连续体离散体过渡分析",
+  "nameEn": "SPH/EFG Continuum-Discrete Transition Analysis",
+  "description": "光滑粒子流体动力学(SPH)与无网格伽辽金法(EFG)耦合的连续体-离散体过渡区域分析。拉伸试件(0.1m×0.02m×0.02m)在F=50kN轴向拉力作用下，分析从连续体变形到裂纹萌生、扩展直至断裂的全过程。SPH区域处理大变形和断裂，EFG区域处理连续体变形，两者通过过渡区域平滑耦合。本案例适用于无网格方法研究、结构破坏过程模拟和新型数值方法测试验证。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["SPH", "EFG", "无网格", "耦合", "断裂", "连续体离散体过渡"],
+  "geometry": {
+    "type": "bar",
+    "length": 0.1,
+    "width": 0.02,
+    "height": 0.02,
+    "radius": 0,
+    "thickness": 0.02,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 8,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Aluminum Alloy 6061-T6",
+    "elastic_modulus": 68900000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "yield_stress": 276000000,
+    "thermal_expansion": 2.36e-5,
+    "thermal_conductivity": 167,
+    "specific_heat": 896
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "uniform",
+    "load_face": "x_max",
+    "load_magnitude": 50000,
+    "load_direction": "X",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 276000000,
+    "formula": "σ = F/A = 50000/(0.02×0.02) = 125 MPa, ε = σ/E, δ = ε·L",
+    "reference": "Belytschko T, Krongauz Y, Organ D, Fleming M, Krysl P. Meshless methods: An overview and recent developments. Computer Methods in Applied Mechanics and Engineering, 1996."
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "弹性段最大位移",
+        "value": 0.000182,
+        "unit": "m",
+        "tolerance": 5
+      },
+      {
+        "name": "屈服应力",
+        "value": 276000000,
+        "unit": "Pa",
+        "tolerance": 5
+      },
+      {
+        "name": "颈缩后最大位移",
+        "value": 0.002,
+        "unit": "m",
+        "tolerance": 15
+      },
+      {
+        "name": "SPH/EFG过渡区能量误差",
+        "value": 2.5,
+        "unit": "%",
+        "tolerance": 5
+      },
+      {
+        "name": "断裂时等效塑性应变",
+        "value": 0.35,
+        "unit": "",
+        "tolerance": 15
+      }
+    ]
+  }
+}

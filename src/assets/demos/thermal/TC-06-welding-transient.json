@@ -1,0 +1,109 @@
+{
+  "id": "TC-06",
+  "name": "焊接过程瞬态热分析",
+  "nameEn": "Welding Process Transient Thermal Analysis",
+  "description": "钢板TIG焊接过程瞬态热分析。钢板尺寸0.2m×0.1m×0.006m，材料为低碳钢。移动高斯热源沿焊缝中心线以v=5mm/s速度移动，总功率Q=3000W，热效率η=0.8(有效功率2400W)。高斯热源分布半径r_0=0.005m。熔点T_melt=1773K。根据Rosenthal解，移动热源后方温度场呈拖尾分布，峰值温度约2500K。焊接热循环特征参数：冷却时间t_8/5(从800°C冷却至500°C)约为8-12s。热扩散系数α=k/(ρ·c_p)=50/(7850×500)=1.274×10⁻⁵m²/s。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["welding", "transient", "Gaussian_heat_source", "moving_source", "thermal_cycle"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.2,
+    "width": 0.1,
+    "height": 0.006,
+    "radius": null,
+    "thickness": 0.006,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 20,
+    "z_div": 4,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Low Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 500
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "heat_flux",
+    "load_face": "top_surface_weld_line",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 300,
+      "T_boundary": null,
+      "T_ambient": 300,
+      "heat_flux": 0,
+      "convection_coeff": 15,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-5,
+    "time_step": 0.1,
+    "total_time": 40
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 0,
+    "max_temperature": 2500,
+    "formula": "q(r) = (3Q_eff)/(π·r_0²)·exp(-3r²/r_0²); T_peak ≈ T_0 + Q_eff/(2π·k·v·δ) for thin plate",
+    "reference": "Goldak, Akhlaghi, Computational Welding Mechanics, Ch.3 - Heat Source Models"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 10.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "peak_temperature",
+        "value": 2500,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "melting_pool_width",
+        "value": 0.008,
+        "unit": "m",
+        "tolerance": 20.0
+      },
+      {
+        "name": "melting_pool_depth",
+        "value": 0.003,
+        "unit": "m",
+        "tolerance": 25.0
+      },
+      {
+        "name": "cooling_time_8_5",
+        "value": 10,
+        "unit": "s",
+        "tolerance": 25.0
+      },
+      {
+        "name": "thermal_diffusivity",
+        "value": 1.274e-5,
+        "unit": "m²/s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "effective_heat_power",
+        "value": 2400,
+        "unit": "W",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

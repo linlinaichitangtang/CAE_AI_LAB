@@ -1,0 +1,356 @@
+{
+  "id": "MS-05",
+  "name": "Fe BCC相变全链路",
+  "nameEn": "Fe BCC Phase Transformation Full Chain",
+  "description": "铁的BCC相变全链路多尺度模拟：从DFT计算铁的基态晶格常数和相变能垒出发，通过分子动力学模拟奥氏体(FCC)→珠光体→马氏体的相变过程，利用相场方法预测微观组织演化，最终通过有限元方法计算宏观硬度分布。该案例涵盖DFT→MD→Phase Field→FE的完整四尺度链路，是CAELab多尺度模拟的核心演示案例。",
+  "category": "multiscale",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["phase transformation", "BCC", "FCC", "martensite", "pearlite", "austenite", "hardness", "full chain"],
+  "scales": ["dft", "md", "phase_field", "fe"],
+  "material_system": "Fe BCC",
+  "pipeline_steps": [
+    {
+      "step": "dft",
+      "name": "Fe基态与相变能垒计算",
+      "description": "使用DFT计算Fe的BCC和FCC相的基态能量、晶格常数和相变能垒，为MD势函数提供参考数据",
+      "input": {
+        "crystal_structures": ["BCC", "FCC"],
+        "atomic_number": 26,
+        "magnetic_moment_BCC": 2.22,
+        "magnetic_moment_unit": "mu_B",
+        "k_points_density": 0.04,
+        "k_points_density_unit": "2pi/Angstrom"
+      },
+      "output": {
+        "BCC": {
+          "lattice_constant": 2.87,
+          "lattice_constant_unit": "Angstrom",
+          "total_energy": -8.39,
+          "total_energy_unit": "eV/atom",
+          "bulk_modulus": 170,
+          "bulk_modulus_unit": "GPa",
+          "magnetic_moment": 2.22,
+          "magnetic_moment_unit": "mu_B"
+        },
+        "FCC": {
+          "lattice_constant": 3.59,
+          "lattice_constant_unit": "Angstrom",
+          "total_energy": -8.28,
+          "total_energy_unit": "eV/atom",
+          "bulk_modulus": 185,
+          "bulk_modulus_unit": "GPa"
+        },
+        "BCC_FCC_energy_difference": 0.11,
+        "energy_difference_unit": "eV/atom",
+        "transition_barrier": 0.05,
+        "transition_barrier_unit": "eV/atom",
+        "elastic_constants_BCC": {
+          "C11": 230,
+          "C12": 135,
+          "C44": 117,
+          "unit": "GPa"
+        }
+      },
+      "parameters": {
+        "k_points": [16, 16, 16],
+        "energy_cutoff": 500,
+        "energy_cutoff_unit": "eV",
+        "pseudopotential": "PAW_PBE_Fe",
+        "xc_functional": "PBE",
+        "magnetic_ordering": "ferromagnetic",
+        "smearing": "Methfessel-Paxton",
+        "smearing_width": 0.2,
+        "smearing_width_unit": "eV",
+        "scf_convergence": 1e-8,
+        "scf_convergence_unit": "eV",
+        "spin_polarized": true,
+        "u_parameter": 4.0,
+        "u_parameter_unit": "eV",
+        "j_parameter": 0.9,
+        "j_parameter_unit": "eV"
+      },
+      "bridge_to_next": {
+        "mapping_method": "DFT energies and forces to EAM potential fitting",
+        "data_transferred": [
+          "BCC_FCC_energy_difference",
+          "elastic_constants_BCC",
+          "lattice_constants",
+          "vacancy_formation_energy",
+          "stacking_fault_energy"
+        ]
+      }
+    },
+    {
+      "step": "md",
+      "name": "Fe相变分子动力学模拟",
+      "description": "使用EAM势函数模拟Fe从奥氏体(FCC)到珠光体和马氏体的相变过程，捕捉原子尺度的相变机制",
+      "input": {
+        "initial_structure": "FCC_austenite",
+        "lattice_constant_FCC": 3.59,
+        "lattice_constant_unit": "Angstrom",
+        "supercell": "20x20x20",
+        "atom_count": 32000,
+        "carbon_content": 0.8,
+        "carbon_content_unit": "wt%",
+        "carbon_atoms": 256,
+        "austenitizing_temperature": 1100,
+        "austenitizing_temperature_unit": "K",
+        "cooling_rate": 1e12,
+        "cooling_rate_unit": "K/s"
+      },
+      "output": {
+        "phase_fractions": {
+          "austenite": 0.05,
+          "pearlite": 0.45,
+          "martensite": 0.50
+        },
+        "martensite_start_temperature_Ms": 550,
+        "Ms_unit": "K",
+        "martensite_finish_temperature_Mf": 300,
+        "Mf_unit": "K",
+        "pearlite_start_temperature": 1000,
+        "pearlite_start_unit": "K",
+        "lath_martensite_width": 0.5,
+        "lath_width_unit": "um",
+        "dislocation_density": 1e15,
+        "dislocation_density_unit": "m^-2",
+        "trajectory_file": "fe_phase_transform.lammpstrj",
+        "atomic_configurations": {
+          "austenite_snapshot": "austenite_1100K.dump",
+          "pearlite_snapshot": "pearlite_800K.dump",
+          "martensite_snapshot": "martensite_300K.dump"
+        }
+      },
+      "parameters": {
+        "potential": "EAM (Meyer-Entel Fe-C)",
+        "potential_file": "FeC_MeyerEntel.eam.alloy",
+        "timestep": 1,
+        "timestep_unit": "fs",
+        "ensemble": "NPT",
+        "thermostat": "Nosé-Hoover",
+        "thermostat_damping": 50,
+        "thermostat_damping_unit": "fs",
+        "barostat": "Parrinello-Rahman",
+        "barostat_damping": 500,
+        "barostat_damping_unit": "fs",
+        "cooling_schedule": "linear_from_1100K_to_300K",
+        "total_simulation_time": 800,
+        "total_simulation_time_unit": "ps",
+        "dump_interval": 500,
+        "cutoff_radius": 5.5,
+        "cutoff_radius_unit": "Angstrom",
+        "carbon_interaction": "Ferrite-C embedded atom"
+      },
+      "bridge_to_next": {
+        "mapping_method": "Local crystal structure identification (CNA/PTM) to phase field order parameters",
+        "data_transferred": [
+          "phase_fractions_austenite_pearlite_martensite",
+          "martensite_lath_geometry",
+          "grain_boundary_network",
+          "carbon_distribution",
+          "dislocation_density"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "Fe相变微观组织演化",
+      "description": "基于MD输出的相分数和初始组织信息，使用多序参量相场模型模拟奥氏体分解和马氏体形核长大过程",
+      "input": {
+        "domain_size": {
+          "Lx": 10,
+          "Ly": 10,
+          "Lz": 10,
+          "unit": "um"
+        },
+        "grid_points": "256x256x256",
+        "initial_phase_fractions": {
+          "austenite": 1.0,
+          "ferrite": 0.0,
+          "cementite": 0.0,
+          "martensite": 0.0
+        },
+        "carbon_content": 0.8,
+        "carbon_content_unit": "wt%",
+        "nucleation_sites_source": "MD CNA analysis",
+        "thermal_history_source": "MD cooling schedule"
+      },
+      "output": {
+        "microstructure_evolution": "microstructure_evolution.vtk",
+        "final_phase_fractions": {
+          "ferrite": 0.50,
+          "cementite": 0.10,
+          "martensite": 0.35,
+          "retained_austenite": 0.05
+        },
+        "pearlite_lamellar_spacing": 0.2,
+        "lamellar_spacing_unit": "um",
+        "martensite_block_size": 2.5,
+        "martensite_block_unit": "um",
+        "grain_size_distribution": "grain_size_hist.dat",
+        "carbon_enrichment_at_boundaries": 1.2,
+        "carbon_enrichment_unit": "wt%",
+        "transformation_kinetics": "transformation_fraction_vs_time.dat"
+      },
+      "parameters": {
+        "model": "Multi-order-parameter Allen-Cahn + Cahn-Hilliard",
+        "order_parameters": ["eta_ferrite", "eta_cementite", "eta_martensite"],
+        "interface_width": 0.05,
+        "interface_width_unit": "um",
+        "gradient_energy_coefficients": {
+          "kappa_ferrite": 1e-9,
+          "kappa_cementite": 2e-9,
+          "kappa_martensite": 1.5e-9,
+          "unit": "J/m"
+        },
+        "mobility": {
+          "L_ferrite": 5e-13,
+          "L_cementite": 1e-13,
+          "L_martensite": 1e-14,
+          "unit": "m^3/(J*s)"
+        },
+        "driving_force": {
+          "delta_G_ferrite": 2e8,
+          "delta_G_cementite": 5e8,
+          "delta_G_martensite": 1e9,
+          "unit": "J/m^3"
+        },
+        "chemical_diffusivity": 1e-15,
+        "chemical_diffusivity_unit": "m^2/s",
+        "time_step": 0.01,
+        "time_step_unit": "s",
+        "total_time": 100,
+        "total_time_unit": "s",
+        "nucleation_model": "classical_nucleation_theory",
+        "thermal_noise_amplitude": 0.01
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase fraction and morphology to effective mechanical properties via homogenization",
+        "data_transferred": [
+          "final_phase_fractions",
+          "microstructure_morphology",
+          "grain_size_distribution",
+          "martensite_block_size",
+          "pearlite_lamellar_spacing"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "宏观硬度有限元预测",
+      "description": "基于相场输出的微观组织信息，通过多尺度均质化获得各相有效力学性能，进行维氏硬度压痕有限元模拟",
+      "input": {
+        "effective_properties": {
+          "martensite": {
+            "youngs_modulus": 210,
+            "youngs_modulus_unit": "GPa",
+            "yield_strength": 1500,
+            "yield_strength_unit": "MPa",
+            "hardness_HV": 800
+          },
+          "ferrite": {
+            "youngs_modulus": 200,
+            "youngs_modulus_unit": "GPa",
+            "yield_strength": 250,
+            "yield_strength_unit": "MPa",
+            "hardness_HV": 120
+          },
+          "pearlite": {
+            "youngs_modulus": 205,
+            "youngs_modulus_unit": "GPa",
+            "yield_strength": 600,
+            "yield_strength_unit": "MPa",
+            "hardness_HV": 350
+          }
+        },
+        "phase_fractions_source": "Phase field MS-05 Step 3",
+        "homogenization_method": "Mori-Tanaka",
+        "indentation_load": 9.81,
+        "indentation_load_unit": "N",
+        "indenter_type": "Vickers",
+        "indenter_angle": 136,
+        "indenter_angle_unit": "degree"
+      },
+      "output": {
+        "load_displacement_curve": "load_displacement.dat",
+        "hardness_HV": 800,
+        "hardness_unit": "HV",
+        "contact_depth": 1.85,
+        "contact_depth_unit": "um",
+        "plastic_zone_size": 3.5,
+        "plastic_zone_unit": "um",
+        "stress_field": "stress_field_indentation.vtk",
+        "equivalent_plastic_strain_field": "peeq_field.vtk",
+        "max_equivalent_plastic_strain": 0.35,
+        "residual_stress_profile": "residual_stress.dat"
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "axisymmetric_200x400",
+        "mesh_refinement_zone": "under_indenter_5um",
+        "boundary_condition": "bottom_fixed_symmetric_axis",
+        "contact_algorithm": "penalty",
+        "friction_coefficient": 0.15,
+        "solver_type": "static_implicit",
+        "material_model": "J2_plasticity_isotropic_hardening",
+        "hardening_law": "Voce",
+        "max_iterations": 200,
+        "convergence_tolerance": 1e-8,
+        "adaptive_remeshing": true
+      },
+      "bridge_to_next": {
+        "mapping_method": "Hardness comparison with experimental data",
+        "data_transferred": [
+          "hardness_HV",
+          "load_displacement_curve",
+          "residual_stress_field",
+          "plastic_zone_size"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/j.actamat.2018.06.018",
+    "authors": "Miyamoto G, Takayama N, Furuhara T",
+    "year": 2018,
+    "journal": "Acta Materialia"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "BCC lattice constant",
+        "value": 2.87,
+        "unit": "Angstrom",
+        "tolerance": 2
+      },
+      {
+        "name": "BCC-FCC energy difference",
+        "value": 0.11,
+        "unit": "eV/atom",
+        "tolerance": 15
+      },
+      {
+        "name": "Martensite start temperature Ms",
+        "value": 550,
+        "unit": "K",
+        "tolerance": 10
+      },
+      {
+        "name": "Martensite volume fraction",
+        "value": 0.50,
+        "unit": "dimensionless",
+        "tolerance": 20
+      },
+      {
+        "name": "Vickers hardness HV",
+        "value": 800,
+        "unit": "HV",
+        "tolerance": 15
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 20
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "id": "TC-39",
+  "name": "航天器热控系统分析",
+  "nameEn": "Spacecraft Thermal Control System Analysis - OSR Coated Panel with Eclipse Cycle",
+  "description": "卫星面板热控系统瞬态分析。面板采用光学太阳反射镜(OSR)涂层，太阳吸收率α_s=0.1，红外发射率ε_IR=0.8。太阳常数S=1361W/m²，地球红外辐射E_IR=237W/m²，深空背景温度T_space=3K。轨道周期5400s(90min低地球轨道)，日照期54min，阴影期(日食)36min。面板面积A=1.0m²，等效热容C=m·c_p=5×900=4500J/K(铝合金面板)。日照期热平衡：α_s·S·A + ε_IR·σ·T_earth⁴·A = ε_IR·σ·T⁴·A + C·dT/dt。平衡温度T_eq=(α_s·S/(ε_IR·σ))^(1/4)=(0.1×1361/(0.8×5.67e-8))^0.25≈267K。阴影期仅地球红外辐射，温度下降。验证温度波动范围±50K(约217K-317K)。面板材料Al-6061-T6：E=69GPa，k=167W/(m·K)，ρ=2700kg/m³。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["spacecraft", "thermal_control", "OSR_coating", "solar_radiation", "eclipse_cycle", "orbital_thermal", "radiation", "satellite"],
+  "geometry": {
+    "type": "plate",
+    "length": 1.0,
+    "width": 1.0,
+    "height": 0.003,
+    "radius": null,
+    "thickness": 0.003,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 30,
+    "z_div": 6,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Aluminum 6061-T6 (Space Grade)",
+    "elastic_modulus": 69000000000,
+    "poisson_ratio": 0.33,
+    "density": 2700,
+    "yield_stress": 276000000,
+    "thermal_expansion": 23.6e-6,
+    "thermal_conductivity": 167,
+    "specific_heat": 900
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "radiation",
+    "load_face": "sunlit_surface",
+    "load_magnitude": 1361,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 267,
+      "T_boundary": null,
+      "T_ambient": 3,
+      "heat_flux": 1361,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.8
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 2000,
+    "convergence_tolerance": 1e-8,
+    "time_step": 10,
+    "total_time": 10800
+  },
+  "theoretical": {
+    "max_displacement": 2e-3,
+    "max_stress": 180000000,
+    "max_temperature": 317,
+    "formula": "T_eq = (alpha_s * S / (epsilon * sigma))^0.25; Q_solar = alpha_s * S * A * cos(theta); Q_IR_earth = epsilon * sigma * T_earth^4 * F * A; Q_rad = epsilon * sigma * T^4 * A; C * dT/dt = Q_in - Q_out; Eclipse: Q_in = Q_IR_earth only",
+    "reference": "Gilmore, Spacecraft Thermal Control Handbook, 2nd Ed., 2002; Wertz & Larson, Space Mission Engineering, 2011; NASA SP-8110, Spacecraft Thermal Design"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "solar_absorptivity_OSR",
+        "value": 0.1,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "IR_emissivity_OSR",
+        "value": 0.8,
+        "unit": "",
+        "tolerance": 2.0
+      },
+      {
+        "name": "solar_constant",
+        "value": 1361,
+        "unit": "W/m^2",
+        "tolerance": 1.0
+      },
+      {
+        "name": "earth_IR_flux",
+        "value": 237,
+        "unit": "W/m^2",
+        "tolerance": 3.0
+      },
+      {
+        "name": "equilibrium_temperature",
+        "value": 267,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "max_temperature_sunlit",
+        "value": 317,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "min_temperature_eclipse",
+        "value": 217,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "temperature_swing",
+        "value": 100,
+        "unit": "K",
+        "tolerance": 10.0
+      },
+      {
+        "name": "orbital_period",
+        "value": 5400,
+        "unit": "s",
+        "tolerance": 1.0
+      },
+      {
+        "name": "eclipse_duration",
+        "value": 2160,
+        "unit": "s",
+        "tolerance": 1.0
+      }
+    ]
+  }
+}

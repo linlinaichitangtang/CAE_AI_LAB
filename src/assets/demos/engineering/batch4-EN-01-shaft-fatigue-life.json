@@ -1,0 +1,118 @@
+{
+  "id": "EN-01",
+  "name": "阶梯轴疲劳寿命分析",
+  "nameEn": "Stepped Shaft Fatigue Life Analysis",
+  "description": "分析阶梯轴在旋转弯曲载荷下的疲劳寿命。轴径从D=80mm过渡到d=50mm，过渡圆角半径r=5mm，理论应力集中系数Kt=2.0。轴材料为45钢，σ_b=600MPa，σ_{-1}=270MPa。承受平均应力σ_m=100MPa和应力幅σ_a=80MPa的旋转弯曲载荷。采用Soderberg安全系数线进行疲劳评估，利用Goodman修正和S-N曲线估算疲劳寿命N_f。验证有限元应力集中计算结果与理论Kt的一致性，以及疲劳寿命预测的合理性。",
+  "category": "engineering",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["fatigue", "shaft", "stress_concentration", "soderberg", "s_n_curve", "rotating_bending"],
+  "engineering_domain": "mechanical",
+  "design_code": "GB/T 19436 机械疲劳设计方法",
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.3,
+    "width": 0.08,
+    "height": 0.08,
+    "radius": 0.04,
+    "dimension": "3d",
+    "detail_params": {
+      "large_diameter": 0.08,
+      "small_diameter": 0.05,
+      "fillet_radius": 0.005,
+      "transition_length": 0.02
+    }
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 16,
+    "z_div": 16,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "45 Steel (Quenched and Tempered)",
+    "elastic_modulus": 206000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 355000000,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 48,
+    "specific_heat": 486,
+    "fatigue_params": {
+      "ultimate_strength": 600000000,
+      "fatigue_limit": 270000000,
+      "notch_sensitivity": 0.8,
+      "surface_factor": 0.85,
+      "size_factor": 0.75
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "x_min",
+    "load_type": "rotating_bending",
+    "load_face": "x_max",
+    "load_magnitude": 5000,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "static",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.00015,
+    "max_stress": 160000000,
+    "formula": "Nominal stress: σ_nom = M·(d/2)/I = M/(πd³/32); For F=5000N at L=0.3m: M=1500N·m; σ_nom = 32×1500/(π×0.05³) = 122.2 MPa; Peak stress at fillet: σ_max = Kt × σ_nom = 2.0 × 122.2 = 244.4 MPa; Modified fatigue limit: σ_{-1}' = σ_{-1} × ε × β = 270 × 0.75 × 0.85 = 171.9 MPa; Soderberg: σ_a/(σ_{-1}'/Kf) + σ_m/σ_y ≤ 1; Kf = 1 + q(Kt-1) = 1 + 0.8(2.0-1) = 1.8; Soderberg check: 80/(171.9/1.8) + 100/355 = 80/95.5 + 100/355 = 0.838 + 0.282 = 1.12 > 1 (not safe); Goodman: σ_a/σ_{-1}' + σ_m/σ_b = 80/171.9 + 100/600 = 0.465 + 0.167 = 0.632 < 1 (safe); Fatigue life from S-N: log(N) = (σ_f'-σ_a)/(b) ≈ 5.8, N_f ≈ 6.3e5 cycles",
+    "reference": "Shigley, J.E. Mechanical Engineering Design; GB/T 19436 机械疲劳设计方法"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5.0,
+    "stress_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "FE computed stress concentration factor Kt",
+        "value": 2.0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Nominal bending stress at fillet section",
+        "value": 122200000,
+        "unit": "Pa",
+        "tolerance": 3.0
+      },
+      {
+        "name": "Peak stress at fillet",
+        "value": 244400000,
+        "unit": "Pa",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Soderberg safety factor",
+        "value": 0.893,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Goodman safety factor",
+        "value": 1.582,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "Estimated fatigue life N_f",
+        "value": 630000,
+        "unit": "cycles",
+        "tolerance": 30.0
+      },
+      {
+        "name": "Modified fatigue limit σ_{-1}'",
+        "value": 171900000,
+        "unit": "Pa",
+        "tolerance": 3.0
+      }
+    ]
+  }
+}

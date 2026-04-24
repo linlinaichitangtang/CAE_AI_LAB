@@ -1,0 +1,59 @@
+{
+  "id": "FS-02",
+  "name": "圆柱绕流共振",
+  "nameEn": "Cylinder Vortex-Induced Lock-In",
+  "description": "模拟弹性支撑圆柱在均匀水流中的涡激振动锁定（lock-in）现象。当涡脱落频率接近圆柱固有频率时，发生频率锁定，振幅显著增大。验证锁定范围为f_n±20%，Strouhal数St=0.2。圆柱直径D=0.05m，长度L=0.5m，水流速度U=1m/s，雷诺数Re=UD/ν≈50000。采用分区耦合方法，结构为弹簧-质量-阻尼系统。",
+  "category": "fsi",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["lock-in", "vortex-shedding", "cylinder", "VIV", "Strouhal"],
+  "fluid_domain": {
+    "type": "external",
+    "density": 998.0,
+    "viscosity": 1.0e-3,
+    "velocity": 1.0,
+    "pressure": 101325.0
+  },
+  "structure_domain": {
+    "type": "cylinder",
+    "length": 0.5,
+    "width": 0.05,
+    "thickness": 0.002,
+    "elastic_modulus": 210000000000.0,
+    "density": 7850.0
+  },
+  "coupling": {
+    "method": "partitioned",
+    "interface": "wet_surface",
+    "time_step": 0.002,
+    "total_time": 30.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Strouhal数",
+        "value": 0.2,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "涡脱落频率",
+        "value": 4.0,
+        "unit": "Hz",
+        "tolerance": 15
+      },
+      {
+        "name": "锁定频率范围",
+        "value": 3.2,
+        "unit": "Hz",
+        "tolerance": 20
+      },
+      {
+        "name": "最大横向振幅比",
+        "value": 0.6,
+        "unit": "-",
+        "tolerance": 25
+      }
+    ]
+  }
+}

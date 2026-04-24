@@ -1,0 +1,80 @@
+{
+  "id": "BM-06",
+  "name": "血管支架扩张",
+  "nameEn": "Stent Expansion",
+  "description": "球囊扩张式血管支架（NiTi镍钛合金超弹性）力学分析。支架初始直径D₀=0.003m（3mm），扩张后直径D₁=0.004m（4mm），支架长度L=0.015m，筋宽w=0.0001m，筋厚t=0.00008m。NiTi超弹性材料参数：奥氏体弹性模量E_A=75GPa，马氏体弹性模量E_M=28GPa，ν=0.33，ρ=6450kg/m³，σ_MS=480MPa（马氏体开始应力），σ_MF=680MPa（马氏体结束应力），σ_AS=300MPa（奥氏体开始应力），σ_AF=100MPa（奥氏体结束应力）。球囊内压p=1.2MPa驱动扩张。验证塑性变形量及回弹率（springback ratio），回弹率≈5-8%。",
+  "category": "biomechanics",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["stent", "NiTi", "superelastic", "balloon expansion", "plastic deformation", "springback"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.015,
+    "radius": 0.0015,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 30,
+    "y_div": 24,
+    "z_div": 4,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "NiTi Superelastic Alloy",
+    "elastic_modulus": 75000000000,
+    "poisson_ratio": 0.33,
+    "density": 6450,
+    "yield_stress": 480000000,
+    "ultimate_stress": 1000000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "axial_symmetry",
+    "load_type": "pressure",
+    "load_face": "inner_surface",
+    "load_magnitude": 1200000,
+    "load_direction": "radial"
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 300,
+    "convergence_tolerance": 1e-7
+  },
+  "theoretical": {
+    "max_displacement": 5e-4,
+    "max_stress": 680000000,
+    "formula": "ε_circumferential = (D₁ - D₀) / D₀ = 33.3%, springback = (D_deployed - D_crimped) / (D_crimped - D₀)",
+    "reference": "Duerig et al., Materials Science and Engineering A, 1999; FDA Guidance for Stent Systems"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15,
+    "stress_error_limit": 15
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "环向应变",
+        "value": 0.333,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "最大von Mises应力",
+        "value": 680000000,
+        "unit": "Pa",
+        "tolerance": 15
+      },
+      {
+        "name": "回弹率",
+        "value": 6.5,
+        "unit": "%",
+        "tolerance": 20
+      },
+      {
+        "name": "残余应力",
+        "value": 200000000,
+        "unit": "Pa",
+        "tolerance": 25
+      }
+    ]
+  }
+}

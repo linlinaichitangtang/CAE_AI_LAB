@@ -1,0 +1,89 @@
+{
+  "id": "SS-47",
+  "name": "Inconel 617高温蠕变分析",
+  "nameEn": "Inconel 617 High Temperature Creep Analysis",
+  "description": "对Inconel 617镍基高温合金在1100°C（1373K）下进行稳态蠕变分析。采用Norton幂律蠕变本构模型，参数A=5.5e-17，n=5.5，施加应力σ=50MPa。稳态蠕变率ε̇_ss=A·σ^n=5.5e-17×(50e6)^5.5=1.23e-7/s。验证Elliot-Norton蠕变曲线及100小时累积蠕变应变。",
+  "category": "structural",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["蠕变", "Inconel 617", "Norton模型", "高温合金", "时间相关"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.1,
+    "width": 0.01,
+    "height": 0.05,
+    "radius": 0.005,
+    "thickness": 0.0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 20,
+    "z_div": 10,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Inconel Alloy 617",
+    "elastic_modulus": 1.6e11,
+    "poisson_ratio": 0.3,
+    "density": 8360,
+    "yield_stress": 275e6,
+    "thermal_expansion": 1.37e-5,
+    "thermal_conductivity": 26.8,
+    "specific_heat": 586
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "uniform",
+    "load_face": "top_face",
+    "load_magnitude": 50000,
+    "load_direction": "Y",
+    "temperature_bc": {
+      "temperature": 1373,
+      "uniform": true
+    }
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.044,
+    "max_stress": 50e6,
+    "formula": "ε̇_ss = A·σ^n = 5.5e-17 × (50e6)^5.5 = 1.23e-7 /s; ε_total(100h) = ε̇_ss × t = 1.23e-7 × 360000 = 0.0443",
+    "reference": "ASM Handbook Vol.1; NRIM Creep Data Sheets for Inconel 617"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "稳态蠕变率 Steady-State Creep Rate",
+        "value": 1.23e-7,
+        "unit": "1/s",
+        "tolerance": 10
+      },
+      {
+        "name": "100小时累积蠕变应变 Creep Strain at 100h",
+        "value": 4.43,
+        "unit": "%",
+        "tolerance": 10
+      },
+      {
+        "name": "100小时蠕变伸长量 Creep Elongation at 100h",
+        "value": 2.22,
+        "unit": "mm",
+        "tolerance": 10
+      },
+      {
+        "name": "Norton应力指数 Stress Exponent n",
+        "value": 5.5,
+        "unit": "-",
+        "tolerance": 5
+      }
+    ]
+  }
+}

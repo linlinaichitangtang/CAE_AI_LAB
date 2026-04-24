@@ -1,0 +1,86 @@
+{
+  "id": "SS-42",
+  "name": "吊装工况动力分析",
+  "nameEn": "Lifting Dynamics Analysis",
+  "description": "对钢结构框架吊装工况进行动力分析。结构尺寸5m×3m×2m，总质量5000kg，采用4点吊装方案，钢丝绳与水平面夹角60°。考虑动力放大系数DAF=1.5，单根吊绳拉力F=mg·DAF/(4·sin60°)=5000×9.81×1.5/(4×sin60°)=21217N。校核吊耳处应力集中及框架整体变形，确保吊装安全。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["吊装分析", "动力放大", "钢丝绳", "钢结构"],
+  "geometry": {
+    "type": "block",
+    "length": 5.0,
+    "width": 3.0,
+    "height": 2.0,
+    "radius": 0.0,
+    "thickness": 0.0,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 12,
+    "z_div": 8,
+    "element_type": "C3D8R"
+  },
+  "material": {
+    "name": "Q345B Structural Steel",
+    "elastic_modulus": 2.06e11,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 345e6,
+    "thermal_expansion": 1.2e-5,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "four_lifting_points",
+    "load_type": "point",
+    "load_face": "gravity_direction",
+    "load_magnitude": 73575,
+    "load_direction": "Y",
+    "temperature_bc": {}
+  },
+  "solver": {
+    "type": "dynamic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_displacement": 0.003,
+    "max_stress": 180e6,
+    "formula": "F_sling = mg·DAF/(4·sin60°) = 5000×9.81×1.5/(4×0.866) = 21217 N; σ_hook = F/A_eff + bending stress",
+    "reference": "GB 50017-2017 钢结构设计标准, 吊装工程规范"
+  },
+  "acceptance": {
+    "displacement_error_limit": 5,
+    "stress_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "单根吊绳拉力 Sling Force",
+        "value": 21217,
+        "unit": "N",
+        "tolerance": 3
+      },
+      {
+        "name": "吊耳处最大应力 Max Stress at Lifting Lug",
+        "value": 180,
+        "unit": "MPa",
+        "tolerance": 5
+      },
+      {
+        "name": "框架最大挠度 Max Deflection",
+        "value": 3.0,
+        "unit": "mm",
+        "tolerance": 5
+      },
+      {
+        "name": "动力放大系数 DAF",
+        "value": 1.5,
+        "unit": "-",
+        "tolerance": 5
+      }
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "id": "TC-38",
+  "name": "超临界水氧化热耦合分析",
+  "nameEn": "Supercritical Water Oxidation (SCWO) Coupled Flow-Heat-Reaction Analysis",
+  "description": "超临界水氧化(SCWO)反应器热-流-化学反应耦合分析。操作条件：T=873K，P=25MPa(水的临界点T_c=647K，P_c=22.1MPa)。有机废物氧化反应放热ΔH=-2000kJ/kg。超临界水物性：k=0.2W/(m·K)，ρ=200kg/m³，c_p=6000J/(kg·K)(近临界区比热容极高)。反应器内径D=0.05m，长度L=1.0m。废物浓度C_waste=0.05kg/m³，流量m_dot=0.1kg/s。温升ΔT=ΔH·C_waste·V_dot/(m_dot·c_p)=2e6×0.05×5e-4/(0.1×6000)=0.083K/s(单位体积)。考虑反应放热集中区域，局部温升可达50-100K。验证耦合场下温度分布及反应转化率。材料为Inconel 625：E=205GPa，k=12W/(m·K)，α=13.0×10⁻⁶/K。",
+  "category": "thermal",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["SCWO", "supercritical_water", "oxidation", "coupled_analysis", "exothermic_reaction", "Inconel_625", "high_pressure", "waste_treatment"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 1.0,
+    "width": null,
+    "height": null,
+    "radius": 0.025,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 50,
+    "y_div": 30,
+    "z_div": 30,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Inconel 625 (High Temperature Alloy)",
+    "elastic_modulus": 205000000000,
+    "poisson_ratio": 0.3,
+    "density": 8440,
+    "yield_stress": 414000000,
+    "thermal_expansion": 13.0e-6,
+    "thermal_conductivity": 12,
+    "specific_heat": 580
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "outer_surface",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 873,
+      "T_boundary": 873,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 25,
+      "heat_source": 500000,
+      "emissivity": 0.8
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6,
+    "time_step": 0.1,
+    "total_time": 30
+  },
+  "theoretical": {
+    "max_displacement": 1e-3,
+    "max_stress": 350000000,
+    "max_temperature": 973,
+    "formula": "Delta_T = Delta_H * C_waste * V_dot / (m_dot * c_p); Q_rxn = Delta_H * r_rxn * C_waste; r_rxn = A * exp(-Ea/(R*T)); sigma_th = E * alpha * Delta_T / (1 - nu); Energy balance: rho*c_p*dT/dt = k*laplacian(T) + Q_rxn - h*(T-T_amb)",
+    "reference": "Tester et al., Supercritical Water Oxidation: A Review, J. Supercritical Fluids, 1997; Bermejo & Cocero, Supercritical Water Oxidation, Handbook of Green Chemistry, 2012"
+  },
+  "acceptance": {
+    "displacement_error_limit": 15.0,
+    "stress_error_limit": 15.0,
+    "temperature_error_limit": 8.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "operating_temperature",
+        "value": 873,
+        "unit": "K",
+        "tolerance": 2.0
+      },
+      {
+        "name": "operating_pressure",
+        "value": 25000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "reaction_enthalpy",
+        "value": -2e6,
+        "unit": "J/kg",
+        "tolerance": 5.0
+      },
+      {
+        "name": "supercritical_water_density",
+        "value": 200,
+        "unit": "kg/m^3",
+        "tolerance": 10.0
+      },
+      {
+        "name": "supercritical_water_cp",
+        "value": 6000,
+        "unit": "J/(kg*K)",
+        "tolerance": 10.0
+      },
+      {
+        "name": "local_temperature_rise",
+        "value": 100,
+        "unit": "K",
+        "tolerance": 15.0
+      },
+      {
+        "name": "max_wall_temperature",
+        "value": 973,
+        "unit": "K",
+        "tolerance": 8.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 350000000,
+        "unit": "Pa",
+        "tolerance": 15.0
+      },
+      {
+        "name": "Inconel_625_thermal_conductivity",
+        "value": 12,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "waste_concentration",
+        "value": 0.05,
+        "unit": "kg/m^3",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

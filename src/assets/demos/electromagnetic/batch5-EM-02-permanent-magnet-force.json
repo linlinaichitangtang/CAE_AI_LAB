@@ -1,0 +1,80 @@
+{
+  "id": "EM-02",
+  "name": "永磁体磁力",
+  "nameEn": "Permanent Magnet Force",
+  "description": "NdFeB永磁体间磁力分析。两块圆柱形永磁体，直径D=0.02m，高度H=0.01m，气隙g=0.002m。NdFeB材料参数：剩磁B_r=1.2T，矫顽力H_c=900kA/m，相对回复磁导率μ_r=1.05，密度ρ=7500kg/m³，E=160GPa，ν=0.24。Maxwell应力张张量法计算磁力：F=B²A/(2μ₀)，其中B≈B_r×(1-g/(g+H))=1.2×(1-0.002/0.012)=1.0T，接触面积A=π×(0.01)²=3.14e-4m²。理论吸引力F=1.0²×3.14e-4/(2×4π×1e-7)=1.0×3.14e-4/(2.513e-6)=125N。验证磁力大小及气隙-力特性曲线。",
+  "category": "electromagnetic",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["permanent magnet", "NdFeB", "Maxwell stress tensor", "magnetic force", "attraction"],
+  "geometry": {
+    "type": "magnet",
+    "length": 0.01,
+    "radius": 0.01,
+    "height": 0.01,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 16,
+    "y_div": 16,
+    "z_div": 20,
+    "element_type": "SOLID97"
+  },
+  "material": {
+    "name": "NdFeB N42",
+    "elastic_modulus": 160000000000,
+    "poisson_ratio": 0.24,
+    "density": 7500,
+    "electrical_conductivity": 625000,
+    "relative_permeability": 1.05
+  },
+  "electromagnetic_bc": {
+    "current": 0,
+    "voltage": 0,
+    "frequency_hz": 0,
+    "magnetic_flux_density": 1.2
+  },
+  "boundaryConditions": {
+    "fixed_face": "magnet_1_bottom",
+    "load_type": "electromagnetic_force",
+    "load_magnitude": 125
+  },
+  "solver": {
+    "type": "magnetostatic",
+    "max_iterations": 100,
+    "convergence_tolerance": 1e-8
+  },
+  "theoretical": {
+    "max_stress": 10000000,
+    "magnetic_force": 125,
+    "temperature_rise": 0,
+    "formula": "F = B²A/(2μ₀), B ≈ B_r × (1 - g/(g+H))",
+    "reference": "Furlani, Permanent Magnet and Electromechanical Devices, 2001"
+  },
+  "acceptance": {
+    "force_error_limit": 10,
+    "temperature_error_limit": 5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "磁吸引力",
+        "value": 125,
+        "unit": "N",
+        "tolerance": 10
+      },
+      {
+        "name": "气隙磁通密度",
+        "value": 1.0,
+        "unit": "T",
+        "tolerance": 10
+      },
+      {
+        "name": "最大接触应力",
+        "value": 10000000,
+        "unit": "Pa",
+        "tolerance": 15
+      }
+    ]
+  }
+}

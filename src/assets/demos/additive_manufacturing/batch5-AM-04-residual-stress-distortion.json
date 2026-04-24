@@ -1,0 +1,80 @@
+{
+  "id": "AM-04",
+  "name": "SLM残余应力+变形",
+  "nameEn": "SLM Residual Stress and Distortion",
+  "description": "SLM悬臂梁残余应力与翘曲变形分析。悬臂梁尺寸：L=50mm，W=10mm，H=5mm，Ti-6Al-4V材料。支撑结构密度50%，支撑位于底部。基板预热温度T_pre=200°C，熔池峰值温度T_max≈3500K，冷却至室温T_room=25°C。Ti-6Al-4V参数：E=110GPa，ν=0.33，ρ=4430kg/m³，σ_y=880MPa，CTE=8.6ppm/K，热导率k=6.7W/(m·K)。残余应力机理：温度梯度机制（TGM）主导，σ_residual≈E×α×ΔT/(1-ν)=110e9×8.6e-6×(3500-200)/(1-0.33)=110e9×8.6e-6×3300/0.67=4.65GPa（理论上限，实际受塑性松弛限制）。实测残余应力约300-600MPa。悬臂梁端部翘曲δ≈0.5mm。验证支撑密度对翘曲量的影响。",
+  "category": "additive_manufacturing",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["residual stress", "distortion", "SLM", "cantilever", "support density", "Ti-6Al-4V", "TGM"],
+  "geometry": {
+    "type": "beam",
+    "length": 0.05,
+    "width": 0.01,
+    "height": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 10,
+    "z_div": 8,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Ti-6Al-4V (SLM printed)",
+    "elastic_modulus": 110000000000,
+    "poisson_ratio": 0.33,
+    "density": 4430,
+    "yield_stress": 880000000,
+    "ultimate_stress": 950000000
+  },
+  "boundaryConditions": {
+    "fixed_face": "base_plate_connection",
+    "load_type": "thermal",
+    "load_face": "top_surface",
+    "load_magnitude": 3300
+  },
+  "solver": {
+    "type": "nonlinear",
+    "max_iterations": 500,
+    "convergence_tolerance": 1e-6
+  },
+  "theoretical": {
+    "max_displacement": 5e-4,
+    "max_stress": 600000000,
+    "formula": "σ_residual ≈ E × α × ΔT / (1-ν), δ ≈ σ × L² / (2E × h) (cantilever bending)",
+    "reference": "Mercelis & Kruth, RPJ, 2006; Li et al., J. Materials Processing Tech., 2017"
+  },
+  "acceptance": {
+    "displacement_error_limit": 20,
+    "stress_error_limit": 20
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "端部翘曲量（50%支撑）",
+        "value": 5e-4,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "端部翘曲量（100%支撑）",
+        "value": 2e-4,
+        "unit": "m",
+        "tolerance": 25
+      },
+      {
+        "name": "最大残余应力",
+        "value": 600000000,
+        "unit": "Pa",
+        "tolerance": 20
+      },
+      {
+        "name": "基板-零件界面应力",
+        "value": 400000000,
+        "unit": "Pa",
+        "tolerance": 25
+      }
+    ]
+  }
+}

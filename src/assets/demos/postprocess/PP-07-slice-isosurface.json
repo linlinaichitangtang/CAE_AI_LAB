@@ -1,0 +1,52 @@
+{
+  "id": "PP-07",
+  "name": "切片云图与等值面",
+  "nameEn": "Slice Contour and Isosurface Visualization",
+  "description": "展示L型支架内部应力分布的高级后处理技术。支架尺寸0.2m，壁厚10mm，材料为结构钢(E=200GPa)，在顶部施加50kN载荷。采用三个正交切片(XY、XZ、YZ平面)显示内部应力场，同时叠加Von Mises等值面(200MPa)标识高应力区域。此案例综合演示切片云图与等值面的组合使用方法，是复杂零件后处理分析的典型工作流。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["切片", "等值面", "Von Mises", "内部应力", "L型支架", "组合可视化"],
+  "visualization": {
+    "type": "slice",
+    "field": "von_mises",
+    "color_map": "hot",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 18500,
+    "elements": 14200,
+    "results_file": "results/postprocess/l_bracket_stress.dat"
+  },
+  "display_settings": {
+    "title": "L型支架 - 切片云图 + Von Mises等值面 (200MPa)",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": 0,
+      "max": 350,
+      "label": "Von Mises应力 (MPa)",
+      "n_levels": 18
+    },
+    "camera": {
+      "position": { "x": 0.25, "y": 0.2, "z": 0.3 },
+      "target": { "x": 0.1, "y": 0.08, "z": 0.05 },
+      "rotation": { "pitch": -25, "yaw": 35 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大Von Mises应力", "value": 320, "unit": "MPa", "tolerance": 5 },
+      { "name": "等值面阈值", "value": 200, "unit": "MPa", "tolerance": 0 },
+      { "name": "应力集中系数", "value": 2.8, "unit": "", "tolerance": 10 },
+      { "name": "最大位移", "value": 0.15, "unit": "mm", "tolerance": 10 },
+      { "name": "切片数量", "value": 3, "unit": "个", "tolerance": 0 }
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "id": "TC-33",
+  "name": "锅炉受热面壁温分析",
+  "nameEn": "Boiler Heating Surface Wall Temperature Analysis - SA213-T12 Water Tube",
+  "description": "锅炉水冷壁管壁温分布分析。水冷壁管外径D=0.05m，壁厚t=0.005m，材料为SA213-T12低合金耐热钢。烟气侧温度T_g=1273K，对流换热系数h_g=80W/(m²·K)；水/蒸汽侧温度T_w=573K，对流换热系数h_w=10000W/(m²·K)。管壁热阻R_w=ln(r_o/r_i)/(2πkL)，其中k=35W/(m·K)。稳态热平衡：q=h_g(T_g-T_wo)=k(T_wo-T_wi)/t=h_w(T_wi-T_w)。计算得T_wo≈673K，T_wi≈583K。SA213-T12物性：E=180GPa，ρ=7800kg/m³，α=12.5×10⁻⁶/K，c_p=520J/(kg·K)。验证管壁温度分布及热应力水平。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["boiler", "water_tube", "SA213_T12", "wall_temperature", "convection", "steady_thermal", "power_plant", "heat_transfer"],
+  "geometry": {
+    "type": "cylinder",
+    "length": 0.2,
+    "width": null,
+    "height": null,
+    "radius": 0.025,
+    "thickness": 0.005,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 40,
+    "z_div": 20,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "SA213-T12 Low Alloy Steel",
+    "elastic_modulus": 180000000000,
+    "poisson_ratio": 0.3,
+    "density": 7800,
+    "yield_stress": 205000000,
+    "thermal_expansion": 12.5e-6,
+    "thermal_conductivity": 35,
+    "specific_heat": 520
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "convection",
+    "load_face": "outer_surface",
+    "load_magnitude": 80,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 573,
+      "T_boundary": 1273,
+      "T_ambient": 1273,
+      "heat_flux": 0,
+      "convection_coeff": 80,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "steady_thermal",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8,
+    "time_step": 1,
+    "total_time": 1
+  },
+  "theoretical": {
+    "max_displacement": 5e-5,
+    "max_stress": 120000000,
+    "max_temperature": 673,
+    "formula": "q = h_g*(T_g - T_wo) = k*(T_wo - T_wi)/t = h_w*(T_wi - T_w); T_wo = T_g - q/h_g; T_wi = T_w + q/h_w; R_total = 1/h_g + t/k + 1/h_w; q = (T_g - T_w)/R_total",
+    "reference": "ASME Boiler and Pressure Vessel Code Section I; Incropera et al., Fundamentals of Heat and Mass Transfer, 7th Ed."
+  },
+  "acceptance": {
+    "displacement_error_limit": 10.0,
+    "stress_error_limit": 10.0,
+    "temperature_error_limit": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "outer_wall_temperature",
+        "value": 673,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "inner_wall_temperature",
+        "value": 583,
+        "unit": "K",
+        "tolerance": 3.0
+      },
+      {
+        "name": "flue_gas_temperature",
+        "value": 1273,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "water_steam_temperature",
+        "value": 573,
+        "unit": "K",
+        "tolerance": 1.0
+      },
+      {
+        "name": "gas_side_convection_coeff",
+        "value": 80,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "water_side_convection_coeff",
+        "value": 10000,
+        "unit": "W/(m^2*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "heat_flux",
+        "value": 80000,
+        "unit": "W/m^2",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_conductivity_SA213T12",
+        "value": 35,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "wall_temperature_difference",
+        "value": 90,
+        "unit": "K",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_stress",
+        "value": 120000000,
+        "unit": "Pa",
+        "tolerance": 10.0
+      }
+    ]
+  }
+}

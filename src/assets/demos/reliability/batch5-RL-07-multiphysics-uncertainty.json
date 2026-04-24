@@ -1,0 +1,91 @@
+{
+  "id": "RL-07",
+  "name": "多物理场不确定性量化",
+  "nameEn": "Multiphysics Uncertainty Quantification",
+  "description": "热-力耦合多物理场问题的全局灵敏度分析和不确定性量化。考虑5个输入随机变量：环境温度、对流换热系数、热膨胀系数、弹性模量和外载荷。采用Sobol灵敏度指数（一阶效应S_i和全效应S_Ti）量化各输入变量对结构响应（最大热应力、最大位移）的贡献度。通过拉丁超立方抽样（LHS）生成样本点，结合有限元热-力耦合分析计算响应。该算例展示如何在多物理场耦合问题中识别关键不确定性来源，为稳健设计和不确定性传播分析提供指导。",
+  "category": "reliability",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["多物理场", "热-力耦合", "Sobol灵敏度", "不确定性量化", "LHS", "全局灵敏度"],
+  "random_variables": [
+    {
+      "name": "ambient_temperature",
+      "distribution": "normal",
+      "mean": 293.15,
+      "stddev": 14.65,
+      "cov": 0.05
+    },
+    {
+      "name": "convection_coefficient",
+      "distribution": "uniform",
+      "mean": 25,
+      "stddev": 5.77,
+      "cov": 0.231
+    },
+    {
+      "name": "thermal_expansion_coefficient",
+      "distribution": "normal",
+      "mean": 0.000012,
+      "stddev": 0.0000006,
+      "cov": 0.05
+    },
+    {
+      "name": "elastic_modulus",
+      "distribution": "normal",
+      "mean": 210000000000,
+      "stddev": 10500000000,
+      "cov": 0.05
+    },
+    {
+      "name": "mechanical_load",
+      "distribution": "lognormal",
+      "mean": 100000,
+      "stddev": 15000,
+      "cov": 0.15
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "sigma_allowable - sigma_thermal_mechanical(T_amb, h, alpha, E, P)",
+    "description": "隐式极限状态函数，热-力耦合最大等效应力不超过许用应力。需通过顺序耦合热-力有限元分析计算"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 10000,
+    "target_reliability_index": 3.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "Sobol_first_order_ambient_temperature",
+        "value": 0.35,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "Sobol_first_order_mechanical_load",
+        "value": 0.25,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "Sobol_total_thermal_expansion",
+        "value": 0.30,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "failure_probability",
+        "value": 0.00135,
+        "unit": "",
+        "tolerance": 25
+      },
+      {
+        "name": "coefficient_of_variation_response",
+        "value": 0.18,
+        "unit": "",
+        "tolerance": 20
+      }
+    ]
+  }
+}

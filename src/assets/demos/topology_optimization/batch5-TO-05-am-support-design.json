@@ -1,0 +1,90 @@
+{
+  "id": "TO-05",
+  "name": "增材制造支撑结构设计",
+  "nameEn": "Additive Manufacturing Support Structure Design",
+  "description": "面向增材制造（3D打印）的拓扑优化问题。针对悬垂角度超过45度的结构特征，设计最优的自支撑拓扑结构。在传统拓扑优化基础上，增加增材制造约束：最大悬垂角度45度、最小特征尺寸0.5mm。通过制造约束投影方法（如过悬挂角度过滤），确保优化结果可直接用于增材制造而无需额外支撑材料。设计域为包含悬垂特征的典型3D打印件截面，材料为316L不锈钢（常用SLM打印材料）。优化目标为在满足制造约束条件下最小化柔度，同时控制体积分数。",
+  "category": "topology_optimization",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["SIMP", "增材制造", "3D打印", "制造约束", "悬垂角度", "自支撑"],
+  "design_domain": {
+    "type": "block",
+    "length": 0.05,
+    "width": 0.05,
+    "height": 0.03,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 100,
+    "y_div": 100,
+    "z_div": 60,
+    "element_type": "C3D8"
+  },
+  "material": {
+    "name": "Stainless Steel 316L (SLM)",
+    "elastic_modulus": 193000000000,
+    "poisson_ratio": 0.3,
+    "density": 7990
+  },
+  "optimization": {
+    "method": "SIMP",
+    "objective": "minimize_compliance",
+    "volume_fraction": 0.3,
+    "penalization": 3,
+    "filter_radius": 0.001,
+    "max_iterations": 150,
+    "convergence_tolerance": 0.01
+  },
+  "boundaryConditions": {
+    "fixed_face": "bottom_face",
+    "load_type": "uniform",
+    "load_face": "top_surface",
+    "load_magnitude": 5000,
+    "load_direction": "-Y"
+  },
+  "constraints": [
+    {
+      "type": "volume",
+      "value": 0.3,
+      "unit": "ratio"
+    },
+    {
+      "type": "manufacturing",
+      "value": 45,
+      "unit": "degrees"
+    },
+    {
+      "type": "manufacturing",
+      "value": 0.0005,
+      "unit": "m"
+    }
+  ],
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "optimal_compliance",
+        "value": 0.12,
+        "unit": "N·m",
+        "tolerance": 15
+      },
+      {
+        "name": "max_overhang_angle",
+        "value": 43,
+        "unit": "degrees",
+        "tolerance": 10
+      },
+      {
+        "name": "min_feature_size",
+        "value": 0.0005,
+        "unit": "m",
+        "tolerance": 20
+      },
+      {
+        "name": "support_material_reduction",
+        "value": 85,
+        "unit": "percent",
+        "tolerance": 15
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@
  */
 
 import { defineStore } from 'pinia'
+import { agentOrchestrator, stateTracker, type TaskPlan, type AgentMessage, type AgentMetrics } from '../agent'
 
 export type AiSource = 'third-party' | 'local' | 'platform'
 
@@ -56,6 +57,12 @@ interface AiState {
   context: ContextData
   isGenerating: boolean
   currentStreamingText: string
+  // V2.4 Agent 扩展
+  agentMode: boolean
+  agentMessages: AgentMessage[]
+  currentPlan: TaskPlan | null
+  agentMetrics: AgentMetrics | null
+  agentPanelVisible: boolean
 }
 
 // 默认配置
@@ -79,7 +86,12 @@ export const useAiStore = defineStore('ai', {
     config: { ...defaultConfig },
     context: { ...defaultContext },
     isGenerating: false,
-    currentStreamingText: ''
+    currentStreamingText: '',
+    agentMode: false,
+    agentMessages: [],
+    currentPlan: null,
+    agentMetrics: null,
+    agentPanelVisible: false,
   }),
 
   getters: {
@@ -94,7 +106,14 @@ export const useAiStore = defineStore('ai', {
         timestamp: Date.now()
       }
       return [systemMessage, ...state.messages]
-    }
+    },
+    // V2.4 Agent getters
+    agentIsExecuting: (state) => state.currentPlan?.status === 'executing',
+    agentProgress: (state) => {
+      if (!state.currentPlan || state.currentPlan.subTasks.length === 0) return 0
+      const completed = state.currentPlan.subTasks.filter(s => s.status === 'done' || s.status === 'skipped').length
+      return Math.round((completed / state.currentPlan.subTasks.length) * 100)
+    },
   },
 
   actions: {
@@ -198,7 +217,104 @@ export const useAiStore = defineStore('ai', {
     resetConfig() {
       this.config = { ...defaultConfig }
       this.saveConfig()
-    }
+    },
+
+    // ========== V2.4 Agent Actions ==========
+
+    /** 切换 Agent 模式 */
+    toggleAgentMode() {
+      this.agentMode = !this.agentMode
+      this.agentPanelVisible = this.agentMode
+      stateTracker.setAgentMode(this.agentMode)
+    },
+
+    /** 设置 Agent 模式 */
+    setAgentMode(enabled: boolean) {
+      this.agentMode = enabled
+      this.agentPanelVisible = enabled
+      stateTracker.setAgentMode(enabled)
+    },
+
+    /** 通过 Agent 处理用户输入 */
+    async processWithAgent(input: string): Promise<AgentMessage[]> {
+      this.addUserMessage(input)
+      this.startGeneration()
+      
+      try {
+        const messages = await agentOrchestrator.processUserInput(input)
+        this.agentMessages.push(...messages)
+        
+        // 更新当前计划
+        const plan = stateTracker.getCurrentPlan()
+        if (plan) {
+          this.currentPlan = plan
+        }
+        
+        // 更新指标
+        this.agentMetrics = agentOrchestrator.getMetrics()
+        
+        // 将最后一条助手消息添加到常规消息流
+        const lastAssistant = messages.filter(m => m.role === 'assistant').pop()
+        if (lastAssistant) {
+          this.addAssistantMessage(lastAssistant.content)
+        }
+        
+        return messages
+      } catch (error) {
+        const errorMsg = `Agent 错误: ${String(error)}`
+        this.addAssistantMessage(errorMsg)
+        return []
+      } finally {
+        this.finishGeneration()
+      }
+    },
+
+    /** 暂停 Agent 任务 */
+    pauseAgent() {
+      agentOrchestrator.pause()
+      this.currentPlan = stateTracker.getCurrentPlan()
+    },
+
+    /** 恢复 Agent 任务 */
+    async resumeAgent(): Promise<AgentMessage[]> {
+      const messages = await agentOrchestrator.resume()
+      this.agentMessages.push(...messages)
+      this.currentPlan = stateTracker.getCurrentPlan()
+      this.agentMetrics = agentOrchestrator.getMetrics()
+      return messages
+    },
+
+    /** 取消 Agent 任务 */
+    cancelAgent() {
+      agentOrchestrator.cancel()
+      this.currentPlan = null
+    },
+
+    /** 确认 Agent 等待中的操作 */
+    async confirmAgentAction(subTaskId: string): Promise<AgentMessage[]> {
+      const messages = await agentOrchestrator.confirmPendingAction(subTaskId)
+      this.agentMessages.push(...messages)
+      this.currentPlan = stateTracker.getCurrentPlan()
+      this.agentMetrics = agentOrchestrator.getMetrics()
+      return messages
+    },
+
+    /** 切换 Agent 面板可见性 */
+    toggleAgentPanel() {
+      this.agentPanelVisible = !this.agentPanelVisible
+    },
+
+    /** 刷新 Agent 指标 */
+    refreshAgentMetrics() {
+      this.agentMetrics = agentOrchestrator.getMetrics()
+      this.currentPlan = stateTracker.getCurrentPlan()
+    },
+
+    /** 清空 Agent 消息 */
+    clearAgentMessages() {
+      this.agentMessages = []
+      this.currentPlan = null
+    },
   }
 })
 

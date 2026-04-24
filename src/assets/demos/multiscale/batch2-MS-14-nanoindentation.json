@@ -1,0 +1,277 @@
+{
+  "id": "MS-14",
+  "name": "纳米压痕多尺度模拟",
+  "nameEn": "Nanoindentation Multiscale Simulation",
+  "description": "模拟金刚石球形压头(半径50nm)压入铝(111)表面的纳米压痕过程。通过MD模拟获得载荷-位移(P-h)曲线和位错形核机制，利用相场方法预测塑性区尺寸和形貌，最终通过有限元方法计算宏观硬度H≈0.5GPa并验证Oliver-Pharr分析方法。该案例展示从原子尺度位错形核到宏观硬度测量的完整跨尺度预测链路。",
+  "category": "multiscale",
+  "usage": "learning",
+  "difficulty": 3,
+  "tags": ["nanoindentation", "Oliver-Pharr", "dislocation nucleation", "hardness", "Al 111", "diamond tip", "P-h curve"],
+  "scales": ["md", "phase_field", "fe"],
+  "material_system": "Al (111) surface",
+  "pipeline_steps": [
+    {
+      "step": "md",
+      "name": "纳米压痕分子动力学模拟",
+      "description": "使用EAM势函数模拟金刚石球形压头压入Al(111)表面，捕获弹性-塑性转变、位错形核和P-h曲线",
+      "input": {
+        "substrate_material": "Al FCC",
+        "substrate_orientation": "(111)",
+        "substrate_dimensions": {
+          "Lx": 40,
+          "Ly": 40,
+          "Lz": 25,
+          "unit": "nm"
+        },
+        "atom_count": 3200000,
+        "indenter_material": "diamond_rigid",
+        "indenter_type": "spherical",
+        "indenter_radius": 5,
+        "indenter_radius_unit": "nm",
+        "indenter_velocity": 10,
+        "indenter_velocity_unit": "m/s",
+        "max_indentation_depth": 3,
+        "max_indentation_depth_unit": "nm",
+        "temperature": 300,
+        "temperature_unit": "K"
+      },
+      "output": {
+        "load_displacement_curve": "P_h_curve.dat",
+        "pop_in_event": {
+          "displacement": 0.8,
+          "displacement_unit": "nm",
+          "load_drop": 15,
+          "load_unit": "nN"
+        },
+        "hardness_MD": 5.2,
+        "hardness_MD_unit": "GPa",
+        "reduced_modulus_MD": 72.5,
+        "reduced_modulus_MD_unit": "GPa",
+        "dislocation_nucleation_stress": 8.5,
+        "nucleation_stress_unit": "GPa",
+        "dislocation_density_max": 2e16,
+        "dislocation_density_unit": "m^-2",
+        "plastic_zone_radius": 8,
+        "plastic_zone_radius_unit": "nm",
+        "contact_area_at_max_depth": 78.5,
+        "contact_area_unit": "nm^2",
+        "dislocation_structures": "dislocation_snapshot.vtk",
+        "atomic_displacement_field": "displacement_field.vtk"
+      },
+      "parameters": {
+        "potential": "EAM (Mishin Al)",
+        "potential_file": "Al_EAM_Mishin.eam.alloy",
+        "timestep": 1.0,
+        "timestep_unit": "fs",
+        "ensemble": "NVE_with_thermostat",
+        "boundary_atoms_temperature": 300,
+        "boundary_temperature_unit": "K",
+        "thermostat": "Nosé-Hoover",
+        "thermostat_coupling": 100,
+        "thermostat_coupling_unit": "fs",
+        "cutoff_radius": 6.5,
+        "cutoff_radius_unit": "Angstrom",
+        "total_steps": 3000000,
+        "dump_interval": 5000,
+        "neighbor_skin": 2.0,
+        "neighbor_skin_unit": "Angstrom",
+        "fix_bottom_layers": 5,
+        "fix_bottom_layers_unit": "nm",
+        "repulsive_indenter_potential": "repulsive_LJ",
+        "indentation_direction": "[111]"
+      },
+      "bridge_to_next": {
+        "mapping_method": "MD plastic zone geometry and dislocation density to phase field initial condition",
+        "data_transferred": [
+          "plastic_zone_radius",
+          "dislocation_density_field",
+          "P_h_curve",
+          "hardness_MD",
+          "contact_stiffness_S"
+        ]
+      }
+    },
+    {
+      "step": "phase_field",
+      "name": "塑性区相场模拟",
+      "description": "基于MD结果初始化塑性区，使用相场方法模拟压痕下方塑性区的扩展和位错密度演化",
+      "input": {
+        "domain_size": {
+          "Lx": 100,
+          "Ly": 100,
+          "Lz": 50,
+          "unit": "nm"
+        },
+        "grid_points": "200x200x100",
+        "initial_plastic_zone_source": "MD MS-14 Step 1",
+        "initial_plastic_zone_radius": 8,
+        "initial_plastic_zone_radius_unit": "nm",
+        "indentation_depth": 3,
+        "indentation_depth_unit": "nm",
+        "indenter_radius": 50,
+        "indenter_radius_unit": "nm",
+        "yield_stress": 0.15,
+        "yield_stress_unit": "GPa"
+      },
+      "output": {
+        "plastic_zone_evolution": "plastic_zone_evolution.vtk",
+        "final_plastic_zone_radius": 18,
+        "final_plastic_zone_radius_unit": "nm",
+        "plastic_strain_field": "plastic_strain.vtk",
+        "max_equivalent_plastic_strain": 0.35,
+        "dislocation_density_field": "rho_dislocation.vtk",
+        "hardness_field": "hardness_map.vtk",
+        "pile_up_height": 0.3,
+        "pile_up_height_unit": "nm",
+        "sink_in_depth": 0.1,
+        "sink_in_depth_unit": "nm"
+      },
+      "parameters": {
+        "model": "phase_field_plasticity",
+        "order_parameter": "eta_plastic (0=elastic, 1=fully_plastic)",
+        "interface_width": 3.0,
+        "interface_width_unit": "nm",
+        "gradient_energy_coefficient": 2e-10,
+        "gradient_energy_coefficient_unit": "J/m",
+        "mobility": 5e-14,
+        "mobility_unit": "m^3/(J*s)",
+        "driving_force": "von_Mises_stress_exceeds_yield",
+        "hardening_law": "isotropic_power_law",
+        "hardening_exponent": 0.3,
+        "time_step": 0.5,
+        "time_step_unit": "ns",
+        "total_time": 50,
+        "total_time_unit": "ns",
+        "elastic_coupling": true,
+        "youngs_modulus": 70,
+        "youngs_modulus_unit": "GPa",
+        "poisson_ratio": 0.35
+      },
+      "bridge_to_next": {
+        "mapping_method": "Phase field plastic strain distribution to FE continuum plasticity model",
+        "data_transferred": [
+          "plastic_zone_radius",
+          "plastic_strain_field",
+          "hardness_distribution",
+          "pile_up_sink_in_profile"
+        ]
+      }
+    },
+    {
+      "step": "fe",
+      "name": "Oliver-Pharr宏观硬度有限元分析",
+      "description": "建立宏观有限元纳米压痕模型，使用Oliver-Pharr方法从P-h曲线提取硬度和弹性模量，与MD和相场结果进行跨尺度对比",
+      "input": {
+        "specimen_geometry": {
+          "type": "half_space",
+          "dimensions": "200x200x100",
+          "dimensions_unit": "um"
+        },
+        "indenter": {
+          "type": "conical_equivalent",
+          "half_angle": 70.3,
+          "half_angle_unit": "degree",
+          "equivalent_to_spherical_radius": 50,
+          "equivalent_radius_unit": "nm"
+        },
+        "material_properties": {
+          "youngs_modulus": 70,
+          "youngs_modulus_unit": "GPa",
+          "poisson_ratio": 0.35,
+          "yield_stress": 0.15,
+          "yield_stress_unit": "GPa",
+          "hardening_modulus": 0.5,
+          "hardening_modulus_unit": "GPa",
+          "hardening_exponent": 0.3,
+          "source": "calibrated_from_MD_and_PF"
+        },
+        "max_indentation_depth": 500,
+        "max_indentation_depth_unit": "nm"
+      },
+      "output": {
+        "load_displacement_curve_FE": "P_h_curve_FE.dat",
+        "oliver_pharr_hardness": 0.48,
+        "hardness_unit": "GPa",
+        "oliver_pharr_reduced_modulus": 71.2,
+        "reduced_modulus_unit": "GPa",
+        "contact_depth_hc": 420,
+        "contact_depth_unit": "nm",
+        "projected_contact_area": 3.14e6,
+        "contact_area_unit": "nm^2",
+        "stiffness_S": 45.2,
+        "stiffness_unit": "uN/nm",
+        "plastic_zone_size_FE": 1.5,
+        "plastic_zone_size_FE_unit": "um",
+        "stress_field": "stress_field.vtk",
+        "strain_field": "strain_field.vtk"
+      },
+      "parameters": {
+        "element_type": "C3D8R",
+        "mesh_density": "axially_symmetric_200_r_x_100_z",
+        "mesh_refinement": "contact_zone_1um_refined",
+        "boundary_condition": "bottom_fixed_axisymmetric",
+        "solver_type": "static_implicit",
+        "contact_algorithm": "surface_to_surface_penalty",
+        "friction_coefficient": 0.1,
+        "material_model": "J2_isotropic_hardening",
+        "geometric_nonlinearity": true,
+        "max_increment": 1000,
+        "initial_increment_size": 0.001,
+        "max_increment_size": 0.05,
+        "convergence_tolerance": 1e-8
+      },
+      "bridge_to_next": {
+        "mapping_method": "FE hardness comparison with Oliver-Pharr analytical solution and MD data",
+        "data_transferred": [
+          "oliver_pharr_hardness",
+          "reduced_modulus",
+          "P_h_curve",
+          "plastic_zone_comparison"
+        ]
+      }
+    }
+  ],
+  "reference": {
+    "doi": "10.1016/0043-1648(92)90218-K",
+    "authors": "Oliver WC, Pharr GM",
+    "year": 1992,
+    "journal": "Journal of Materials Research"
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "MD pop-in displacement",
+        "value": 0.8,
+        "unit": "nm",
+        "tolerance": 25
+      },
+      {
+        "name": "MD hardness (nano-scale)",
+        "value": 5.2,
+        "unit": "GPa",
+        "tolerance": 30
+      },
+      {
+        "name": "FE Oliver-Pharr hardness (macro)",
+        "value": 0.48,
+        "unit": "GPa",
+        "tolerance": 15
+      },
+      {
+        "name": "Reduced modulus",
+        "value": 71.2,
+        "unit": "GPa",
+        "tolerance": 10
+      },
+      {
+        "name": "Contact stiffness S",
+        "value": 45.2,
+        "unit": "uN/nm",
+        "tolerance": 20
+      }
+    ]
+  },
+  "acceptance": {
+    "overall_error_limit": 20
+  }
+}

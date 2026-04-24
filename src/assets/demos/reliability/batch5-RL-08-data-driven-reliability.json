@@ -1,0 +1,97 @@
+{
+  "id": "RL-08",
+  "name": "数据驱动可靠性分析",
+  "nameEn": "Data-Driven Reliability Analysis",
+  "description": "基于神经网络代理模型的数据驱动可靠度分析方法。采用5000组训练样本（通过拉丁超立方抽样生成输入，有限元计算输出）训练深度神经网络（DNN）代理模型，替代昂贵的有限元分析。网络结构为3层全连接网络（输入层-隐藏层-输出层），使用ReLU激活函数和Adam优化器。在代理模型基础上进行大规模蒙特卡洛抽样（100万次），高效估计失效概率及其分位数（P90/P99）。通过与直接蒙特卡洛结果对比验证代理模型精度。该算例展示机器学习在可靠度分析中的应用潜力，以及如何平衡计算效率与预测精度。",
+  "category": "reliability",
+  "usage": "test",
+  "difficulty": 5,
+  "tags": ["数据驱动", "神经网络", "代理模型", "深度学习", "机器学习", "P90/P99"],
+  "random_variables": [
+    {
+      "name": "material_strength",
+      "distribution": "lognormal",
+      "mean": 250000000,
+      "stddev": 25000000,
+      "cov": 0.1
+    },
+    {
+      "name": "applied_force",
+      "distribution": "normal",
+      "mean": 150000,
+      "stddev": 22500,
+      "cov": 0.15
+    },
+    {
+      "name": "geometric_parameter",
+      "distribution": "normal",
+      "mean": 0.05,
+      "stddev": 0.001,
+      "cov": 0.02
+    },
+    {
+      "name": "boundary_stiffness",
+      "distribution": "uniform",
+      "mean": 50000000,
+      "stddev": 14433756,
+      "cov": 0.289
+    },
+    {
+      "name": "load_position_offset",
+      "distribution": "normal",
+      "mean": 0,
+      "stddev": 0.005,
+      "cov": 0
+    }
+  ],
+  "limit_state": {
+    "type": "implicit",
+    "g_function": "R - f(F, d, k, x_offset, material_props)",
+    "description": "隐式极限状态函数，结构抗力与载荷响应之差。响应函数f由神经网络代理模型近似"
+  },
+  "reliability_method": {
+    "type": "monte_carlo",
+    "samples": 1000000,
+    "target_reliability_index": 3.5
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "failure_probability",
+        "value": 0.00023,
+        "unit": "",
+        "tolerance": 20
+      },
+      {
+        "name": "reliability_index",
+        "value": 3.5,
+        "unit": "",
+        "tolerance": 10
+      },
+      {
+        "name": "P90_response_estimate",
+        "value": 180000000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "P99_response_estimate",
+        "value": 210000000,
+        "unit": "Pa",
+        "tolerance": 10
+      },
+      {
+        "name": "neural_network_R_squared",
+        "value": 0.995,
+        "unit": "",
+        "tolerance": 2
+      },
+      {
+        "name": "computational_speedup_ratio",
+        "value": 200,
+        "unit": "times",
+        "tolerance": 30
+      }
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "id": "MD-03",
+  "name": "机翼气动-结构优化",
+  "nameEn": "Wing Aerostructural Optimization",
+  "description": "模拟机翼的气动-结构多学科设计优化。同时考虑气动性能（升阻比L/D）和结构重量两个目标，设计变量包括后掠角、相对厚度和弯度3个参数。气动分析采用面元法或低阶CFD，结构分析采用等效梁模型。通过耦合优化寻找气动与结构之间的最佳平衡点，验证优化后L/D提升和重量减轻的效果。",
+  "category": "mdo",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["aerostructural", "wing-optimization", "L/D-ratio", "MDO", "coupled-analysis"],
+  "design_variables": [
+    {
+      "name": "后掠角",
+      "lower_bound": 20.0,
+      "upper_bound": 45.0,
+      "initial": 30.0
+    },
+    {
+      "name": "相对厚度",
+      "lower_bound": 0.08,
+      "upper_bound": 0.18,
+      "initial": 0.12
+    },
+    {
+      "name": "翼型弯度",
+      "lower_bound": 0.02,
+      "upper_bound": 0.06,
+      "initial": 0.04
+    }
+  ],
+  "objectives": [
+    {
+      "name": "升阻比L/D",
+      "type": "maximize"
+    },
+    {
+      "name": "机翼重量",
+      "type": "minimize"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "最大应力",
+      "type": "inequality",
+      "limit": 400000000.0
+    },
+    {
+      "name": "翼尖最大挠度",
+      "type": "inequality",
+      "limit": 2.0
+    },
+    {
+      "name": "失速裕度",
+      "type": "inequality",
+      "limit": 0.15
+    }
+  ],
+  "optimization_method": {
+    "type": "nsga2",
+    "population": 80,
+    "generations": 150
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "优化后L/D比",
+        "value": 18.0,
+        "unit": "-",
+        "tolerance": 10
+      },
+      {
+        "name": "机翼重量减轻",
+        "value": 12.0,
+        "unit": "%",
+        "tolerance": 20
+      },
+      {
+        "name": "最优后掠角",
+        "value": 32.0,
+        "unit": "deg",
+        "tolerance": 15
+      },
+      {
+        "name": "最优相对厚度",
+        "value": 0.11,
+        "unit": "-",
+        "tolerance": 10
+      }
+    ]
+  }
+}

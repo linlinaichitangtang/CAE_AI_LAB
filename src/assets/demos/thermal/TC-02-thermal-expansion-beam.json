@@ -1,0 +1,103 @@
+{
+  "id": "TC-02",
+  "name": "热膨胀梁约束应力分析",
+  "nameEn": "Thermal Expansion Beam with Constrained Stress",
+  "description": "一根长1m、截面0.1m×0.1m的钢梁，两端完全固定约束，整体均匀温升ΔT=50°C。由于热膨胀被完全约束，梁内产生均匀轴向压应力σ = E·α·ΔT = 200×10⁹ × 12×10⁻⁶ × 50 = 120MPa。若梁自由膨胀，则自由伸长量δ = α·L·ΔT = 12×10⁻⁶ × 1 × 50 = 0.6mm。该案例同时验证自由膨胀位移和完全约束热应力两种工况。",
+  "category": "thermal",
+  "usage": "learning",
+  "difficulty": 2,
+  "tags": ["thermal_expansion", "constrained_stress", "beam", "uniform_temperature"],
+  "geometry": {
+    "type": "beam",
+    "length": 1.0,
+    "width": 0.1,
+    "height": 0.1,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 20,
+    "y_div": 2,
+    "z_div": 2,
+    "element_type": "C3D8T"
+  },
+  "material": {
+    "name": "Carbon Steel (Q235)",
+    "elastic_modulus": 200000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 50,
+    "specific_heat": 490
+  },
+  "boundaryConditions": {
+    "fixed_face": "both_ends",
+    "load_type": "thermal",
+    "load_face": "entire_body",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 343,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 200,
+    "convergence_tolerance": 1e-8,
+    "time_step": null,
+    "total_time": null
+  },
+  "theoretical": {
+    "max_displacement": 0,
+    "max_stress": 120000000,
+    "max_temperature": 343,
+    "formula": "σ = E·α·ΔT (fully constrained); δ_free = α·L·ΔT (free expansion)",
+    "reference": "Boresi, Schmidt, Advanced Mechanics of Materials, Ch.4 - Thermal Stresses"
+  },
+  "acceptance": {
+    "displacement_error_limit": 2.0,
+    "stress_error_limit": 2.0,
+    "temperature_error_limit": 0.1
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "constrained_axial_stress",
+        "value": 120000000,
+        "unit": "Pa",
+        "tolerance": 2.0
+      },
+      {
+        "name": "free_expansion_displacement",
+        "value": 0.0006,
+        "unit": "m",
+        "tolerance": 2.0
+      },
+      {
+        "name": "temperature_rise",
+        "value": 50,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "axial_strain_constrained",
+        "value": 0,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_strain_free",
+        "value": 0.0006,
+        "unit": "",
+        "tolerance": 2.0
+      }
+    ]
+  }
+}

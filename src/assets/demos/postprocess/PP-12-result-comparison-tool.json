@@ -1,0 +1,54 @@
+{
+  "id": "PP-12",
+  "name": "结果对比工具",
+  "nameEn": "Result Comparison Tool - Design Modification",
+  "description": "演示设计修改前后的有限元结果对比分析工具。原始设计为等截面悬臂梁(0.05m x 0.1m x 1m)，修改设计为变截面梁(根部0.06m x 0.12m，端部0.04m x 0.08m)。两套结果集的差异可视化包括：(1)绝对差值云图，显示位移变化量；(2)百分比变化图，显示相对改善幅度；(3)统计对比表，列出关键指标变化。修改后最大位移从2.0mm降至1.6mm(改善20%)，最大应力从150MPa降至120MPa(改善20%)。",
+  "category": "postprocess",
+  "usage": "test",
+  "difficulty": 4,
+  "tags": ["结果对比", "设计优化", "差异云图", "百分比变化", "变截面梁"],
+  "visualization": {
+    "type": "comparison",
+    "field": "displacement",
+    "color_map": "rainbow",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": false,
+      "frames": 1,
+      "fps": 1,
+      "format": "png_sequence"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 2480,
+    "elements": 1920,
+    "results_file": "results/postprocess/design_comparison_merged.dat"
+  },
+  "display_settings": {
+    "title": "设计修改前后对比 - 等截面 vs 变截面悬臂梁",
+    "axis_labels": ["X (m)", "Y (m)", "Z (m)"],
+    "color_bar": {
+      "min": -0.5,
+      "max": 0.5,
+      "label": "位移差值 (mm)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 1.2, "y": 0.8, "z": 0.6 },
+      "target": { "x": 0.5, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": -30 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "原始最大位移", "value": 2.0, "unit": "mm", "tolerance": 5 },
+      { "name": "修改后最大位移", "value": 1.6, "unit": "mm", "tolerance": 5 },
+      { "name": "位移改善率", "value": 20, "unit": "%", "tolerance": 5 },
+      { "name": "原始最大应力", "value": 150, "unit": "MPa", "tolerance": 5 },
+      { "name": "修改后最大应力", "value": 120, "unit": "MPa", "tolerance": 5 },
+      { "name": "应力改善率", "value": 20, "unit": "%", "tolerance": 5 },
+      { "name": "质量变化率", "value": 0, "unit": "%", "tolerance": 5 }
+    ]
+  }
+}

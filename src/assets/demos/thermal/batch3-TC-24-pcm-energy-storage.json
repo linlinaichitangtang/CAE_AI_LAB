@@ -1,0 +1,134 @@
+{
+  "id": "TC-24",
+  "name": "相变储能单元(Stefan问题)",
+  "nameEn": "Phase Change Energy Storage Unit - Paraffin RT42 Stefan Problem",
+  "description": "石蜡RT42相变储能单元热分析。矩形容器尺寸0.1m×0.1m×0.05m，石蜡物性：熔点T_melt=315K(42°C)，潜热L=174kJ/kg，固态热导率k_s=0.4W/(m·K)，液态热导率k_l=0.2W/(m·K)，密度ρ=800kg/m³，比热c_p=2000J/(kg·K)。左侧热壁T_hot=343K(70°C)，右侧冷壁T_cold=293K(20°C)。Stefan数Ste=c_p·(T_hot-T_melt)/L=2000×28/174000=0.322。经典Stefan问题解析解：熔化前沿位置s(t)≈2λ√(α_l·t)，其中λ由超越方程确定。验证熔化前沿随时间的推进，及相变潜热对温度场的迟滞效应。瞬态分析总时间7200s。",
+  "category": "thermal",
+  "usage": "research",
+  "difficulty": 4,
+  "tags": ["phase_change", "Stefan_problem", "latent_heat", "paraffin_RT42", "energy_storage", "melt_front", "PCM"],
+  "geometry": {
+    "type": "block",
+    "length": 0.1,
+    "width": 0.1,
+    "height": 0.05,
+    "radius": null,
+    "thickness": null,
+    "dimension": "3d"
+  },
+  "mesh": {
+    "x_div": 40,
+    "y_div": 10,
+    "z_div": 10,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Paraffin RT42 (Phase Change Material)",
+    "elastic_modulus": 200000000,
+    "poisson_ratio": 0.35,
+    "density": 800,
+    "yield_stress": 5000000,
+    "thermal_expansion": 80e-6,
+    "thermal_conductivity": 0.2,
+    "specific_heat": 2000
+  },
+  "boundaryConditions": {
+    "fixed_face": "",
+    "load_type": "thermal",
+    "load_face": "left_face",
+    "load_magnitude": 0,
+    "load_direction": "",
+    "temperature_bc": {
+      "T_initial": 293,
+      "T_boundary": 343,
+      "T_ambient": 293,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "emissivity": 0.0
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 1000,
+    "convergence_tolerance": 1e-6,
+    "time_step": 10,
+    "total_time": 7200
+  },
+  "theoretical": {
+    "max_displacement": 0.002,
+    "max_stress": 5000000,
+    "max_temperature": 343,
+    "formula": "Ste = c_p*(T_hot - T_melt)/L = 0.322; s(t) = 2*lambda*sqrt(alpha_l*t); alpha_l = k_l/(rho*c_p) = 0.2/(800*2000) = 1.25e-7 m^2/s; Neumann solution for 1D Stefan problem",
+    "reference": "Alexiades, Solomon, Mathematical Modeling of Melting and Freezing Processes, Hemisphere Pub, 1993"
+  },
+  "acceptance": {
+    "displacement_error_limit": null,
+    "stress_error_limit": null,
+    "temperature_error_limit": 8.0
+  },
+  "expected_results": {
+    "quantities": [
+      {
+        "name": "melting_temperature",
+        "value": 315,
+        "unit": "K",
+        "tolerance": 0.5
+      },
+      {
+        "name": "latent_heat",
+        "value": 174000,
+        "unit": "J/kg",
+        "tolerance": 2.0
+      },
+      {
+        "name": "Stefan_number",
+        "value": 0.322,
+        "unit": "",
+        "tolerance": 5.0
+      },
+      {
+        "name": "liquid_thermal_diffusivity",
+        "value": 1.25e-7,
+        "unit": "m^2/s",
+        "tolerance": 5.0
+      },
+      {
+        "name": "hot_wall_temperature",
+        "value": 343,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "cold_wall_temperature",
+        "value": 293,
+        "unit": "K",
+        "tolerance": 0.1
+      },
+      {
+        "name": "melt_front_position_at_3600s",
+        "value": 0.018,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "melt_front_position_at_7200s",
+        "value": 0.026,
+        "unit": "m",
+        "tolerance": 15.0
+      },
+      {
+        "name": "thermal_conductivity_liquid",
+        "value": 0.2,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      },
+      {
+        "name": "thermal_conductivity_solid",
+        "value": 0.4,
+        "unit": "W/(m*K)",
+        "tolerance": 5.0
+      }
+    ]
+  }
+}

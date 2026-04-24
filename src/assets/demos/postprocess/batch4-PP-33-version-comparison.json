@@ -1,0 +1,55 @@
+{
+  "id": "PP-33",
+  "name": "仿真数据版本对比",
+  "nameEn": "Simulation Data Version Comparison - Bracket Design Iterations",
+  "description": "演示同一支架模型在三个设计版本间的仿真结果对比分析能力。版本1为原始设计(直角连接)，版本2增加圆角过渡(R=5mm)以降低应力集中，版本3经拓扑优化后去除冗余材料(减重32%)。后处理功能包括：(1)三个版本的位移云图叠加显示，通过透明度控制(0.3/0.5/0.8)实现多模型同屏对比；(2)差值云图(v3-v1)直观展示拓扑优化前后的位移场变化量，红色区域表示位移增大、蓝色表示减小；(3)并排视图模式支持逐版本切换查看。通过颜色映射和数值标注快速识别设计迭代对结构性能的影响趋势，辅助工程师做出设计决策。",
+  "category": "postprocess",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["版本对比", "设计迭代", "拓扑优化", "差值云图", "透明度叠加", "支架结构"],
+  "visualization": {
+    "type": "comparison",
+    "field": "displacement",
+    "color_map": "jet",
+    "view_mode": "3d_solid",
+    "animation": {
+      "enabled": true,
+      "frames": 60,
+      "fps": 15,
+      "format": "gif"
+    }
+  },
+  "source_simulation": {
+    "type": "structural",
+    "nodes": 45000,
+    "elements": 38000,
+    "results_file": "results/postprocess/bracket_version_comparison.dat"
+  },
+  "display_settings": {
+    "title": "支架结构设计版本对比 - 位移场叠加与差值分析",
+    "axis_labels": ["X (mm)", "Y (mm)", "Z (mm)"],
+    "color_bar": {
+      "min": 0,
+      "max": 2.8,
+      "label": "位移 (mm)",
+      "n_levels": 16
+    },
+    "camera": {
+      "position": { "x": 120.0, "y": 80.0, "z": 100.0 },
+      "target": { "x": 0.0, "y": 0.0, "z": 0.0 },
+      "rotation": { "pitch": -25, "yaw": 45 }
+    }
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "v1原始设计最大位移", "value": 1.85, "unit": "mm", "tolerance": 5 },
+      { "name": "v2圆角设计最大位移", "value": 1.72, "unit": "mm", "tolerance": 5 },
+      { "name": "v3拓扑优化最大位移", "value": 2.15, "unit": "mm", "tolerance": 5 },
+      { "name": "v3相对v1位移变化率", "value": 16.2, "unit": "%", "tolerance": 10 },
+      { "name": "v3相对v1减重比", "value": 32, "unit": "%", "tolerance": 5 },
+      { "name": "差值云图最大正值", "value": 0.45, "unit": "mm", "tolerance": 10 },
+      { "name": "差值云图最大负值", "value": -0.22, "unit": "mm", "tolerance": 10 },
+      { "name": "叠加透明度层级数", "value": 3, "unit": "层", "tolerance": 0 }
+    ]
+  }
+}
