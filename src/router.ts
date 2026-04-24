@@ -181,7 +181,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/multiscale',
     name: 'Multiscale',
-    component: () => import('./views/MultiscaleView.vue')
+    component: () => import('./views/MicroToMacroView.vue')
   },
   {
     path: '/md',

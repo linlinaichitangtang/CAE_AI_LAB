@@ -549,6 +549,58 @@ const validate_ml_potential: ToolDefinition = {
 }
 
 // ============================================================================
+// 工具定义 - 多尺度 Surrogate 工具 (V2.7)
+// ============================================================================
+
+const segment_microstructure: ToolDefinition = {
+  name: 'segment_microstructure',
+  description: '使用 UNet 对微观结构图像进行相分割（固相/孔隙/第二相），提取相体积分数、孔隙率、晶粒尺寸等特征',
+  category: 'analysis',
+  params: [
+    { name: 'imageId', type: 'string', description: '微观结构图像 ID', required: true },
+    { name: 'segmentationTarget', type: 'string', description: '分割目标: phase/pore/grain', required: false, default: 'phase' }
+  ],
+  returnType: 'SegmentationResult',
+  requiresConfirmation: false,
+  tauriCommand: 'multiscale_surrogate::segment_microstructure',
+  isDestructive: false,
+  examples: ['分割SEM图像提取相分布', '检测微观结构孔隙率']
+}
+
+const predict_macro_property: ToolDefinition = {
+  name: 'predict_macro_property',
+  description: '从微观结构特征直接预测宏观等效性能（弹性模量/热导率/屈服强度），支持不确定性量化',
+  category: 'analysis',
+  params: [
+    { name: 'imageId', type: 'string', description: '微观结构图像 ID', required: false },
+    { name: 'processingParams', type: 'object', description: '工艺参数（温度/压力/时间等）', required: false },
+    { name: 'targetProperties', type: 'array', description: '预测目标列表', required: true },
+    { name: 'withUncertainty', type: 'boolean', description: '是否输出不确定性', required: false, default: true }
+  ],
+  returnType: 'MacroPropertyPredictionResponse',
+  requiresConfirmation: false,
+  tauriCommand: 'multiscale_surrogate::predict_macro_properties',
+  isDestructive: false,
+  examples: ['预测Al6061的宏观弹性模量', '从微观结构预测热导率']
+}
+
+const run_multiscale_workflow: ToolDefinition = {
+  name: 'run_multiscale_workflow',
+  description: '端到端多尺度直通工作流：微观结构图像 → UNet分割 → 特征提取 → ML预测宏观性能 → 可选CAELab验证',
+  category: 'simulation',
+  params: [
+    { name: 'imageId', type: 'string', description: '微观结构图像 ID', required: true },
+    { name: 'targetProperties', type: 'array', description: '预测目标', required: true },
+    { name: 'autoVerify', type: 'boolean', description: '不确定性高时是否自动触发CAELab验证', required: false, default: false }
+  ],
+  returnType: 'MultiScaleWorkflowResult',
+  requiresConfirmation: true,
+  tauriCommand: 'multiscale_surrogate::predict_macro_properties',
+  isDestructive: false,
+  examples: ['运行完整多尺度工作流', '从SEM图像预测宏观性能并验证']
+}
+
+// ============================================================================
 // 工具注册表
 // ============================================================================
 
@@ -576,6 +628,8 @@ function initToolRegistry(): void {
     predict_material_properties, verify_ml_prediction,
     // ML 势函数工具 (V2.6)
     select_ml_potential, train_ml_potential, run_md_ml, validate_ml_potential,
+    // 多尺度 Surrogate 工具 (V2.7)
+    segment_microstructure, predict_macro_property, run_multiscale_workflow,
   ]
 
   for (const tool of allTools) {
