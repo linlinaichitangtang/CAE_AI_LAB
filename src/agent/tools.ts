@@ -479,6 +479,76 @@ const verify_ml_prediction: ToolDefinition = {
 }
 
 // ============================================================================
+// 工具定义 - ML 势函数工具 (V2.6)
+// ============================================================================
+
+const select_ml_potential: ToolDefinition = {
+  name: 'select_ml_potential',
+  description: '根据体系元素和原子数自动推荐最合适的 ML 势函数类型（MACE/CHGNet/NequIP/NEP 等），判断是否需要训练',
+  category: 'analysis',
+  params: [
+    { name: 'elements', type: 'array', description: '原子种类列表，如 ["Fe", "Cr", "Ni"]', required: true },
+    { name: 'numAtoms', type: 'number', description: '体系原子总数', required: true },
+    { name: 'accuracyRequirement', type: 'string', description: '精度要求: high/medium/low', required: false, default: 'medium' }
+  ],
+  returnType: 'PotentialSelectionResult',
+  requiresConfirmation: false,
+  tauriCommand: 'ml_potential::auto_select_potential',
+  isDestructive: false,
+  examples: ['推荐FeCrNi合金的势函数', '10000原子体系用什么势函数']
+}
+
+const train_ml_potential: ToolDefinition = {
+  name: 'train_ml_potential',
+  description: '使用 DFT 数据训练 ML 势函数（NequIP/MACE/NEP），返回训练结果和精度指标',
+  category: 'simulation',
+  params: [
+    { name: 'potentialType', type: 'string', description: '势函数类型: nequip/mace/nep/mtp/ace', required: true },
+    { name: 'trainingDataPath', type: 'string', description: '训练数据文件路径 (extxyz 格式)', required: true },
+    { name: 'epochs', type: 'number', description: '训练轮数', required: false, default: 500 },
+    { name: 'cutoff', type: 'number', description: '截断半径 (Å)', required: false, default: 5.0 }
+  ],
+  returnType: 'TrainingResult',
+  requiresConfirmation: true,
+  tauriCommand: 'ml_potential::submit_training_job',
+  isDestructive: false,
+  examples: ['训练FeCrNi的NequIP势函数', '用DFT数据训练MACE势']
+}
+
+const run_md_ml: ToolDefinition = {
+  name: 'run_md_with_ml_potential',
+  description: '使用 ML 势函数运行分子动力学模拟，支持大体系 (>10万原子) 高效计算',
+  category: 'simulation',
+  params: [
+    { name: 'potentialName', type: 'string', description: 'ML 势函数名称', required: true },
+    { name: 'ensemble', type: 'string', description: '系综: NVE/NVT/NPT', required: true },
+    { name: 'temperature', type: 'number', description: '温度 (K)', required: false, default: 300 },
+    { name: 'numSteps', type: 'number', description: '模拟步数', required: false, default: 10000 },
+    { name: 'timestepFs', type: 'number', description: '时间步长 (fs)', required: false, default: 1.0 }
+  ],
+  returnType: 'MdResult',
+  requiresConfirmation: true,
+  tauriCommand: 'ml_potential::run_md_with_ml_potential',
+  isDestructive: false,
+  examples: ['用MACE势跑10万原子NVT模拟', 'ML势函数MD模拟300K']
+}
+
+const validate_ml_potential: ToolDefinition = {
+  name: 'validate_ml_potential',
+  description: '验证 ML 势函数质量，对比 DFT 参考值计算能量和力的 RMSE',
+  category: 'analysis',
+  params: [
+    { name: 'potentialName', type: 'string', description: '势函数名称', required: true },
+    { name: 'testDataPath', type: 'string', description: '测试数据路径', required: true }
+  ],
+  returnType: 'ValidationResult',
+  requiresConfirmation: false,
+  tauriCommand: 'ml_potential::validate_ml_potential',
+  isDestructive: false,
+  examples: ['验证MACE势函数精度', '检查训练好的势函数质量']
+}
+
+// ============================================================================
 // 工具注册表
 // ============================================================================
 
@@ -504,6 +574,8 @@ function initToolRegistry(): void {
     validate_results, compare_results,
     // ML 预测工具 (V2.5)
     predict_material_properties, verify_ml_prediction,
+    // ML 势函数工具 (V2.6)
+    select_ml_potential, train_ml_potential, run_md_ml, validate_ml_potential,
   ]
 
   for (const tool of allTools) {

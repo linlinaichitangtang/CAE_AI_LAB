@@ -15,7 +15,7 @@ export type ThermostatType = 'nosé_hoover' | 'berendsen' | 'velocity_rescaling'
 
 export type BarostatType = 'parrinello_rahman' | 'berendsen' | 'andersen'
 
-export type PotentialType = 'lj' | 'eam' | 'meam' | 'tersoff' | 'reaxff' | 'morse' | 'buckingham'
+export type PotentialType = 'lj' | 'eam' | 'meam' | 'tersoff' | 'reaxff' | 'morse' | 'buckingham' | 'mace' | 'chgnet' | 'nequip' | 'nep' | 'sevennet' | 'mtp' | 'ace' | 'gap'
 
 export interface MdAtom {
   id: number

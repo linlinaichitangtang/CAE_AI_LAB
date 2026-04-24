@@ -4,7 +4,7 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential};
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -676,6 +676,15 @@ pub fn run() {
             commands::simulation_archive::get_archive_statistics,
             commands::simulation_archive::export_simulation_archives,
             commands::simulation_archive::delete_simulation_archive,
+            // V2.6: ML Potential commands
+            commands::ml_potential::list_ml_potentials,
+            commands::ml_potential::compute_ml_potential,
+            commands::ml_potential::auto_select_potential,
+            commands::ml_potential::get_gpu_status,
+            commands::ml_potential::recommend_training_hyperparams,
+            commands::ml_potential::submit_training_job,
+            commands::ml_potential::validate_ml_potential,
+            commands::ml_potential::run_md_with_ml_potential,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

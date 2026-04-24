@@ -78,6 +78,23 @@
               <label class="label">势函数文件路径</label>
               <input v-model="config.potential_file_path" type="text" class="input w-full text-xs" placeholder="/path/to/potential.eam.alloy" />
             </div>
+            <!-- V2.6: ML 势函数选项 -->
+            <div class="mt-3 pt-3" style="border-top: 1px solid var(--border-default)">
+              <div class="text-xs font-medium mb-2" style="color: var(--text-secondary)">🧬 ML 势函数 (V2.6)</div>
+              <div class="grid grid-cols-5 gap-1">
+                <button
+                  v-for="mlpot in mlPotentials"
+                  :key="mlpot.value"
+                  @click="config.potential = mlpot.value as PotentialType; config.potential_file_path = `models/${mlpot.value}_model.pt`"
+                  :class="['px-1 py-1.5 rounded text-[10px] text-center transition border', config.potential === mlpot.value ? 'text-white' : '']"
+                  :style="config.potential === mlpot.value
+                    ? 'background: linear-gradient(135deg, #89b4fa, #74c7ec); border-color: #89b4fa'
+                    : 'background: var(--bg-elevated); border-color: var(--border-default); color: var(--text-secondary)'"
+                >
+                  {{ mlpot.label }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -411,6 +428,14 @@ const potentials = [
   { value: 'reaxff' as PotentialType, label: 'ReaxFF' },
   { value: 'morse' as PotentialType, label: 'Morse' },
   { value: 'buckingham' as PotentialType, label: 'Buckingham' }
+]
+
+const mlPotentials = [
+  { value: 'mace' as string, label: 'MACE' },
+  { value: 'chgnet' as string, label: 'CHGNet' },
+  { value: 'nequip' as string, label: 'NequIP' },
+  { value: 'nep' as string, label: 'NEP' },
+  { value: 'sevennet' as string, label: 'SevenNet' },
 ]
 
 const thermostats = [
