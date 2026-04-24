@@ -601,6 +601,55 @@ const run_multiscale_workflow: ToolDefinition = {
 }
 
 // ============================================================================
+// 工具定义 - 主动学习工具 (V2.8)
+// ============================================================================
+
+const analyze_data_coverage: ToolDefinition = {
+  name: 'analyze_data_coverage',
+  description: '分析材料数据库的数据覆盖度，识别成分空间和工艺空间的数据盲区，输出覆盖度评分和盲区列表',
+  category: 'analysis',
+  params: [],
+  returnType: 'CoverageAnalysis',
+  requiresConfirmation: false,
+  tauriCommand: 'material_data_platform::analyze_data_coverage',
+  isDestructive: false,
+  examples: ['分析数据覆盖度', '找出数据盲区']
+}
+
+const get_active_learning_recommendations: ToolDefinition = {
+  name: 'get_active_learning_recommendations',
+  description: '基于贝叶斯优化主动推荐下一个最有价值的仿真点，优先选择高不确定性+高期望改进区域，用最少仿真次数获得最高精度',
+  category: 'analysis',
+  params: [
+    { name: 'targetProperty', type: 'string', description: '目标属性: elastic_modulus/yield_strength/thermal_conductivity', required: true },
+    { name: 'numRecommendations', type: 'number', description: '推荐数量', required: false, default: 5 },
+    { name: 'strategy', type: 'string', description: '采样策略: bayesian/greedy/random', required: false, default: 'bayesian' }
+  ],
+  returnType: 'ActiveLearningRecommendation',
+  requiresConfirmation: false,
+  tauriCommand: 'material_data_platform::get_active_learning_recommendations',
+  isDestructive: false,
+  examples: ['推荐下一个仿真点', '用主动学习优化弹性模量预测']
+}
+
+const run_closed_loop: ToolDefinition = {
+  name: 'run_closed_loop',
+  description: '执行主动学习闭环：推荐点 → CAELab仿真 → 结果写回数据库 → 模型自动更新，全程无需人工介入',
+  category: 'simulation',
+  params: [
+    { name: 'materialName', type: 'string', description: '材料名称', required: true },
+    { name: 'composition', type: 'object', description: '材料成分', required: true },
+    { name: 'processingParams', type: 'object', description: '工艺参数', required: true },
+    { name: 'targetProperty', type: 'string', description: '目标属性', required: true }
+  ],
+  returnType: 'ClosedLoopResult',
+  requiresConfirmation: true,
+  tauriCommand: 'material_data_platform::run_closed_loop_verification',
+  isDestructive: false,
+  examples: ['执行闭环验证', '自动补充数据并更新模型']
+}
+
+// ============================================================================
 // 工具注册表
 // ============================================================================
 
@@ -630,6 +679,8 @@ function initToolRegistry(): void {
     select_ml_potential, train_ml_potential, run_md_ml, validate_ml_potential,
     // 多尺度 Surrogate 工具 (V2.7)
     segment_microstructure, predict_macro_property, run_multiscale_workflow,
+    // 主动学习工具 (V2.8)
+    analyze_data_coverage, get_active_learning_recommendations, run_closed_loop,
   ]
 
   for (const tool of allTools) {

@@ -23,6 +23,7 @@ impl Database {
         db.init_tables()?;
         db.init_builtin_materials()?;
         db.init_archive_table()?;
+        db.init_material_property_table()?;
         Ok(db)
     }
 
@@ -311,6 +312,12 @@ impl Database {
     fn init_archive_table(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         crate::commands::simulation_archive::create_archive_table(&conn)
+    }
+
+    /// Initialize V2.8 material property table
+    fn init_material_property_table(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        crate::commands::material_data_platform::create_material_property_table(&conn)
     }
 
     /// Initialize built-in materials

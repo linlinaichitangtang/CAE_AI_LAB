@@ -4,7 +4,7 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate, material_data_platform};
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -694,6 +694,15 @@ pub fn run() {
             commands::multiscale_surrogate::train_multiscale_surrogate,
             commands::multiscale_surrogate::export_multiscale_onnx,
             commands::multiscale_surrogate::verify_with_caelab,
+            // V2.8: Material Data Platform commands
+            commands::material_data_platform::write_material_property,
+            commands::material_data_platform::query_material_properties,
+            commands::material_data_platform::batch_import_material_data,
+            commands::material_data_platform::analyze_data_coverage,
+            commands::material_data_platform::analyze_uncertainty,
+            commands::material_data_platform::get_active_learning_recommendations,
+            commands::material_data_platform::run_closed_loop_verification,
+            commands::material_data_platform::generate_active_learning_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
