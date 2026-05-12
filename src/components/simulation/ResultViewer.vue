@@ -1352,12 +1352,64 @@ function onCancelChunkLoading() {
   loading.value = false
 }
 
+// V2.9-005: 发表级图表导出
+async function exportHighResImage(config: {
+  width?: number
+  height?: number
+  filename?: string
+  transparent?: boolean
+} = {}): Promise<string | null> {
+  if (!renderer || !scene || !camera) return null
+
+  try {
+    const width = config.width || 1200
+    const height = config.height || 900
+
+    // 保存当前尺寸和背景色
+    const originalWidth = renderer.domElement.width
+    const originalHeight = renderer.domElement.height
+    const originalPixelRatio = renderer.getPixelRatio()
+
+    // 设置高分辨率
+    renderer.setPixelRatio(1)
+    renderer.setSize(width, height, false)
+
+    // 调整相机纵横比
+    camera.aspect = width / height
+    camera.updateProjectionMatrix()
+
+    // 渲染一帧
+    renderer.render(scene, camera)
+
+    // 导出为 PNG
+    const dataURL = renderer.domElement.toDataURL('image/png')
+
+    // 恢复原始尺寸
+    renderer.setPixelRatio(originalPixelRatio)
+    renderer.setSize(originalWidth, originalHeight, false)
+    camera.aspect = originalWidth / originalHeight
+    camera.updateProjectionMatrix()
+
+    // 触发下载
+    const link = document.createElement('a')
+    link.download = config.filename || `caelab_result_${Date.now()}.png`
+    link.href = dataURL
+    link.click()
+
+    return dataURL
+  } catch (e) {
+    console.error('Export failed:', e)
+    return null
+  }
+}
+
 // Expose color data for legend and animation controls
 defineExpose({
   getColorData: () => mesh?.userData,
   playAnimation,
   pauseAnimation,
   isPlaying,
-  currentFrame
+  currentFrame,
+  exportHighResImage
 })
 </script>

@@ -171,45 +171,84 @@
       <!-- Right Panel: Visualization & Results -->
       <div class="flex-1 overflow-y-auto p-4 space-y-4" ref="graphRef">
 
-        <!-- Task Graph Visualization -->
+        <!-- V2.9-006: Data Flow Visualization -->
         <div v-if="selectedProject">
-          <h4 class="text-sm font-medium mb-3" style="color: var(--text-primary)">任务图可视化</h4>
-          <div class="p-4 rounded" style="background: var(--bg-surface); border: 1px solid var(--border-subtle)">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-medium" style="color: var(--text-primary)">
+              🔗 多尺度数据流可视化 (V2.9-006)
+            </h4>
+            <button
+              class="btn btn-ghost text-xs"
+              @click="showDataFlowDetails = !showDataFlowDetails"
+            >
+              {{ showDataFlowDetails ? '隐藏详情' : '查看详情' }}
+            </button>
+          </div>
+
+          <div class="rounded overflow-hidden" style="background: var(--bg-surface); border: 1px solid var(--border-subtle)">
             <svg width="100%" :height="graphHeight" :viewBox="`0 0 ${graphWidth} ${graphHeight}`">
-              <!-- Edges (arrows) -->
               <defs>
                 <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                   <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
                 </marker>
+                <!-- 数据流动画渐变 -->
+                <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:var(--primary);stop-opacity:0.2" />
+                  <stop offset="50%" style="stop-color:var(--primary);stop-opacity:0.8" />
+                  <stop offset="100%" style="stop-color:var(--primary);stop-opacity:0.2" />
+                </linearGradient>
               </defs>
-              <g v-for="(edge, ei) in taskEdges" :key="'e-' + ei">
+
+              <!-- 连线 (可点击) -->
+              <g v-for="(edge, ei) in taskEdges" :key="'e-' + ei"
+                 class="cursor-pointer"
+                 @click="selectEdge(edge)"
+                 @mouseenter="hoveredEdge = ei"
+                 @mouseleave="hoveredEdge = null"
+              >
                 <line
                   :x1="nodePosition(edge.from).x"
                   :y1="nodePosition(edge.from).y"
                   :x2="nodePosition(edge.to).x"
                   :y2="nodePosition(edge.to).y"
-                  stroke="var(--text-muted)"
-                  stroke-width="2"
+                  :stroke="hoveredEdge === ei ? 'var(--primary)' : 'var(--text-muted)'"
+                  :stroke-width="hoveredEdge === ei ? 3 : 2"
                   stroke-dasharray="6,3"
                   marker-end="url(#arrowhead)"
+                />
+                <!-- 数据流标签背景 -->
+                <rect
+                  :x="(nodePosition(edge.from).x + nodePosition(edge.to).x) / 2 - 40"
+                  :y="(nodePosition(edge.from).y + nodePosition(edge.to).y) / 2 - 18"
+                  width="80"
+                  height="14"
+                  rx="7"
+                  fill="var(--bg-surface)"
+                  :stroke="hoveredEdge === ei ? 'var(--primary)' : 'var(--border-subtle)'"
+                  stroke-width="1"
                 />
                 <text
                   :x="(nodePosition(edge.from).x + nodePosition(edge.to).x) / 2"
                   :y="(nodePosition(edge.from).y + nodePosition(edge.to).y) / 2 - 8"
                   text-anchor="middle"
-                  fill="var(--text-muted)"
-                  font-size="9"
-                >{{ edge.data_flow }}</text>
+                  :fill="hoveredEdge === ei ? 'var(--primary)' : 'var(--text-muted)'"
+                  font-size="8"
+                  font-weight="500"
+                >{{ edge.data_flow_label }}</text>
               </g>
-              <!-- Nodes -->
-              <g v-for="node in taskNodes" :key="node.id">
+
+              <!-- 节点 -->
+              <g v-for="node in taskNodes" :key="node.id"
+                 class="cursor-pointer"
+                 @click="selectNode(node)"
+              >
                 <circle
                   :cx="nodePosition(node.id).x"
                   :cy="nodePosition(node.id).y"
                   r="28"
                   :fill="scaleFillColor(node.scale)"
-                  :stroke="nodeStatusStroke(node.status)"
-                  stroke-width="3"
+                  :stroke="selectedNodeId === node.id ? 'var(--primary)' : nodeStatusStroke(node.status)"
+                  :stroke-width="selectedNodeId === node.id ? 4 : 3"
                 />
                 <text
                   :x="nodePosition(node.id).x"
@@ -228,6 +267,87 @@
                 >{{ node.id }}</text>
               </g>
             </svg>
+          </div>
+
+          <!-- V2.9-006: Data Flow Details Panel -->
+          <div v-if="showDataFlowDetails" class="mt-3 space-y-3 animate-fade-in">
+            <div
+              v-for="(flow, fi) in dataFlows"
+              :key="fi"
+              class="p-3 rounded border"
+              style="background: var(--bg-elevated); border-color: var(--border-subtle)"
+            >
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs px-2 py-0.5 rounded font-medium"
+                  :style="scaleBadgeStyle(flow.fromScale)"
+                >{{ flow.fromName }}</span>
+                <span class="text-lg" style="color: var(--text-muted)"
+                >→</span>
+                <span class="text-xs px-2 py-0.5 rounded font-medium"
+                  :style="scaleBadgeStyle(flow.toScale)"
+                >{{ flow.toName }}</span>
+              </div>
+
+              <div class="space-y-1.5">
+                <div v-for="(item, ii) in flow.items" :key="ii"
+                  class="flex items-center justify-between py-1 px-2 rounded"
+                  style="background: var(--bg-surface)"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm">{{ item.icon }}</span>
+                    <div>
+                      <p class="text-xs font-medium" style="color: var(--text-primary)">{{ item.name }}</p>
+                      <p class="text-[10px]" style="color: var(--text-muted)">{{ item.type }}</p>
+                    </div>
+                  </div>
+                  <span class="text-[10px] px-1.5 py-0.5 rounded"
+                    :style="item.mapped ? 'background: rgba(34,197,94,0.15); color: var(--accent-green)' : 'background: rgba(156,163,175,0.15); color: var(--text-muted)'"
+                  >
+                    {{ item.mapped ? '已映射' : '待映射' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- V2.9-006: Selected Node/Edge Details -->
+          <div v-if="selectedNodeId || selectedEdge" class="mt-3 p-3 rounded border animate-fade-in"
+            style="background: var(--bg-elevated); border-color: var(--primary)"
+          >
+            <div v-if="selectedNodeId" class="space-y-2">
+              <p class="text-sm font-medium" style="color: var(--text-primary)">
+                {{ nodeDetails.name }}
+              </p>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span style="color: var(--text-muted)">尺度: </span>
+                  <span style="color: var(--text-primary)">{{ nodeDetails.scale }}</span>
+                </div>
+                <div>
+                  <span style="color: var(--text-muted)">状态: </span>
+                  <span :style="nodeDetails.statusStyle">{{ nodeDetails.status }}</span>
+                </div>
+              </div>
+              <div v-if="nodeDetails.parameters" class="text-xs space-y-1">
+                <p style="color: var(--text-muted)">参数:</p>
+                <div class="flex flex-wrap gap-1">
+                  <span v-for="(v, k) in nodeDetails.parameters" :key="k"
+                    class="px-1.5 py-0.5 rounded text-[10px]"
+                    style="background: var(--bg-surface); color: var(--text-secondary)"
+                  >{{ k }}={{ v }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="selectedEdge" class="space-y-2">
+              <p class="text-sm font-medium" style="color: var(--text-primary)">
+                数据流: {{ selectedEdge.fromName }} → {{ selectedEdge.toName }}
+              </p>
+              <div class="text-xs" style="color: var(--text-secondary)">
+                <p>传输数据量: {{ selectedEdge.dataSize }}</p>
+                <p>数据类型: {{ selectedEdge.dataType }}</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -331,6 +451,12 @@ const connection = reactive({
 // ============ Graph Dimensions ============
 const graphWidth = 640
 const graphHeight = 200
+
+// V2.9-006: Data Flow Visualization State
+const showDataFlowDetails = ref(false)
+const hoveredEdge = ref<number | null>(null)
+const selectedNodeId = ref<string | null>(null)
+const selectedEdge = ref<any>(null)
 
 // ============ Mock Data ============
 function generateMockProjects(): MultiscaleProject[] {
@@ -451,17 +577,77 @@ const taskNodes = computed(() => {
 
 const taskEdges = computed(() => {
   if (!selectedProject.value) return []
-  const edges: Array<{ from: string; to: string; data_flow: string }> = []
+  const edges: Array<{ from: string; to: string; data_flow: string; data_flow_label: string }> = []
+  const dataFlowLabels: Record<string, string> = {
+    'task-dft-001-task-md-001': '势函数+弹性常数',
+    'task-md-001-task-pf-001': '晶格参数+断裂能',
+    'task-pf-001-task-fe-001': '应力-应变+裂纹路径'
+  }
   for (const task of selectedProject.value.tasks) {
     if (task.bridge_to) {
+      const key = `${task.task_id}-${task.bridge_to}`
       edges.push({
         from: task.task_id,
         to: task.bridge_to,
-        data_flow: 'data'
+        data_flow: 'data',
+        data_flow_label: dataFlowLabels[key] || '数据传递'
       })
     }
   }
   return edges
+})
+
+// V2.9-006: Data Flow Details
+const dataFlows = computed(() => {
+  if (!selectedProject.value) return []
+  return [
+    {
+      fromName: 'DFT',
+      fromScale: 'dft' as TaskScale,
+      toName: 'MD',
+      toScale: 'md' as TaskScale,
+      items: [
+        { icon: '📊', name: '弹性常数张量 (Cij)', type: 'tensor', mapped: true },
+        { icon: '⚡', name: 'EAM 势函数参数', type: 'potential', mapped: true },
+        { icon: '🧲', name: '晶格常数', type: 'scalar', mapped: true }
+      ]
+    },
+    {
+      fromName: 'MD',
+      fromScale: 'md' as TaskScale,
+      toName: '相场',
+      toScale: 'phase_field' as TaskScale,
+      items: [
+        { icon: '📏', name: '晶格常数', type: 'scalar', mapped: true },
+        { icon: '💥', name: '断裂能 (Gc)', type: 'scalar', mapped: true },
+        { icon: '🌡️', name: '扩散系数', type: 'scalar', mapped: false }
+      ]
+    },
+    {
+      fromName: '相场',
+      fromScale: 'phase_field' as TaskScale,
+      toName: 'FE',
+      toScale: 'fe' as TaskScale,
+      items: [
+        { icon: '📈', name: '应力-应变曲线', type: 'curve', mapped: true },
+        { icon: '🕳️', name: '裂纹路径几何', type: 'geometry', mapped: true },
+        { icon: '🔧', name: '有效弹性模量', type: 'scalar', mapped: false }
+      ]
+    }
+  ]
+})
+
+const nodeDetails = computed(() => {
+  if (!selectedProject.value || !selectedNodeId.value) return {}
+  const task = selectedProject.value.tasks.find(t => t.task_id === selectedNodeId.value)
+  if (!task) return {}
+  return {
+    name: task.name,
+    scale: scaleLabel(task.scale),
+    status: taskStatusLabel(task.status),
+    statusStyle: taskStatusBadgeStyle(task.status),
+    parameters: task.parameters
+  }
 })
 
 // ============ Node Positioning ============
@@ -576,6 +762,26 @@ function formatSize(bytes: number): string {
 
 function selectProject(projectId: string) {
   selectedProjectId.value = projectId
+  selectedNodeId.value = null
+  selectedEdge.value = null
+}
+
+// V2.9-006: Data Flow Interactions
+function selectNode(node: any) {
+  selectedNodeId.value = node.id
+  selectedEdge.value = null
+}
+
+function selectEdge(edge: any) {
+  const fromTask = selectedProject.value?.tasks.find(t => t.task_id === edge.from)
+  const toTask = selectedProject.value?.tasks.find(t => t.task_id === edge.to)
+  selectedEdge.value = {
+    fromName: fromTask?.name || edge.from,
+    toName: toTask?.name || edge.to,
+    dataSize: '计算中...',
+    dataType: edge.data_flow_label
+  }
+  selectedNodeId.value = null
 }
 
 function createProject() {

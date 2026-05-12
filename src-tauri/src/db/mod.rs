@@ -29,7 +29,8 @@ impl Database {
 
     /// Initialize database tables
     fn init_tables(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
         
         // Projects table
         conn.execute(
@@ -310,19 +311,22 @@ impl Database {
 
     /// Initialize V2.5 simulation archive table
     fn init_archive_table(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
         crate::commands::simulation_archive::create_archive_table(&conn)
     }
 
     /// Initialize V2.8 material property table
     fn init_material_property_table(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
         crate::commands::material_data_platform::create_material_property_table(&conn)
     }
 
     /// Initialize built-in materials
     fn init_builtin_materials(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
         
         // Built-in materials data: (name, description, E_GPa, nu, density_kg_m3, alpha_1_K, sy_MPa, su_MPa)
         let builtin_materials: Vec<(&str, &str, f64, f64, f64, f64, f64, Option<f64>)> = vec![

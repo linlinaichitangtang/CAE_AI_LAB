@@ -392,3 +392,17 @@ export * from './coordinateMapping'
 
 // V1.8-003: 粗粒化策略库
 export * from './coarseGraining'
+
+// ============ V1.8+ 扩展分析 API ============
+
+export * from './fsi'
+export * from './parametric'
+export * from './materialDataPlatform'
+export * from './mlPotential'
+export * from './multiscale'
+export * from './remoteSolver'
+export * from './solverManager'
+
+// ============ 辅助服务 API ============
+
+export * from './syncService'

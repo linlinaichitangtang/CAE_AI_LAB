@@ -1,5 +1,22 @@
 //! CAE API - Rust API for frontend
 //! Exposes CAE solver functionality to the Tauri frontend
+//!
+//! ## File Layout (2222 lines, 48 #[tauri::command] functions)
+//!
+//! | Section | Lines | Description |
+//! |---------|-------|-------------|
+//! | Data Structures | 1-571 | AnalysisJob, MeshApiResult, NodeApi, ElementApi, ResultSet |
+//! | Core Commands | 572-909 | check_solver, generate_input, generate_mesh, run_solver |
+//! | Boundary Condition API | 910-1332 | create_fixed_bc, create_point_load, create_uniform_load |
+//! | Buckling Analysis API | 1333-1518 | BucklingConfig, buckling analysis commands |
+//! | Contact Analysis API | 1519-1874 | ContactPair, contact detection, contact results |
+//! | Frequency Response API | 1875-2060 | FrequencyResponseConfig, modal/frf commands |
+//! | Coupling Analysis Commands | 2061-2222 | Thermal-structural coupling, temperature field |
+//!
+//! ### Design Notes
+//! - All 48 commands are thin wrappers delegating to `solver/`, `input_gen/`, `postprocess/` modules
+//! - `coupling.rs` (helper, not a command module) is reused here for INP generation
+//! - `modal.rs` (helper, no #[tauri::command]) is imported for type definitions only
 
 use serde::{Deserialize, Serialize};
 use std::fmt::Write;

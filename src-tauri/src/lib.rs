@@ -34,7 +34,12 @@ async fn start_api_server_cmd(
         return Err(format!("API server is already running on port {}", current_port));
     }
 
-    let actual_port = port.unwrap_or_else(|| *api_state.port.lock().unwrap_or_else(|e| e.into_inner()));
+    let actual_port = port.unwrap_or_else(|| {
+        match api_state.port.lock() {
+            Ok(guard) => *guard,
+            Err(poisoned) => *poisoned.into_inner(),
+        }
+    });
     *api_state.port.lock().map_err(|e| e.to_string())? = actual_port;
 
     // Create shutdown channel
@@ -43,7 +48,7 @@ async fn start_api_server_cmd(
 
     // Get database reference for the API server
     let db_path = app.path().app_data_dir()
-        .expect("Failed to get app data dir")
+        .map_err(|e| format!("failed to get app data dir: {}", e))?
         .join("caelab.db");
     let database = Database::new(db_path).map_err(|e| format!("Failed to open database for API server: {}", e))?;
     let db_arc = Arc::new(std::sync::Mutex::new(database));
@@ -126,13 +131,16 @@ pub fn run() {
             tracing::info!("Application setup complete");
             
             // Initialize database
-            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
-            std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
-            
+            let app_data_dir = app.path().app_data_dir()
+            .map_err(|e| format!("failed to get app data dir: {}", e))?;
+            std::fs::create_dir_all(&app_data_dir)
+            .map_err(|e| format!("failed to create app data directory: {}", e))?;
+
             let db_path = app_data_dir.join("caelab.db");
             tracing::info!("Database path: {:?}", db_path);
-            
-            let database = Database::new(db_path).expect("Failed to initialize database");
+
+            let database = Database::new(db_path)
+            .map_err(|e| format!("failed to initialize database: {}", e))?;
             app.manage(database);
 
             // Initialize global cancel flag for solver
@@ -705,5 +713,8 @@ pub fn run() {
             commands::material_data_platform::generate_active_learning_report,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("error while running tauri application: {}", e);
+            std::process::exit(1);
+        });
 }

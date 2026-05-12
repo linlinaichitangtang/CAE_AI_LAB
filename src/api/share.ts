@@ -628,6 +628,12 @@ export interface ProjectTemplate {
   category: string
   icon: string
   projectData?: ExportData
+  // V2.9-007: 模板发布与克隆
+  published?: boolean
+  author?: string
+  createdAt?: string
+  cloneCount?: number
+  usageInstructions?: string
 }
 
 /**
@@ -637,7 +643,8 @@ export async function saveProjectAsTemplate(
   projectId: string,
   name: string,
   description: string,
-  category: string = 'default'
+  category: string = 'default',
+  usageInstructions?: string
 ): Promise<void> {
   const data = await exportProject(projectId)
 
@@ -648,7 +655,12 @@ export async function saveProjectAsTemplate(
     description,
     category,
     icon: '📋',
-    projectData: data
+    projectData: data,
+    published: false,
+    author: '当前用户',
+    createdAt: new Date().toISOString(),
+    cloneCount: 0,
+    usageInstructions
   }
 
   templates.push(template)
@@ -664,9 +676,35 @@ export function getTemplates(): ProjectTemplate[] {
 }
 
 /**
- * 从模板创建项目
+ * V2.9-007: 发布模板（使模板可被其他人克隆）
  */
-export async function createProjectFromTemplate(
+export function publishTemplate(templateId: string): void {
+  const templates = getTemplates()
+  const template = templates.find(t => t.id === templateId)
+  if (!template) {
+    throw new Error('模板不存在')
+  }
+  template.published = true
+  localStorage.setItem('caelab_templates', JSON.stringify(templates))
+}
+
+/**
+ * V2.9-007: 取消发布模板
+ */
+export function unpublishTemplate(templateId: string): void {
+  const templates = getTemplates()
+  const template = templates.find(t => t.id === templateId)
+  if (!template) {
+    throw new Error('模板不存在')
+  }
+  template.published = false
+  localStorage.setItem('caelab_templates', JSON.stringify(templates))
+}
+
+/**
+ * V2.9-007: 克隆模板（创建新项目并增加克隆计数）
+ */
+export async function cloneTemplate(
   templateId: string,
   newName?: string,
   newDescription?: string
@@ -678,9 +716,13 @@ export async function createProjectFromTemplate(
     throw new Error('模板不存在或数据已损坏')
   }
 
+  // 增加克隆计数
+  template.cloneCount = (template.cloneCount || 0) + 1
+  localStorage.setItem('caelab_templates', JSON.stringify(templates))
+
   const newProjectInput: CreateProjectInput = {
-    name: newName || template.projectData.project.name,
-    description: newDescription || template.projectData.project.description
+    name: newName || `${template.name} (克隆)`,
+    description: newDescription || template.description
   }
 
   const newProject = await createProject(newProjectInput)
@@ -700,12 +742,30 @@ export async function createProjectFromTemplate(
 }
 
 /**
+ * 从模板创建项目（兼容旧版API）
+ */
+export async function createProjectFromTemplate(
+  templateId: string,
+  newName?: string,
+  newDescription?: string
+): Promise<Project> {
+  return cloneTemplate(templateId, newName, newDescription)
+}
+
+/**
  * 删除模板
  */
 export function deleteTemplate(templateId: string): void {
   const templates = getTemplates()
   const filtered = templates.filter(t => t.id !== templateId)
   localStorage.setItem('caelab_templates', JSON.stringify(filtered))
+}
+
+/**
+ * V2.9-007: 获取已发布的模板列表（模板市场）
+ */
+export function getPublishedTemplates(): ProjectTemplate[] {
+  return getTemplates().filter(t => t.published)
 }
 
 // ============ 分享链接 ============
