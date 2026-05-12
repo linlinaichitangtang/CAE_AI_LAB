@@ -650,6 +650,237 @@ const run_closed_loop: ToolDefinition = {
 }
 
 // ============================================================================
+// 工具定义 - 图像分析工具 (V3.6)
+// ============================================================================
+
+const analyze_sem_image: ToolDefinition = {
+  name: 'analyze_sem_image',
+  description: '分析 SEM/TEM/光学 断裂面图像，提取特征（韧窝/条纹/裂纹/孔洞），输出特征统计和尺寸分布，用于材料失效分析',
+  category: 'analysis',
+  params: [
+    { name: 'imageId', type: 'string', description: '图像 ID', required: true },
+    { name: 'profileName', type: 'string', description: '分析配置: dimple/striation/cleavage/crack/full', required: false, default: 'full' },
+    { name: 'pixelCalibration', type: 'number', description: '像素校准 (nm/pixel)', required: false, default: 1.0 }
+  ],
+  returnType: 'ImageAnalysisResult',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['分析SEM断裂面图像', '检测韧窝特征', '提取疲劳条纹间距']
+}
+
+const detect_fracture_features: ToolDefinition = {
+  name: 'detect_fracture_features',
+  description: '使用 ML 模型检测断裂面特征（韧窝/解理面/疲劳条带/二次裂纹），并量化特征尺寸和密度',
+  category: 'analysis',
+  params: [
+    { name: 'imageId', type: 'string', description: '图像 ID', required: true },
+    { name: 'featureTypes', type: 'array', description: '要检测的特征类型: dimple/striation/cleavage/crack/pore', required: false, default: ['dimple', 'crack'] },
+    { name: 'modelId', type: 'string', description: 'ML 模型 ID（可选，使用默认模型）', required: false }
+  ],
+  returnType: 'FeatureDetectionResult',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['检测断裂面韧窝', '识别疲劳条带', '量化裂纹密度']
+}
+
+const correlate_with_simulation: ToolDefinition = {
+  name: 'correlate_with_simulation',
+  description: '将图像分析结果与 MD/FE 模拟数据进行跨尺度关联分析，输出断裂机制判断和材料性能预测',
+  category: 'analysis',
+  params: [
+    { name: 'imageAnalysisId', type: 'string', description: '图像分析结果 ID', required: true },
+    { name: 'simulationData', type: 'object', description: '模拟数据 {maxStress, maxDisplacement, strainEnergy}', required: false },
+    { name: 'materialProperty', type: 'string', description: '材料属性名称', required: false, default: 'TC4 Titanium Alloy' }
+  ],
+  returnType: 'CrossScaleCorrelation',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['关联SEM和MD模拟结果', '跨尺度分析断裂机制']
+}
+
+// ============================================================================
+// 工具定义 - ML 训练工具 (V3.6)
+// ============================================================================
+
+const create_ml_dataset: ToolDefinition = {
+  name: 'create_ml_dataset',
+  description: '创建 ML 训练数据集，管理 SEM/TEM 图像和标注数据，支持分类/检测/分割任务',
+  category: 'ml',
+  params: [
+    { name: 'datasetName', type: 'string', description: '数据集名称', required: true },
+    { name: 'rootPath', type: 'string', description: '数据根目录路径', required: true },
+    { name: 'classes', type: 'array', description: '分类类别列表', required: true }
+  ],
+  returnType: 'DatasetInfo',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['创建断裂特征数据集', '准备SEM图像训练集']
+}
+
+const train_image_classifier: ToolDefinition = {
+  name: 'train_image_classifier',
+  description: '训练图像分类/检测/分割模型（ResNet/UNet/YOLOv8），支持数据增强和迁移学习',
+  category: 'ml',
+  params: [
+    { name: 'datasetId', type: 'string', description: '数据集 ID', required: true },
+    { name: 'modelType', type: 'string', description: '模型类型: classifier/detector/segmenter', required: true },
+    { name: 'architecture', type: 'string', description: '网络架构: resnet18/resnet50/unet/yolov8', required: false, default: 'resnet18' },
+    { name: 'epochs', type: 'number', description: '训练轮数', required: false, default: 50 },
+    { name: 'transferLearning', type: 'boolean', description: '是否使用迁移学习', required: false, default: true }
+  ],
+  returnType: 'TrainingResult',
+  requiresConfirmation: true,
+  isDestructive: false,
+  examples: ['训练韧窝分类器', '训练裂纹检测模型', '训练SEM图像分割模型']
+}
+
+const predict_with_trained_model: ToolDefinition = {
+  name: 'predict_with_trained_model',
+  description: '使用训练好的模型对新图像进行预测（分类/检测/分割）',
+  category: 'ml',
+  params: [
+    { name: 'imageId', type: 'string', description: '待预测图像 ID', required: true },
+    { name: 'modelId', type: 'string', description: '训练好的模型 ID', required: true }
+  ],
+  returnType: 'PredictionResult',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['用训练模型预测SEM图像', '识别断裂特征类型']
+}
+
+// ============================================================================
+// 工具定义 - Active Learning 工具 (V3.7)
+// ============================================================================
+
+const initialize_active_learning: ToolDefinition = {
+  name: 'initialize_active_learning',
+  description: '初始化主动学习数据池，准备采集策略（uncertainty/variance/density）',
+  category: 'ml',
+  params: [
+    { name: 'features', type: 'array', description: '特征矩阵 [[f1, f2, ...], ...]', required: true },
+    { name: 'strategy', type: 'string', description: '采集策略: uncertainty/variance/density/expected_model_change/random', required: false, default: 'uncertainty' },
+    { name: 'batchSize', type: 'number', description: '每轮采集数量', required: false, default: 10 }
+  ],
+  returnType: 'ActiveLearningPool',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['初始化主动学习', '设置不确定度采集策略']
+}
+
+const acquire_next_points: ToolDefinition = {
+  name: 'acquire_next_points',
+  description: '根据当前采集策略推荐最有价值的数据点进行标注/实验',
+  category: 'ml',
+  params: [
+    { name: 'poolId', type: 'string', description: '数据池 ID', required: true },
+    { name: 'numPoints', type: 'number', description: '采集点数', required: false, default: 5 }
+  ],
+  returnType: 'AcquisitionResult',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['推荐下一个实验点', '选择最有价值的SEM图像']
+}
+
+const run_active_learning_iteration: ToolDefinition = {
+  name: 'run_active_learning_iteration',
+  description: '执行一轮主动学习：选择点 → 更新模型 → 评估指标',
+  category: 'ml',
+  params: [
+    { name: 'poolId', type: 'string', description: '数据池 ID', required: true },
+    { name: 'labeledData', type: 'array', description: '新标注数据 [{features, label}]', required: true }
+  ],
+  returnType: 'ActiveLearningIteration',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['执行主动学习迭代', '更新模型并选择下一批点']
+}
+
+// ============================================================================
+// 工具定义 - PINN 工具 (V3.7)
+// ============================================================================
+
+const train_pinn_model: ToolDefinition = {
+  name: 'train_pinn_model',
+  description: '训练物理约束神经网络 (PINN)，将物理定律嵌入训练过程，满足边界条件和平衡方程',
+  category: 'ml',
+  params: [
+    { name: 'modelName', type: 'string', description: '模型名称', required: true },
+    { name: 'physicsType', type: 'string', description: '物理类型: linear_elasticity/nonlinear_elasticity/heat_equation/navier_stokes/diffusion', required: true },
+    { name: 'dimension', type: 'number', description: '维度: 1/2/3', required: false, default: 2 },
+    { name: 'epochs', type: 'number', description: '训练轮数', required: false, default: 5000 },
+    { name: 'physicsWeight', type: 'number', description: '物理损失权重', required: false, default: 0.1 }
+  ],
+  returnType: 'PINNTrainingResult',
+  requiresConfirmation: true,
+  isDestructive: false,
+  examples: ['训练线性弹性PINN', '训练热传导物理约束模型']
+}
+
+const predict_pinn: ToolDefinition = {
+  name: 'predict_pinn',
+  description: '使用训练好的 PINN 模型进行预测，结果满足物理约束',
+  category: 'ml',
+  params: [
+    { name: 'pinnId', type: 'string', description: 'PINN 模型 ID', required: true },
+    { name: 'position', type: 'array', description: '位置坐标 [x] 或 [x, y] 或 [x, y, z]', required: true },
+    { name: 'time', type: 'number', description: '时间（仅对瞬态问题）', required: false }
+  ],
+  returnType: 'PINNPrediction',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['PINN预测应力分布', '预测温度场']
+}
+
+// ============================================================================
+// 工具定义 - Surrogate Model 工具 (V3.7)
+// ============================================================================
+
+const create_surrogate_model: ToolDefinition = {
+  name: 'create_surrogate_model',
+  description: '创建代理模型，用 ML 模型替代完整 MD/FE 求解器，加速预测',
+  category: 'ml',
+  params: [
+    { name: 'modelName', type: 'string', description: '模型名称', required: true },
+    { name: 'inputDimensions', type: 'array', description: '输入维度名称列表', required: true },
+    { name: 'outputDimensions', type: 'array', description: '输出维度名称列表', required: true },
+    { name: 'modelType', type: 'string', description: '模型类型: ANN/GNN/KNN/SVR/RandomForest/GaussianProcess', required: false, default: 'ANN' }
+  ],
+  returnType: 'SurrogateModel',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['创建应力代理模型', '创建位移预测代理模型']
+}
+
+const train_surrogate: ToolDefinition = {
+  name: 'train_surrogate',
+  description: '从 MD/FE 模拟数据训练代理模型，学习输入参数到输出的映射',
+  category: 'ml',
+  params: [
+    { name: 'surrogateId', type: 'string', description: '代理模型 ID', required: true },
+    { name: 'trainingData', type: 'array', description: '训练数据 [{inputs: [], outputs: []}]', required: true },
+    { name: 'epochs', type: 'number', description: '训练轮数', required: false, default: 300 }
+  ],
+  returnType: 'SurrogateTrainingResult',
+  requiresConfirmation: true,
+  isDestructive: false,
+  examples: ['训练Surrogate代理模型', '从MD数据训练替代模型']
+}
+
+const predict_with_surrogate: ToolDefinition = {
+  name: 'predict_with_surrogate',
+  description: '使用训练好的代理模型快速预测，无需运行完整 MD/FE 模拟',
+  category: 'ml',
+  params: [
+    { name: 'surrogateId', type: 'string', description: '代理模型 ID', required: true },
+    { name: 'inputs', type: 'array', description: '输入参数 [温度, 压力, 材料属性, ...]', required: true }
+  ],
+  returnType: 'SurrogatePrediction',
+  requiresConfirmation: false,
+  isDestructive: false,
+  examples: ['代理模型快速预测应力', '秒级预测代替完整模拟']
+}
+
+// ============================================================================
 // 工具注册表
 // ============================================================================
 
@@ -681,6 +912,16 @@ function initToolRegistry(): void {
     segment_microstructure, predict_macro_property, run_multiscale_workflow,
     // 主动学习工具 (V2.8)
     analyze_data_coverage, get_active_learning_recommendations, run_closed_loop,
+    // 图像分析工具 (V3.6)
+    analyze_sem_image, detect_fracture_features, correlate_with_simulation,
+    // ML 训练工具 (V3.6)
+    create_ml_dataset, train_image_classifier, predict_with_trained_model,
+    // Active Learning 工具 (V3.7)
+    initialize_active_learning, acquire_next_points, run_active_learning_iteration,
+    // PINN 工具 (V3.7)
+    train_pinn_model, predict_pinn,
+    // Surrogate Model 工具 (V3.7)
+    create_surrogate_model, train_surrogate, predict_with_surrogate,
   ]
 
   for (const tool of allTools) {
