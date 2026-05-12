@@ -32,6 +32,26 @@ interface Note {
   tags: string[]
 }
 
+// 项目版本历史 (V2.9-004)
+export interface ProjectVersion {
+  id: string
+  timestamp: string
+  label: string
+  description?: string
+  // 快照数据
+  meshSnapshot: {
+    nodes: Node[]
+    elements: Element[]
+  } | null
+  boundaryConditionsSnapshot: {
+    fixedBcs: FixedBc[]
+    pointLoads: PointLoad[]
+    uniformLoads: UniformLoad[]
+  }
+  resultSnapshot: ResultSet | null
+  createdBy: 'auto' | 'manual'  // auto=自动保存, manual=用户手动保存
+}
+
 interface ProjectState {
   // 当前打开的项目
   currentProject: Project | null
@@ -62,10 +82,10 @@ interface ProjectState {
   currentNoteId: string | null
   // 笔记列表
   notes: Note[]
-  // 项目名称（computed alias for currentProject.name）
-  projectName: string
   // 代码文件最后修改时间戳（用于嵌入卡片实时更新检测）
   codeLastModified: string | null
+  // 项目版本历史 (V2.9-004)
+  versionHistory: ProjectVersion[]
 }
 
 export const useProjectStore = defineStore('project', {
@@ -85,8 +105,8 @@ export const useProjectStore = defineStore('project', {
     embeddings: [],
     currentNoteId: null,
     notes: [],
-    projectName: '',
-    codeLastModified: null
+    codeLastModified: null,
+    versionHistory: []
   }),
 
   getters: {
@@ -346,6 +366,95 @@ export const useProjectStore = defineStore('project', {
         default:
           return { name: '未知', hasData: false }
       }
+    },
+
+    // ============================================================
+    // 项目版本历史 (V2.9-004)
+    // ============================================================
+
+    /** 创建版本快照（自动保存或手动保存） */
+    createVersionSnapshot(label: string, createdBy: 'auto' | 'manual' = 'auto') {
+      const version: ProjectVersion = {
+        id: `v-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        label,
+        description: createdBy === 'auto' ? '自动保存' : '手动保存',
+        meshSnapshot: this.currentMesh ? {
+          nodes: [...this.currentMesh.nodes],
+          elements: [...this.currentMesh.elements]
+        } : null,
+        boundaryConditionsSnapshot: {
+          fixedBcs: [...this.boundaryConditions.fixedBcs],
+          pointLoads: [...this.boundaryConditions.pointLoads],
+          uniformLoads: [...this.boundaryConditions.uniformLoads]
+        },
+        resultSnapshot: this.lastResult,
+        createdBy
+      }
+
+      // 添加到历史（最新的在前）
+      this.versionHistory.unshift(version)
+
+      // 限制最多保留 50 个版本
+      if (this.versionHistory.length > 50) {
+        this.versionHistory = this.versionHistory.slice(0, 50)
+      }
+
+      return version
+    },
+
+    /** 恢复到指定版本 */
+    restoreVersion(versionId: string) {
+      const version = this.versionHistory.find(v => v.id === versionId)
+      if (!version) {
+        console.error('Version not found:', versionId)
+        return false
+      }
+
+      // 恢复网格数据
+      if (version.meshSnapshot) {
+        this.currentMesh = { ...version.meshSnapshot }
+      }
+
+      // 恢复边界条件
+      this.boundaryConditions = {
+        fixedBcs: [...version.boundaryConditionsSnapshot.fixedBcs],
+        pointLoads: [...version.boundaryConditionsSnapshot.pointLoads],
+        uniformLoads: [...version.boundaryConditionsSnapshot.uniformLoads]
+      }
+
+      // 恢复结果
+      this.lastResult = version.resultSnapshot
+
+      return true
+    },
+
+    /** 获取版本历史列表 */
+    getVersionHistory(): ProjectVersion[] {
+      return [...this.versionHistory]
+    },
+
+    /** 删除指定版本 */
+    deleteVersion(versionId: string) {
+      const index = this.versionHistory.findIndex(v => v.id === versionId)
+      if (index !== -1) {
+        this.versionHistory.splice(index, 1)
+      }
+    },
+
+    /** 清除所有版本历史 */
+    clearVersionHistory() {
+      this.versionHistory = []
+    },
+
+    /** 为当前操作创建自动快照（每5分钟自动调用） */
+    autoSnapshot() {
+      return this.createVersionSnapshot('自动保存', 'auto')
+    },
+
+    /** 用户手动创建命名快照 */
+    manualSnapshot(label: string) {
+      return this.createVersionSnapshot(label, 'manual')
     }
   }
 })

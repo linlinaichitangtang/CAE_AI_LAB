@@ -40,6 +40,43 @@
       </div>
     </div>
 
+    <!-- 场景入口 - 你想做什么? -->
+    <div class="mb-8 bg-gradient-to-br from-[var(--bg-surface)] to-[var(--bg-elevated)] rounded-2xl p-6 border border-[var(--border-subtle)]">
+      <h2 class="text-lg font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+        <span class="text-2xl">🎯</span>
+        <span>你想做什么？</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          v-for="scenario in scenarios"
+          :key="scenario.id"
+          class="group relative bg-[var(--bg-elevated)] rounded-xl p-5 cursor-pointer border border-transparent hover:border-[var(--primary)] transition-all duration-300"
+          :class="{ 'ring-2 ring-[var(--primary)]': scenario.isNew }"
+          @click="handleScenarioClick(scenario)"
+        >
+          <!-- NEW 标签 -->
+          <div v-if="scenario.isNew" class="absolute -top-2 -right-2 bg-[var(--primary)] text-white text-xs px-2 py-0.5 rounded-full">
+            NEW
+          </div>
+          <div class="flex flex-col h-full">
+            <div class="w-12 h-12 rounded-xl bg-[var(--bg-surface)] flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <span class="text-3xl">{{ scenario.icon }}</span>
+            </div>
+            <h3 class="font-semibold text-[var(--text-primary)] mb-2">{{ scenario.name }}</h3>
+            <p class="text-xs text-[var(--text-muted)] mb-3 flex-1">{{ scenario.description }}</p>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-[var(--primary)]">{{ scenario.timeEstimate }}</span>
+              <span class="text-lg opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 快捷提示 -->
+      <p class="text-xs text-[var(--text-muted)] mt-4 text-center">
+        选择一个场景，系统会引导你完成整个流程
+      </p>
+    </div>
+
     <!-- Recent Projects -->
     <div v-if="recentProjects.length > 0" class="mb-8">
       <h3 class="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-4">最近项目</h3>
@@ -152,26 +189,74 @@
 
     <!-- Templates Section -->
     <div v-if="templates.length > 0" class="mb-8">
-      <h3 class="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-4">项目模板</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider">项目模板</h3>
+        <button
+          @click="showTemplatesDialog = true"
+          class="text-xs text-[var(--primary)] hover:underline"
+        >
+          管理模板 →
+        </button>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div 
-          v-for="template in templates" 
+        <div
+          v-for="template in templates"
           :key="template.id"
-          class="card cursor-pointer group"
+          class="card cursor-pointer group relative"
           @click="createFromTemplate(template)"
         >
+          <!-- 发布标签 -->
+          <div v-if="template.published" class="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+            <span>🌍</span> 已发布
+          </div>
+
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-[var(--primary-glow)] flex items-center justify-center">
               <span class="text-[var(--primary)] text-lg">{{ template.icon }}</span>
             </div>
-            <div>
-              <h4 class="font-semibold text-[var(--text-primary)]">{{ template.name }}</h4>
+            <div class="flex-1 min-w-0">
+              <h4 class="font-semibold text-[var(--text-primary)] truncate">{{ template.name }}</h4>
               <p class="text-xs text-[var(--text-muted)]">{{ template.category }}</p>
             </div>
           </div>
           <p class="text-sm text-[var(--text-secondary)] line-clamp-2">{{ template.description || '暂无描述' }}</p>
-          <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-[var(--border-subtle)]">
-            <button 
+
+          <!-- 使用说明预览 -->
+          <div v-if="template.usageInstructions" class="mt-2 p-2 rounded bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)] line-clamp-2">
+            📖 {{ template.usageInstructions }}
+          </div>
+
+          <!-- 克隆计数 -->
+          <div v-if="(template.cloneCount || 0) > 0" class="mt-2 text-[10px] text-[var(--text-muted)]">
+            🔄 已被克隆 {{ template.cloneCount }} 次
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-[var(--border-subtle)] opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              @click.stop="cloneTemplateItem(template)"
+              class="text-xs text-[var(--primary)] hover:underline"
+              title="克隆此模板"
+            >
+              🔄 克隆
+            </button>
+            <button
+              v-if="!template.published"
+              @click.stop="publishTemplateItem(template.id)"
+              class="text-xs text-[var(--accent-green)] hover:underline"
+              title="发布模板"
+            >
+              🌍 发布
+            </button>
+            <button
+              v-else
+              @click.stop="unpublishTemplateItem(template.id)"
+              class="text-xs text-[var(--text-muted)] hover:underline"
+              title="取消发布"
+            >
+              🔒 取消发布
+            </button>
+            <button
               @click.stop="deleteTemplateItem(template.id)"
               class="text-xs text-[var(--text-muted)] hover:text-[var(--accent-red)]"
             >
@@ -523,14 +608,17 @@ import { useRouter } from 'vue-router'
 import { listProjects, createProject, updateProject, deleteProject, type Project } from '@/api'
 import { formatProjectDate } from '@/api'
 import ShareDialog from '@/components/collaboration/ShareDialog.vue'
-import { 
-  exportProjectAsZip, 
-  importProjectFromZip, 
-  saveProjectAsTemplate, 
-  getTemplates, 
-  createProjectFromTemplate, 
+import {
+  exportProjectAsZip,
+  importProjectFromZip,
+  saveProjectAsTemplate,
+  getTemplates,
+  createProjectFromTemplate,
+  cloneTemplate,
+  publishTemplate,
+  unpublishTemplate,
   deleteTemplate,
-  generateShareLink, 
+  generateShareLink,
   copyToClipboard,
   type ProjectTemplate
 } from '@/api/share'
@@ -598,6 +686,56 @@ const modules = [
   { name: '代码编辑', icon: '💻', path: '/code', desc: '语法高亮、代码运行' },
   { name: '仿真分析', icon: '🔬', path: '/simulation', desc: '结构力学仿真、结果后处理' }
 ]
+
+// 场景入口数据
+interface Scenario {
+  id: string
+  name: string
+  icon: string
+  description: string
+  timeEstimate: string
+  path: string
+  isNew: boolean
+}
+
+const scenarios = ref<Scenario[]>([
+  {
+    id: 'quick-sim',
+    name: '快速仿真',
+    icon: '⚡',
+    description: '选择模板，几分钟完成第一次结构仿真',
+    timeEstimate: '5 分钟',
+    path: '/simulation',
+    isNew: true
+  },
+  {
+    id: 'multi-scale',
+    name: '多尺度模拟',
+    icon: '🔬',
+    description: 'DFT→MD→相场→FE 全流程串联',
+    timeEstimate: '10 分钟',
+    path: '/md',
+    isNew: true
+  },
+  {
+    id: 'modeling-design',
+    name: '建模与设计',
+    icon: '🎨',
+    description: '3D 几何建模、CSG 布尔、STL 导入',
+    timeEstimate: '8 分钟',
+    path: '/modeling',
+    isNew: false
+  },
+  {
+    id: 'notes-creation',
+    name: '笔记创作',
+    icon: '📝',
+    description: '嵌入模型、代码、仿真结果的知识笔记',
+    timeEstimate: '3 分钟',
+    path: '/notes',
+    isNew: false
+  }
+])
 
 // Computed: recent projects (sorted by creation date, limit 6)
 const recentProjects = computed(() => {
@@ -782,6 +920,39 @@ function deleteTemplateItem(templateId: string) {
   loadTemplates()
 }
 
+// V2.9-007: 模板发布与克隆
+async function cloneTemplateItem(template: ProjectTemplate) {
+  try {
+    const newProject = await cloneTemplate(template.id, `${template.name} (克隆)`)
+    await loadProjects()
+    await loadTemplates()
+    router.push({ path: '/notes', query: { projectId: newProject.id } })
+  } catch (error) {
+    console.error('Failed to clone template:', error)
+    alert('克隆模板失败: ' + (error as Error).message)
+  }
+}
+
+function publishTemplateItem(templateId: string) {
+  try {
+    publishTemplate(templateId)
+    loadTemplates()
+  } catch (error) {
+    console.error('Failed to publish template:', error)
+    alert('发布模板失败: ' + (error as Error).message)
+  }
+}
+
+function unpublishTemplateItem(templateId: string) {
+  try {
+    unpublishTemplate(templateId)
+    loadTemplates()
+  } catch (error) {
+    console.error('Failed to unpublish template:', error)
+    alert('取消发布失败: ' + (error as Error).message)
+  }
+}
+
 // Import functions
 function triggerImport() {
   fileInput.value?.click()
@@ -883,6 +1054,52 @@ function handleModuleClick(path: string) {
     router.push({ path, query: { projectId: currentProject.id } })
   } else {
     router.push(path)
+  }
+}
+
+// Handle scenario click - 场景化入口
+function handleScenarioClick(scenario: Scenario) {
+  if (scenario.id === 'quick-sim') {
+    // 快速仿真：创建新项目并跳转到仿真
+    handleQuickSimulation()
+  } else if (scenario.id === 'multi-scale') {
+    // 多尺度：创建新项目并跳转到 MD
+    handleMultiScale()
+  } else {
+    // 其他场景：直接跳转
+    router.push(scenario.path)
+  }
+}
+
+// 快速仿真引导
+async function handleQuickSimulation() {
+  try {
+    // 创建新项目
+    const project = await createProject({
+      name: '快速仿真_' + new Date().toLocaleDateString('zh-CN'),
+      description: '快速仿真模板项目'
+    })
+    await loadProjects()
+    // 跳转到仿真页面
+    router.push({ path: '/simulation', query: { projectId: project.id, guide: 'first-sim' } })
+  } catch (error) {
+    console.error('Failed to create quick simulation project:', error)
+  }
+}
+
+// 多尺度模拟引导
+async function handleMultiScale() {
+  try {
+    // 创建新项目
+    const project = await createProject({
+      name: '多尺度模拟_' + new Date().toLocaleDateString('zh-CN'),
+      description: '多尺度模拟模板项目'
+    })
+    await loadProjects()
+    // 跳转到 MD 页面（多尺度起点）
+    router.push({ path: '/md', query: { projectId: project.id, guide: 'multi-scale' } })
+  } catch (error) {
+    console.error('Failed to create multi-scale project:', error)
   }
 }
 
