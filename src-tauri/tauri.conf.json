@@ -11,7 +11,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb"],
+    "targets": ["deb", "app", "dmg", "ipa", "aab"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -56,19 +56,32 @@
       "appimage": {
         "bundleMediaFramework": false
       }
+    },
+    "android": {
+      "minSdk": 24,
+      "targetSdk": 34,
+      "compileSdk": 34,
+      "kotlinVersion": "1.9.22",
+      "enableHuawei": true
+    },
+    "ios": {
+      "minimumDeploymentVersion": "14.0",
+      "enableHuawei": true
     }
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "CAELab - \u79d1\u7814\u4e0e\u5de5\u7a0b\u521b\u4f5c\u4e00\u4f53\u5316\u5de5\u4f5c\u53f0",
         "width": 1280,
         "height": 800,
-        "minWidth": 800,
+        "minWidth": 768,
         "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true
+        "decorations": true,
+        "orientation": "landscape"
       }
     ]
   }
