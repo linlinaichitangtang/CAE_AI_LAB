@@ -3,7 +3,7 @@
  * 统一管理所有快捷键注册、冲突检测和上下文感知
  */
 
-import { ref, readonly } from 'vue'
+import { ref, readonly, onUnmounted } from 'vue'
 import { defaultHotkeys, type HotkeyConfig } from '@/utils/defaultHotkeys'
 
 // ============ 类型定义 ============
@@ -330,14 +330,17 @@ function handleGlobalKeydown(e: KeyboardEvent): void {
 
 loadCustomKeys()
 
-// 注册全局事件监听
-if (typeof document !== 'undefined') {
-  document.addEventListener('keydown', handleGlobalKeydown, true)
-}
-
 // ============ 导出 ============
 
 export function useHotkeys() {
+  // 注册全局事件监听 (在组件卸载时清理)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', handleGlobalKeydown, true)
+    onUnmounted(() => {
+      document.removeEventListener('keydown', handleGlobalKeydown, true)
+    })
+  }
+
   return {
     // 状态
     activeContext: readonly(activeContext),

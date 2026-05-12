@@ -61,6 +61,6 @@ export default defineConfig(({ mode }) => ({
     }
   },
   optimizeDeps: {
-    include: ['monaco-editor', 'codemirror']
+    exclude: ['monaco-editor']
   }
 }))

@@ -3,7 +3,7 @@
  * 完整本地求解，无需网络（field engineers 场景）
  */
 
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 // ============ 类型定义 ============
 
@@ -138,15 +138,21 @@ export function useOfflineMode() {
     offlineCapabilities.value.filter(c => c.supported).length
   )
 
-  function setupNetworkListeners() {
-    window.addEventListener('online', () => {
-      isOnline.value = true
-      processSyncQueue()
-    })
-    window.addEventListener('offline', () => {
-      isOnline.value = false
-    })
-  }
+// 防止重复注册监听器
+let networkListenersInitialized = false
+
+function setupNetworkListeners() {
+  if (networkListenersInitialized) return
+  networkListenersInitialized = true
+
+  window.addEventListener('online', () => {
+    isOnline.value = true
+    processSyncQueue()
+  })
+  window.addEventListener('offline', () => {
+    isOnline.value = false
+  })
+}
 
   async function enableOfflineMode(): Promise<boolean> {
     try {
