@@ -4,35 +4,45 @@ import { usePlatform } from './usePlatform'
 /**
  * 移动端功能裁剪
  * 定义在移动端/平板哪些功能可用/不可用
- * 主要针对平板优化 (iPad / Android Pad / Harmony Pad)
+ * 主要针对平板优化
  */
 export function useMobileFeatures() {
-  const { isTouchDevice, isMobile, isTablet, isIOS, isAndroid, isHarmony, isOpenHarmony } = usePlatform()
-
-  const isPureHarmony = computed(() => isHarmony.value || isOpenHarmony.value)
+  const { isTouchDevice, isMobile, isTablet, isIOS, isAndroid, isHarmony } = usePlatform()
 
   // 平板功能配置（iPad/Android Pad/Harmony Pad）
   const tabletFeatures = computed(() => ({
+    // 查看结果 - 完全可用
     viewResults: true,
+    // 笔记 - 完全可用
     notes: true,
+    // 轻量仿真 - 完全可用
     lightSimulation: true,
+    // 基本建模 - 完全可用
     basicModeling: true,
+    // 代码编辑 - 完全可用
     codeEditor: true,
+    // 完整仿真 - 平板可用（性能允许时）
     fullSimulation: true,
+    // CFD 分析 - 平板可用（简化模式）
     cfdAnalysis: true,
+    // 拓扑优化 - 平板可用（云端计算）
     topologyOptimization: true,
-    explicitDynamics: false,
+    // 显式动力学 - 平板受限可用
+    explicitDynamics: false, // 平板性能不足
+    // 高级建模 - 平板可用（简化）
     advancedModeling: true,
+    // 参数化扫描 - 平板可用（云端）
     parameterScan: true,
+    // 脚本自动化 - 平板可用
     scriptAutomation: true,
+    // 结果对比 - 平板可用
     comparison: true,
-    stylusSupport: isIOS.value || isPureHarmony.value,
+    // Apple Pencil / 手写笔支持
+    stylusSupport: isIOS.value || isHarmony.value,
+    // 多任务分屏
     splitScreen: true,
+    // AR 预览
     arPreview: true,
-    // 纯血鸿蒙特有
-    mPencil: isPureHarmony.value,
-    multiWindow: true,
-    foldableSupport: true,
   }))
 
   // 手机功能配置
@@ -53,32 +63,6 @@ export function useMobileFeatures() {
     stylusSupport: false,
     splitScreen: false,
     arPreview: true,
-    mPencil: false,
-    multiWindow: false,
-    foldableSupport: false,
-  }))
-
-  // 折叠屏功能配置
-  const foldableFeatures = computed(() => ({
-    viewResults: true,
-    notes: true,
-    lightSimulation: true,
-    basicModeling: true,
-    codeEditor: true,
-    fullSimulation: true,
-    cfdAnalysis: true,
-    topologyOptimization: true,
-    explicitDynamics: false,
-    advancedModeling: true,
-    parameterScan: true,
-    scriptAutomation: true,
-    comparison: true,
-    stylusSupport: isPureHarmony.value,
-    splitScreen: true,
-    arPreview: true,
-    mPencil: isPureHarmony.value,
-    multiWindow: true,
-    foldableSupport: true,
   }))
 
   // 根据设备类型选择功能集
@@ -103,9 +87,6 @@ export function useMobileFeatures() {
       stylusSupport: false,
       splitScreen: false,
       arPreview: true,
-      mPencil: false,
-      multiWindow: false,
-      foldableSupport: false,
     }
   })
 
@@ -125,12 +106,6 @@ export function useMobileFeatures() {
     { path: '/simulation', label: '仿真', icon: 'box' },
     { path: '/notes', label: '笔记', icon: 'file-text' },
   ])
-
-  // 折叠屏导航项（支持展开/折叠切换）
-  const foldableNavItems = computed(() => {
-    if (isTablet.value) return tabletNavItems.value
-    return mobileNavItems.value
-  })
 
   const navItems = computed(() => {
     if (isTablet.value) return tabletNavItems.value
@@ -156,12 +131,9 @@ export function useMobileFeatures() {
     availableFeatures,
     tabletFeatures,
     phoneFeatures,
-    foldableFeatures,
     mobileNavItems,
     tabletNavItems,
-    foldableNavItems,
     desktopNavItems,
     navItems,
-    isPureHarmony,
   }
 }

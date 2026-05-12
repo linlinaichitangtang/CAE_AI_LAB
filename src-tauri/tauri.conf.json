@@ -60,13 +60,36 @@
     "android": {
       "minSdk": 24,
       "targetSdk": 34,
+      "splitDebugSymbols": false,
       "compileSdk": 34,
       "kotlinVersion": "1.9.22",
-      "enableHuawei": true
+      "toolchainVersion": "0.9.0",
+      "enableHuawei": true,
+      "signing": {
+        "Huawei": {
+          "storeFile": null,
+          "storePassword": "",
+          "alias": "",
+          "keyPassword": ""
+        },
+        "GooglePlay": {
+          "storeFile": null,
+          "storePassword": "",
+          "alias": "",
+          "keyPassword": ""
+        }
+      }
     },
     "ios": {
       "minimumDeploymentVersion": "14.0",
-      "enableHuawei": true
+      "enableHuawei": true,
+      "signing": {
+        "Apple": {
+          "developmentTeam": "",
+          "codeSignIdentity": "",
+          "provisioningProfile": ""
+        }
+      }
     }
   },
   "app": {
@@ -81,7 +104,9 @@
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
-        "orientation": "landscape"
+        "tabletPlacement": "center",
+        "orientation": "landscape",
+        "visible": true
       }
     ]
   }
