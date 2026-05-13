@@ -44,7 +44,6 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           'three': ['three'],
-          'monaco': ['monaco-editor'],
           'codemirror': [
             'codemirror',
             '@codemirror/lang-python',
