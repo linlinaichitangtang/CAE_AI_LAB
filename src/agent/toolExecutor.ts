@@ -349,6 +349,154 @@ export class ToolExecutor {
         filePath: params.filePath || '/tmp/model.step',
         imported: true,
         geometryInfo: { type: 'imported', volume: 0.003 }
+      },
+
+      // ========== 图像分析工具 (V3.6) ==========
+      'analyze_sem_image': {
+        imageId: params.imageId || 'img-1',
+        profileName: params.profileName || 'full',
+        features: [
+          { type: 'dimple', count: 45, avgSize: 2.5, areaRatio: 0.32 },
+          { type: 'crack', count: 3, avgSize: 15.2, length: 45.6 }
+        ],
+        statistics: {
+          totalFeatures: 48,
+          featuresByType: { dimple: 45, crack: 3, striation: 0, pore: 0, cleavage: 0, particle: 0, inclusion: 0, unknown: 0 },
+          averageSize: 3.8,
+          areaRatio: 0.32
+        },
+        qualityScore: 0.92
+      },
+      'detect_fracture_features': {
+        imageId: params.imageId || 'img-1',
+        featureTypes: params.featureTypes || ['dimple', 'crack'],
+        detections: [
+          { type: 'dimple', confidence: 0.95, count: 42, avgSize: 2.3 },
+          { type: 'crack', confidence: 0.88, count: 2, totalLength: 28.5 }
+        ],
+        modelUsed: params.modelId || 'default_fracture_model'
+      },
+      'correlate_with_simulation': {
+        imageAnalysisId: params.imageAnalysisId || 'result-1',
+        simulationData: params.simulationData || { maxStress: 850, maxDisplacement: 0.025 },
+        correlationScore: 0.87,
+        insights: [
+          '断裂模式以韧性断裂为主，韧窝发育良好',
+          '高应力区与裂纹扩展路径存在空间关联'
+        ],
+        recommendations: [
+          '材料具有较好的韧性，建议关注疲劳寿命',
+          '建议优化热处理工艺提高强度'
+        ]
+      },
+
+      // ========== ML 训练工具 (V3.6) ==========
+      'create_ml_dataset': {
+        datasetId: `dataset_${Date.now()}`,
+        datasetName: params.datasetName || 'fracture_dataset',
+        rootPath: params.rootPath || '/data/fracture',
+        classes: params.classes || ['dimple', 'crack', 'striation'],
+        created: true
+      },
+      'train_image_classifier': {
+        datasetId: params.datasetId || 'dataset-1',
+        modelType: params.modelType || 'classifier',
+        architecture: params.architecture || 'resnet18',
+        epochs: params.epochs || 50,
+        status: 'completed',
+        metrics: {
+          trainAccuracy: 0.96,
+          valAccuracy: 0.92,
+          f1Score: 0.91
+        },
+        modelId: `model_${Date.now()}`
+      },
+      'predict_with_trained_model': {
+        imageId: params.imageId || 'img-1',
+        modelId: params.modelId || 'model-1',
+        predictions: [
+          { label: 'dimple', confidence: 0.94 },
+          { label: 'ductile', confidence: 0.89 }
+        ],
+        processingTime: 0.32
+      },
+
+      // ========== Active Learning 工具 (V3.7) ==========
+      'initialize_active_learning': {
+        poolId: `pool_${Date.now()}`,
+        strategy: params.strategy || 'uncertainty',
+        batchSize: params.batchSize || 10,
+        totalPoints: (params.features as unknown[][] || []).length || 500,
+        initialized: true
+      },
+      'acquire_next_points': {
+        poolId: params.poolId || 'pool-1',
+        numPoints: params.numPoints || 5,
+        selectedPoints: [
+          { id: 'pt_1', features: [0.5, 0.3, 0.8], score: 0.92 },
+          { id: 'pt_2', features: [0.6, 0.4, 0.7], score: 0.88 },
+          { id: 'pt_3', features: [0.4, 0.5, 0.9], score: 0.85 }
+        ],
+        reason: '高不确定度区域'
+      },
+      'run_active_learning_iteration': {
+        poolId: params.poolId || 'pool-1',
+        iteration: 1,
+        newLabeledCount: (params.labeledData as unknown[] || []).length || 5,
+        modelAccuracy: 0.89,
+        uncertaintyReduction: 0.15,
+        totalLabeled: 15
+      },
+
+      // ========== PINN 工具 (V3.7) ==========
+      'train_pinn_model': {
+        modelId: `pinn_${Date.now()}`,
+        modelName: params.modelName || 'elasticity_pinn',
+        physicsType: params.physicsType || 'linear_elasticity',
+        epochs: params.epochs || 5000,
+        status: 'completed',
+        metrics: {
+          finalLoss: 0.015,
+          dataLoss: 0.008,
+          physicsLoss: 0.007,
+          r2Score: 0.96
+        }
+      },
+      'predict_pinn': {
+        pinnId: params.pinnId || 'pinn-1',
+        position: params.position || [0.5, 0.5],
+        time: params.time,
+        predictedValue: 125.4,
+        residual: 0.012,
+        confidence: 0.94
+      },
+
+      // ========== Surrogate Model 工具 (V3.7) ==========
+      'create_surrogate_model': {
+        surrogateId: `surrogate_${Date.now()}`,
+        modelName: params.modelName || 'stress_surrogate',
+        inputDimensions: params.inputDimensions || ['temperature', 'pressure', 'material'],
+        outputDimensions: params.outputDimensions || ['maxStress', 'maxDisplacement'],
+        modelType: params.modelType || 'ANN',
+        created: true
+      },
+      'train_surrogate': {
+        surrogateId: params.surrogateId || 'surrogate-1',
+        trainingDataSize: (params.trainingData as unknown[] || []).length || 100,
+        status: 'completed',
+        metrics: {
+          trainRMSE: 0.018,
+          valRMSE: 0.024,
+          r2Score: 0.97
+        }
+      },
+      'predict_with_surrogate': {
+        surrogateId: params.surrogateId || 'surrogate-1',
+        inputs: params.inputs || [300, 0.001],
+        predictions: [850.5, 0.023],
+        uncertainty: [25.2, 0.001],
+        confidence: 0.91,
+        predictionTime: 0.005
       }
     }
 
