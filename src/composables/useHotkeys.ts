@@ -24,6 +24,9 @@ const STORAGE_KEY = 'caelab-hotkeys-custom'
 /** 当前活跃的上下文（模块） */
 const activeContext = ref<string>('global')
 
+/** AI 上下文快捷键（这些在任何模块下都可触发） */
+const aiHotkeys = ['ctrl+k', 'ctrl+shift+i', 'ctrl+shift+b', 'ctrl+shift+c']
+
 /** 快捷键注册表 */
 const hotkeyRegistry = new Map<string, HotkeyBinding>()
 
@@ -308,12 +311,28 @@ function handleGlobalKeydown(e: KeyboardEvent): void {
     return
   }
 
+  const eventKeys = eventToKeys(e)
+
+  // AI 快捷键在任何上下文中都可触发
+  if (aiHotkeys.includes(eventKeys)) {
+    for (const [, binding] of hotkeyRegistry) {
+      if (binding.category === 'ai' && binding.keys === eventKeys) {
+        if (binding.enabled) {
+          e.preventDefault()
+          e.stopPropagation()
+          binding.action()
+          return
+        }
+      }
+    }
+  }
+
   // 检查是否匹配任何已注册的快捷键
   for (const [, binding] of hotkeyRegistry) {
     if (!binding.enabled) continue
 
-    // 上下文检查：全局快捷键始终响应，模块级快捷键只在对应上下文响应
-    if (binding.category !== 'global' && binding.category !== activeContext.value) {
+    // 上下文检查：全局快捷键和 AI 快捷键始终响应，模块级快捷键只在对应上下文响应
+    if (binding.category !== 'global' && binding.category !== 'ai' && binding.category !== activeContext.value) {
       continue
     }
 

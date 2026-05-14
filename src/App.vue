@@ -90,6 +90,24 @@
 
       <!-- 移动端底部导航 -->
       <MobileBottomNav v-if="isTouchDevice" />
+
+      <!-- 浮动 AI 助手按钮 -->
+      <FloatingAIButton />
+
+      <!-- 新用户引导 -->
+      <OnboardingDialog
+        :visible="showOnboarding"
+        :is-active="showOnboarding"
+        :steps="defaultOnboardingSteps"
+        :current-step-index="onboardingStepIndex"
+        @next="nextOnboardingStep"
+        @prev="prevOnboardingStep"
+        @skip="skipOnboarding"
+        @complete="completeOnboarding"
+      />
+
+      <!-- AI 教学助手 -->
+      <AITutor :is-open="showAITutor" @close="showAITutor = false" />
     </template>
   </div>
 </template>
@@ -113,6 +131,10 @@ import { useOrientation } from './composables/useOrientation'
 import { useAuthStore } from './stores/authStore'
 import { useTrialStore } from './stores/trial'
 import { useHotkeys } from './composables/useHotkeys'
+import FloatingAIButton from './components/ai/FloatingAIButton.vue'
+import AITutor from './components/ai/AITutor.vue'
+import OnboardingDialog from './components/common/OnboardingDialog.vue'
+import { defaultOnboardingSteps } from './composables/useOnboarding'
 
 // Platform detection for responsive layout
 const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
@@ -129,6 +151,69 @@ const trialStore = useTrialStore()
 // V1.1-011: Hotkeys
 const { registerHotkey, setActiveContext } = useHotkeys()
 const router = useRouter()
+
+// ============ 新用户引导状态 ============
+const ONBOARDING_KEY = 'caelab_onboarding_completed'
+const showOnboarding = ref(false)
+const onboardingStepIndex = ref(0)
+
+function checkOnboardingStatus() {
+  try {
+    const completed = localStorage.getItem(ONBOARDING_KEY)
+    if (!completed) {
+      // 首次使用，显示引导
+      setTimeout(() => {
+        showOnboarding.value = true
+      }, 2000) // 延迟2秒，等页面加载完成
+    }
+  } catch {
+    // Ignore
+  }
+}
+
+function nextOnboardingStep() {
+  if (onboardingStepIndex.value < defaultOnboardingSteps.length - 1) {
+    onboardingStepIndex.value++
+  }
+}
+
+function prevOnboardingStep() {
+  if (onboardingStepIndex.value > 0) {
+    onboardingStepIndex.value--
+  }
+}
+
+function skipOnboarding() {
+  showOnboarding.value = false
+  localStorage.setItem(ONBOARDING_KEY, 'true')
+}
+
+function completeOnboarding() {
+  showOnboarding.value = false
+  localStorage.setItem(ONBOARDING_KEY, 'true')
+}
+
+// ============ AI 教学助手状态 ============
+const showAITutor = ref(false)
+
+// 键盘快捷键唤起 AI 助教
+function handleTutorHotkey(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+    e.preventDefault()
+    showAITutor.value = !showAITutor.value
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleTutorHotkey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleTutorHotkey)
+})
+
+// 检查引导状态
+checkOnboardingStatus()
 
 // Layout mode: 'focus' | 'side' | 'tri' | 'quad'
 const currentLayout = ref<string>(

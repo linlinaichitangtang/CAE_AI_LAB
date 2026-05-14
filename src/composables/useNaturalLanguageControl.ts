@@ -490,7 +490,7 @@ export function useNaturalLanguageControl() {
       '变形': 'deformation',
       'deformation': 'deformation'
     }
-    return map[value.toLowerCase()]] || value
+    return map[value.toLowerCase()] || value
   }
 
   function mapBoundaryCondition(value: string): string {
@@ -750,7 +750,7 @@ export function useNaturalLanguageControl() {
   async function handleSimulationRun(intent: ParsedIntent): Promise<{ response: string; actions: NLAction[] }> {
     const response = intent.language === 'zh'
       ? '好的，我将运行仿真分析。这可能需要几分钟时间，请稍候...'
-      : 'OK, I'll run the simulation analysis. This may take a few minutes, please wait...'
+      : 'OK, I\'ll run the simulation analysis. This may take a few minutes, please wait...'
 
     return {
       response,

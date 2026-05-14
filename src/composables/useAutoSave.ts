@@ -1,9 +1,11 @@
 /**
  * 自动保存 Composable
  * 定期或在关键操作后自动保存项目状态
+ * V3.5-013: 支持 IndexedDB 存储，解决 localStorage 配额限制
  */
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useProjectStore } from '@/stores/project'
+import { usePersistentStorage, migrateFromLocalStorage } from './usePersistentStorage'
 
 export interface AutoSaveConfig {
   /** 自动保存间隔（毫秒），默认 30000 (30秒) */
@@ -36,6 +38,7 @@ export interface VersionSnapshot {
 
 export function useAutoSave(config?: Partial<AutoSaveConfig>) {
   const projectStore = useProjectStore()
+  const persistentStorage = usePersistentStorage('versions')
 
   // 合并配置
   const fullConfig: AutoSaveConfig = {
@@ -48,22 +51,45 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
   const isAutoSaving = ref(false)
   const lastSaveTime = ref<Date | null>(null)
   const versions = ref<VersionSnapshot[]>([])
+  const isStorageReady = ref(false)
   let timer: ReturnType<typeof setInterval> | null = null
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  /** 获取 localStorage key */
+  /** 获取存储键 */
   function getStorageKey(): string {
     const projectId = projectStore.currentProject?.id || 'default'
     return `caelab_versions_${projectId}`
   }
 
-  /** 从 localStorage 加载版本历史 */
-  function loadVersions() {
+  /** 初始化存储并迁移数据 */
+  async function initStorage() {
+    // 等待 IndexedDB 就绪
+    await new Promise<void>(resolve => {
+      const checkReady = () => {
+        if (persistentStorage.isReady.value) {
+          resolve()
+        } else {
+          setTimeout(checkReady, 50)
+        }
+      }
+      checkReady()
+    })
+    isStorageReady.value = true
+
+    // 尝试从 localStorage 迁移
+    const localKey = getStorageKey()
+    if (localStorage.getItem(localKey)) {
+      await migrateFromLocalStorage(localKey, persistentStorage)
+    }
+  }
+
+  /** 从持久化存储加载版本历史 */
+  async function loadVersions() {
     try {
       const key = getStorageKey()
-      const raw = localStorage.getItem(key)
-      if (raw) {
-        versions.value = JSON.parse(raw) as VersionSnapshot[]
+      const data = await persistentStorage.get<VersionSnapshot[]>(key)
+      if (data && Array.isArray(data)) {
+        versions.value = data
       }
     } catch (e) {
       console.error('加载版本历史失败:', e)
@@ -71,19 +97,17 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
     }
   }
 
-  /** 将版本历史持久化到 localStorage */
-  function persistVersions() {
+  /** 将版本历史持久化到 IndexedDB */
+  async function persistVersions() {
     try {
       const key = getStorageKey()
-      localStorage.setItem(key, JSON.stringify(versions.value))
+      await persistentStorage.set(key, versions.value)
     } catch (e) {
       console.error('保存版本历史失败:', e)
-      // 如果是存储空间不足，尝试删除最旧的版本后重试
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        if (versions.value.length > 1) {
-          versions.value.shift()
-          persistVersions()
-        }
+      // 如果存储失败，尝试清理最旧版本后重试
+      if (versions.value.length > 1) {
+        versions.value.shift()
+        await persistVersions()
       }
     }
   }
@@ -122,7 +146,7 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
   }
 
   /** 保存当前状态到版本历史 */
-  function saveVersion(label?: string): VersionSnapshot {
+  async function saveVersion(label?: string): Promise<VersionSnapshot> {
     const snapshot: VersionSnapshot = {
       id: generateVersionId(),
       timestamp: new Date().toISOString(),
@@ -149,8 +173,8 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
       versions.value = versions.value.slice(0, fullConfig.maxVersions)
     }
 
-    // 持久化
-    persistVersions()
+    // 持久化到 IndexedDB
+    await persistVersions()
 
     // 更新最后保存时间
     lastSaveTime.value = new Date()
@@ -159,7 +183,7 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
   }
 
   /** 恢复到指定版本 */
-  function restoreVersion(versionId: string): boolean {
+  async function restoreVersion(versionId: string): Promise<boolean> {
     const version = versions.value.find((v) => v.id === versionId)
     if (!version) {
       console.error('版本不存在:', versionId)
@@ -196,26 +220,27 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
   }
 
   /** 删除指定版本 */
-  function deleteVersion(versionId: string): void {
+  async function deleteVersion(versionId: string): Promise<void> {
     const index = versions.value.findIndex((v) => v.id === versionId)
     if (index !== -1) {
       versions.value.splice(index, 1)
-      persistVersions()
+      await persistVersions()
     }
   }
 
   /** 清除所有版本历史 */
-  function clearVersions(): void {
+  async function clearVersions(): Promise<void> {
     versions.value = []
     try {
-      localStorage.removeItem(getStorageKey())
+      const key = getStorageKey()
+      await persistentStorage.remove(key)
     } catch (e) {
       console.error('清除版本历史失败:', e)
     }
   }
 
   /** 自动保存触发 */
-  function autoSave() {
+  async function autoSave() {
     if (!fullConfig.enabled) return
     if (isAutoSaving.value) return
 
@@ -230,7 +255,7 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
 
     isAutoSaving.value = true
     try {
-      saveVersion()
+      await saveVersion()
     } finally {
       isAutoSaving.value = false
     }
@@ -294,8 +319,9 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
     { deep: true }
   )
 
-  onMounted(() => {
-    loadVersions()
+  onMounted(async () => {
+    await initStorage()
+    await loadVersions()
     startAutoSave()
   })
 
@@ -307,6 +333,7 @@ export function useAutoSave(config?: Partial<AutoSaveConfig>) {
     isAutoSaving,
     lastSaveTime,
     versions,
+    isStorageReady,
     saveVersion,
     restoreVersion,
     deleteVersion,

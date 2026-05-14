@@ -51,6 +51,12 @@ export const defaultHotkeys: HotkeyConfig[] = [
   { id: 'code.format', keys: 'shift+alt+f', description: '格式化代码', category: 'code' },
   { id: 'code.save-file', keys: 'ctrl+s', description: '保存文件', category: 'code' },
   { id: 'code.comment', keys: 'ctrl+/', description: '切换注释', category: 'code' },
+
+  // ===== AI 助手 =====
+  { id: 'ai.toggle', keys: 'ctrl+k', description: '唤起 AI 助手', category: 'ai' },
+  { id: 'ai.analyze', keys: 'ctrl+shift+i', description: 'AI 分析当前结果', category: 'ai' },
+  { id: 'ai.setup', keys: 'ctrl+shift+b', description: 'AI 辅助边界条件', category: 'ai' },
+  { id: 'ai.code', keys: 'ctrl+shift+c', description: 'AI 编写代码', category: 'ai' },
 ]
 
 /**
@@ -63,6 +69,7 @@ export function getCategoryLabel(category: string): string {
     modeling: '建模',
     notes: '笔记',
     code: '代码',
+    ai: 'AI 助手',
   }
   return labels[category] || category
 }
@@ -77,6 +84,7 @@ export function getCategoryIcon(category: string): string {
     modeling: '\u{1F4D0}',
     notes: '\u{1F4DD}',
     code: '\u{1F4BB}',
+    ai: '\u{1F916}',
   }
   return icons[category] || '\u{1F3E0}'
 }

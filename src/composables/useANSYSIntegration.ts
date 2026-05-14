@@ -8,7 +8,7 @@ import { ref } from 'vue'
 // ============ 类型定义 ============
 
 export type ANSYSVersion = '2024R1' | '2023R2' | '2023R1' | '2022R2' | '2022R1' | '2021R2' | '2021R1' | '2020R2'
-export type ANSYSProduct = 'Mechanical' | ' 'Structural' | 'Thermal' | 'Fluid' | 'Workbench'
+export type ANSYSProduct = 'Mechanical' | 'Structural' | 'Thermal' | 'Fluid' | 'Workbench'
 export type ImportStatus = 'idle' | 'analyzing' | 'converting' | 'transferring' | 'complete' | 'error'
 
 export interface ANSYSGeometryData {

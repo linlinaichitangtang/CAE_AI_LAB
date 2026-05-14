@@ -5,28 +5,32 @@
         v-if="visible"
         class="fixed inset-0 z-[9000] flex items-end justify-center pointer-events-none"
       >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/20 pointer-events-auto" @click="$emit('close')"></div>
+        <!-- Backdrop with blur -->
+        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-auto" @click="$emit('close')"></div>
 
-        <!-- Panel -->
+        <!-- Panel with glass effect -->
         <div
-          class="relative pointer-events-auto w-full max-w-lg mx-4 mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+          class="relative pointer-events-auto w-full max-w-lg mx-4 mb-6 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden"
         >
-          <!-- Header -->
-          <div class="px-5 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+          <!-- Header with gradient -->
+          <div class="px-5 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-lg">&#x1F4CA;</span>
-                <span class="text-sm font-semibold">仿真完成</span>
-                <span v-if="resultData.solveTime" class="text-xs opacity-80">
-                  &middot; 用时 {{ resultData.solveTime.toFixed(1) }}s
-                </span>
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <span class="text-xl">&#x1F4CA;</span>
+                </div>
+                <div>
+                  <div class="text-base font-semibold">仿真完成</div>
+                  <div v-if="resultData.solveTime" class="text-xs opacity-80">
+                    用时 {{ resultData.solveTime.toFixed(1) }}s · {{ resultData.analysisType }}
+                  </div>
+                </div>
               </div>
               <button
                 @click="$emit('close')"
-                class="w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition"
+                class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all hover:scale-110"
               >
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -34,74 +38,111 @@
             </div>
           </div>
 
-          <!-- Body -->
-          <div class="p-5 space-y-3">
-            <!-- AI Summary -->
-            <div v-if="aiSummary" class="text-sm text-[var(--text-secondary)] leading-relaxed bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <div class="flex items-center gap-1.5 mb-1">
-                <span class="text-xs">&#x1F916;</span>
-                <span class="text-xs font-medium text-[var(--text-primary)]">AI 总结</span>
-              </div>
-              {{ aiSummary }}
-            </div>
-            <div v-else-if="aiLoading" class="text-sm text-[var(--text-muted)] flex items-center gap-2">
-              <div class="w-4 h-4 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></div>
-              AI 正在分析结果...
-            </div>
-
-            <!-- Displacement -->
-            <div class="flex items-start gap-3 p-3 rounded-lg" :class="displacementBgClass">
-              <span class="text-lg mt-0.5">{{ displacementIcon }}</span>
-              <div>
-                <div class="text-sm font-medium" :class="displacementTextClass">
-                  最大位移：{{ formatValue(resultData.maxDisplacement) }}
+          <!-- Body with better spacing -->
+          <div class="p-5 space-y-4">
+            <!-- AI Summary with enhanced styling -->
+            <div v-if="aiSummary" class="ai-summary-card">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                  <span class="text-xs">&#x1F916;</span>
                 </div>
-                <div class="text-xs text-[var(--text-muted)] mt-0.5">
-                  {{ displacementNote }}
+                <span class="text-sm font-semibold text-[var(--text-primary)]">AI 智能分析</span>
+              </div>
+              <p class="text-sm text-[var(--text-secondary)] leading-relaxed">{{ aiSummary }}</p>
+            </div>
+            <div v-else-if="aiLoading" class="ai-loading-card">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div>
+                  <div class="text-sm font-medium text-[var(--text-primary)]">AI 正在分析结果</div>
+                  <div class="text-xs text-[var(--text-muted)]">基于仿真数据生成专业解读</div>
                 </div>
               </div>
             </div>
 
-            <!-- Stress -->
-            <div class="flex items-start gap-3 p-3 rounded-lg" :class="stressBgClass">
-              <span class="text-lg mt-0.5">{{ stressIcon }}</span>
-              <div>
-                <div class="text-sm font-medium" :class="stressTextClass">
-                  最大应力：{{ formatValue(resultData.maxVonMises) }} MPa
+            <!-- Metrics Grid -->
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Displacement Card -->
+              <div class="metric-card" :class="displacementBgClass">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-lg" :class="displacementIconBg">
+                    {{ displacementIcon }}
+                  </div>
+                  <span class="text-xs font-medium text-[var(--text-muted)]">最大位移</span>
                 </div>
-                <div class="text-xs text-[var(--text-muted)] mt-0.5">
-                  <span v-if="resultData.materialName">材料：{{ resultData.materialName }}，</span>
-                  <span v-if="safetyFactor !== null">安全系数 = {{ safetyFactor.toFixed(2) }}</span>
-                  <span v-else>未提供材料屈服强度</span>
+                <div class="text-xl font-bold" :class="displacementTextClass">
+                  {{ formatValue(resultData.maxDisplacement) }}
+                  <span class="text-xs font-normal text-[var(--text-muted)]">mm</span>
                 </div>
+                <div class="text-xs text-[var(--text-muted)]] mt-1">{{ displacementNote }}</div>
+              </div>
+
+              <!-- Stress Card -->
+              <div class="metric-card" :class="stressBgClass">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-lg" :class="stressIconBg">
+                    {{ stressIcon }}
+                  </div>
+                  <span class="text-xs font-medium text-[var(--text-muted)]">最大应力</span>
+                </div>
+                <div class="text-xl font-bold" :class="stressTextClass">
+                  {{ formatValue(resultData.maxVonMises) }}
+                  <span class="text-xs font-normal text-[var(--text-muted)]">MPa</span>
+                </div>
+                <div v-if="resultData.materialName" class="text-xs text-[var(--text-muted)] mt-1">{{ resultData.materialName }}</div>
               </div>
             </div>
 
-            <!-- Safety Assessment -->
-            <div v-if="safetyFactor !== null" class="flex items-center gap-2 p-3 rounded-lg" :class="safetyBgClass">
-              <span class="text-sm font-semibold" :class="safetyTextClass">
-                {{ safetyLabel }}
-              </span>
-              <span class="text-xs text-[var(--text-muted)]">
-                {{ safetyDescription }}
-              </span>
+            <!-- Safety Assessment with enhanced visuals -->
+            <div v-if="safetyFactor !== null" class="safety-card" :class="safetyBgClass">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" :class="safetyIconBg">
+                    {{ safetyIcon }}
+                  </div>
+                  <div>
+                    <div class="text-base font-bold" :class="safetyTextClass">
+                      {{ safetyLabel }}
+                    </div>
+                    <div class="text-xs text-[var(--text-muted)] mt-0.5">
+                      安全系数 = {{ safetyFactor.toFixed(2) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-[var(--text-muted)]">设计评估</div>
+                  <div class="text-sm font-medium" :class="safetyTextClass">{{ safetyLevel }}</div>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-current/10">
+                <div class="flex items-center gap-2 text-xs" :class="safetyTextClass">
+                  <span>&#x2139;</span>
+                  <span>{{ safetyDescription }}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Footer -->
-          <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-            <button
-              @click="$emit('view-report')"
-              class="px-4 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-[var(--text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              查看详细报告
-            </button>
-            <button
-              @click="$emit('share')"
-              class="px-4 py-1.5 text-xs rounded-lg bg-[var(--primary)] text-white hover:opacity-90 transition"
-            >
-              分享结果
-            </button>
+          <!-- Footer with action buttons -->
+          <div class="px-5 py-4 border-t border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-[var(--text-muted)]">快捷键</span>
+              <span class="kbd">Ctrl</span><span>+</span><span class="kbd">Shift</span><span>+</span><span class="kbd">I</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                @click="$emit('view-report')"
+                class="btn-secondary text-sm"
+              >
+                详细报告
+              </button>
+              <button
+                @click="$emit('share')"
+                class="btn-premium text-sm"
+              >
+                分享结果
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -175,24 +216,54 @@ const safetyTextClass = computed(() => {
   return 'text-red-700 dark:text-red-400'
 })
 
+// ============ 安全等级 ============
+
+const safetyLevel = computed(() => {
+  if (safetyFactor.value === null) return 'N/A'
+  if (safetyFactor.value >= 2) return '优秀'
+  if (safetyFactor.value >= 1.5) return '良好'
+  if (safetyFactor.value >= 1.0) return '一般'
+  return '危险'
+})
+
+const safetyIcon = computed(() => {
+  if (safetyFactor.value === null) return 'ℹ'
+  if (safetyFactor.value >= 2) return '🟢'
+  if (safetyFactor.value >= 1.5) return '🟡'
+  return '🔴'
+})
+
+const safetyIconBg = computed(() => {
+  if (safetyFactor.value === null) return 'bg-gray-100'
+  if (safetyFactor.value >= 1.5) return 'bg-green-100'
+  if (safetyFactor.value >= 1.0) return 'bg-yellow-100'
+  return 'bg-red-100'
+})
+
 // ============ 位移评估 ============
 
 const DISPLACEMENT_THRESHOLD = 1.0 // mm
 
 const displacementIcon = computed(() => {
-  return props.resultData.maxDisplacement < DISPLACEMENT_THRESHOLD ? '\u2705' : '\u26A0\uFE0F'
+  return props.resultData.maxDisplacement < DISPLACEMENT_THRESHOLD ? '✅' : '⚠️'
 })
 
 const displacementBgClass = computed(() => {
   return props.resultData.maxDisplacement < DISPLACEMENT_THRESHOLD
-    ? 'bg-green-50 dark:bg-green-900/20'
-    : 'bg-yellow-50 dark:bg-yellow-900/20'
+    ? 'metric-card bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20'
+    : 'metric-card bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20'
+})
+
+const displacementIconBg = computed(() => {
+  return props.resultData.maxDisplacement < DISPLACEMENT_THRESHOLD
+    ? 'bg-green-100 text-green-600'
+    : 'bg-yellow-100 text-yellow-600'
 })
 
 const displacementTextClass = computed(() => {
   return props.resultData.maxDisplacement < DISPLACEMENT_THRESHOLD
-    ? 'text-green-700 dark:text-green-400'
-    : 'text-yellow-700 dark:text-yellow-400'
+    ? 'text-green-600 dark:text-green-400'
+    : 'text-yellow-600 dark:text-yellow-400'
 })
 
 const displacementNote = computed(() => {

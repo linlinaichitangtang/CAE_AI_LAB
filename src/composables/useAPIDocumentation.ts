@@ -521,7 +521,7 @@ export function useAPIDocumentation() {
     lines.push('')
 
     if (endpoint.requestBody?.example) {
-      lines.push(`payload = ${JSON.stringify(endpoint.requestBody.example, null: 4)}`)
+      lines.push(`payload = ${JSON.stringify(endpoint.requestBody.example, null, 4)}`)
       lines.push('')
     }
 
@@ -579,7 +579,7 @@ export function useAPIDocumentation() {
     }
 
     if (endpoint.requestBody?.example) {
-      options.push(`  body: JSON.stringify(${JSON.stringify(endpoint.requestBody.example, null: 2)})`)
+      options.push(`  body: JSON.stringify(${JSON.stringify(endpoint.requestBody.example, null, 2)})`)
     }
 
     lines.push(`const response = await fetch('${baseUrl}${endpoint.path}', {`)
