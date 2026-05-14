@@ -35,3 +35,17 @@ export { toolExecutor, ToolExecutor, type ToolExecutorConfig } from './toolExecu
 export { resultVerifier, ResultVerifier } from './resultVerifier'
 export { selfRepairEngine, SelfRepairEngine } from './selfRepair'
 export { agentOrchestrator, AgentOrchestrator, type AgentOrchestratorConfig, type AgentEventType, type AgentEvent } from './agentOrchestrator'
+
+// Claude Code 对齐新增组件
+export { ReflectionEngine } from './reflectionEngine'
+export { ContextCompressor } from './contextCompressor'
+
+// 新增类型导出
+export type {
+  ExecutionPhase,
+  ReflectionResult,
+  ToolReflection,
+  CompressionConfig,
+  CompressedContext,
+  BatchExecuteResult,
+} from './types'

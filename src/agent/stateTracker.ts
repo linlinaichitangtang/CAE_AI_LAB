@@ -401,7 +401,6 @@ export class StateTracker {
    * 注册状态变更监听器
    */
   onChange(listener: (state: AgentState) => void): () => void {
-    const id = shortId()
     if (!this.listeners.has('change')) {
       this.listeners.set('change', [])
     }

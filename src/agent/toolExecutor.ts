@@ -587,6 +587,51 @@ export class ToolExecutor {
     this.config = { ...this.config, ...config }
   }
 
+  /**
+   * 批量并行调用工具（用于独立任务的并行执行，如 TC4 三路输入）
+   * @param calls 工具调用列表
+   * @returns 批量执行结果
+   */
+  async invokeBatch(
+    calls: Array<{ toolName: string; params: Record<string, unknown> }>
+  ): Promise<{ results: Map<string, ToolResult>; totalTime: number; errors: string[] }> {
+    const startTime = Date.now()
+
+    const promises = calls.map(async (call) => {
+      const result = await this.invoke(call.toolName, call.params)
+      return { toolName: call.toolName, result }
+    })
+
+    const settled = await Promise.allSettled(promises)
+
+    const results = new Map<string, ToolResult>()
+    const errors: string[] = []
+
+    settled.forEach((outcome, idx) => {
+      const toolName = calls[idx].toolName
+      if (outcome.status === 'fulfilled') {
+        results.set(toolName, outcome.value.result)
+        if (!outcome.value.result.success && outcome.value.result.error) {
+          errors.push(`${toolName}: ${outcome.value.result.error}`)
+        }
+      } else {
+        const error = String(outcome.reason)
+        results.set(toolName, {
+          success: false,
+          error,
+          executionTime: Date.now() - startTime,
+        })
+        errors.push(`${toolName}: ${error}`)
+      }
+    })
+
+    return {
+      results,
+      totalTime: Date.now() - startTime,
+      errors,
+    }
+  }
+
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
   }

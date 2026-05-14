@@ -4,8 +4,7 @@
  * 复用现有 AI 流式输出
  */
 
-import type { IntentResult, TaskPlan, SubTask, ReActStep, ReActStatus } from './types'
-import { toolRegistry } from './tools'
+import type { IntentResult, TaskPlan, SubTask, ReActStep } from './types'
 
 /** 生成短UUID */
 function shortId(): string {
@@ -113,6 +112,15 @@ export class TaskPlanner {
       }
 
       case 'analysis': {
+        // TC4 / 多模态失效分析 — EBSD + SEM + Load 可并行执行
+        if (query.includes('TC4') || query.includes('失效') || query.includes('多模态') || query.includes('三路')) {
+          const groupId = `parallel-${shortId()}`
+          subTasks.push(this.createSubTask('加载 EBSD 晶格数据', '提取 EBSD 晶格特征 80维', 'tc4_load_ebsd', { material: 'TC4' }, [], now, groupId))
+          subTasks.push(this.createSubTask('加载 SEM 图像特征', '提取 SEM 图像特征 768维', 'tc4_load_sem', {}, [], now, groupId))
+          subTasks.push(this.createSubTask('加载载荷历史', '提取载荷特征 30维', 'tc4_load_load', {}, [], now, groupId))
+          subTasks.push(this.createSubTask('多模态失效预测', 'EBSD+SEM+Load 三路融合预测', 'tc4_predict_failure', {}, [subTasks[0].id, subTasks[1].id, subTasks[2].id], now))
+          break
+        }
         subTasks.push(this.createSubTask('获取当前结果', '读取仿真结果用于分析', 'get_results', { resultType: 'all' }, [], now))
         subTasks.push(this.createSubTask('获取模型信息', '读取模型和边界条件设置', 'get_model_info', {}, [], now))
         subTasks.push(this.createSubTask('验证结果', '检查结果数值合理性', 'validate_results', { resultType: 'stress', criteria: 'engineering' }, [subTasks[0].id], now))
@@ -150,10 +158,19 @@ export class TaskPlanner {
         break
       }
 
-      case 'qa':
-      default:
+      default: {
+        // TC4 / 多模态失效分析 — EBSD + SEM + Load 可并行执行
+        if (query.includes('TC4') || query.includes('失效') || query.includes('多模态') || query.includes('三路')) {
+          const groupId = `parallel-${shortId()}`
+          subTasks.push(this.createSubTask('加载 EBSD 晶格数据', '提取 EBSD 晶格特征 80维', 'tc4_load_ebsd', { material: 'TC4' }, [], now, groupId))
+          subTasks.push(this.createSubTask('加载 SEM 图像特征', '提取 SEM 图像特征 768维', 'tc4_load_sem', {}, [], now, groupId))
+          subTasks.push(this.createSubTask('加载载荷历史', '提取载荷特征 30维', 'tc4_load_load', {}, [], now, groupId))
+          subTasks.push(this.createSubTask('多模态失效预测', 'EBSD+SEM+Load 三路融合预测', 'tc4_predict_failure', {}, [subTasks[0].id, subTasks[1].id, subTasks[2].id], now))
+          break
+        }
         // QA 和 unknown 意图不需要工具调用，直接返回空计划
         break
+      }
     }
 
     return subTasks
@@ -168,7 +185,8 @@ export class TaskPlanner {
     toolName: string,
     toolParams: Record<string, unknown>,
     dependsOn: string[],
-    createdAt: number
+    createdAt: number,
+    parallelGroup?: string
   ): SubTask {
     return {
       id: `task-${shortId()}`,
@@ -181,7 +199,8 @@ export class TaskPlanner {
       maxRetries: 3,
       dependsOn,
       createdAt,
-      estimatedTime: this.estimateTime(toolName)
+      estimatedTime: this.estimateTime(toolName),
+      parallelGroup,
     }
   }
 

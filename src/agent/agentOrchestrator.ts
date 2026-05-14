@@ -1,15 +1,21 @@
 /**
  * V2.4 Agent 编排器
  * 核心调度引擎，串联意图识别→任务规划→工具执行→状态追踪→结果验证→自修复
+ * Claude Code 对齐：反思机制 / 并行执行 / 上下文压缩 / 智能终止
  */
 
-import type { IntentResult, TaskPlan, AgentMessage, ToolCallMessage, ToolResult, AgentMetrics } from './types'
+import type {
+  TaskPlan, SubTask, AgentMessage,
+  ToolResult, AgentMetrics, ExecutionPhase, AgentOrchestratorConfig as AgentOrchConfig,
+} from './types'
 import { intentClassifier } from './intentClassifier'
 import { taskPlanner } from './taskPlanner'
 import { stateTracker } from './stateTracker'
 import { toolExecutor } from './toolExecutor'
 import { resultVerifier } from './resultVerifier'
 import { selfRepairEngine } from './selfRepair'
+import { ReflectionEngine } from './reflectionEngine'
+import { ContextCompressor } from './contextCompressor'
 
 /** Agent 编排器事件 */
 export type AgentEventType =
@@ -28,6 +34,10 @@ export type AgentEventType =
   | 'plan_paused'
   | 'confirmation_required'
   | 'message'
+  | 'reflection_completed'
+  | 'context_compressed'
+  | 'infinite_loop_detected'
+  | 'replan_recommended'
 
 /** Agent 事件 */
 export interface AgentEvent {
@@ -36,12 +46,19 @@ export interface AgentEvent {
   timestamp: number
 }
 
-/** Agent 编排器配置 */
-export interface AgentOrchestratorConfig {
+/** Agent 编排器配置（扩展） */
+export interface AgentOrchestratorConfig extends AgentOrchConfig {
   enableSelfRepair: boolean
   maxRepairAttempts: number
   streamingEnabled: boolean
-  autoExecute: boolean  // 是否自动执行（false时需用户确认每步）
+  autoExecute: boolean
+  enableGoodEnoughTermination: boolean
+  goodEnoughThreshold: number
+  maxToolRepeats: number
+  allowPartialSuccess: boolean
+  replanThreshold: number
+  summaryThreshold: number
+  maxMessages: number
 }
 
 /** 默认配置 */
@@ -49,7 +66,14 @@ const defaultConfig: AgentOrchestratorConfig = {
   enableSelfRepair: true,
   maxRepairAttempts: 2,
   streamingEnabled: true,
-  autoExecute: true
+  autoExecute: true,
+  enableGoodEnoughTermination: true,
+  goodEnoughThreshold: 0.8,
+  maxToolRepeats: 5,
+  allowPartialSuccess: false,
+  replanThreshold: 0.6,
+  summaryThreshold: 100,
+  maxMessages: 50,
 }
 
 /** Agent 编排器 */
@@ -57,9 +81,18 @@ export class AgentOrchestrator {
   private config: AgentOrchestratorConfig
   private eventListeners: Map<AgentEventType, Array<(event: AgentEvent) => void>> = new Map()
   private messageHistory: AgentMessage[] = []
+  private reflectionEngine: ReflectionEngine
+  private contextCompressor: ContextCompressor
+  private consecutiveFailures = 0
+  private MAX_CONSECUTIVE_FAILURES = 3
 
   constructor(config?: Partial<AgentOrchestratorConfig>) {
-    this.config = { ...defaultConfig, ...config }
+    this.config = { ...defaultConfig, ...config } as AgentOrchestratorConfig
+    this.reflectionEngine = new ReflectionEngine()
+    this.contextCompressor = new ContextCompressor({
+      maxMessages: this.config.maxMessages,
+      summaryThreshold: this.config.summaryThreshold,
+    })
   }
 
   /**
@@ -102,6 +135,10 @@ export class AgentOrchestrator {
       return messages
     }
 
+    // 重置执行状态
+    this.consecutiveFailures = 0
+    this.reflectionEngine.resetRepeatCount()
+
     stateTracker.setCurrentPlan(plan)
     this.emitEvent('plan_created', plan)
 
@@ -123,7 +160,7 @@ export class AgentOrchestrator {
       return messages
     }
 
-    // 6. 执行任务计划
+    // 6. 执行任务计划（Phase-based 状态机）
     const executionMessages = await this.executePlan(plan)
     messages.push(...executionMessages)
 
@@ -131,55 +168,109 @@ export class AgentOrchestrator {
   }
 
   /**
-   * 执行任务计划
+   * 执行任务计划 — Phase-based 状态机
    */
   private async executePlan(plan: TaskPlan): Promise<AgentMessage[]> {
     const messages: AgentMessage[] = []
     stateTracker.startExecution()
 
     try {
-      while (true) {
-        // 获取下一个待执行子任务
-        const nextTask = stateTracker.getNextPendingSubTask()
-        if (!nextTask) break
+      let phase: ExecutionPhase = 'executing' as ExecutionPhase
 
-        // 执行子任务
-        const taskMessages = await this.executeSubTask(nextTask)
-        messages.push(...taskMessages)
+      while (phase !== 'terminating') {
+        switch (phase) {
+          case 'executing': {
+            // 获取下一批可执行的任务（支持并行）
+            const batch = this.getNextBatch(plan)
+            if (batch.length === 0) {
+              phase = 'completing'
+              continue
+            }
 
-        // 检查是否被暂停
-        if (!stateTracker.isExecuting) {
-          stateTracker.updatePlanStatus('paused')
-          const pauseMsg = this.createMessage('assistant', '任务已暂停。', { taskId: plan.id })
-          messages.push(pauseMsg)
-          this.addMessage(pauseMsg)
-          break
-        }
+            // 执行这一批任务
+            const batchResults = await this.executeBatch(batch)
+            messages.push(...batchResults.messages)
 
-        // 检查是否全部完成
-        if (stateTracker.isAllSubTasksCompleted()) {
-          stateTracker.updatePlanStatus('completed')
-          this.emitEvent('plan_completed', plan)
-          const completeMsg = this.createMessage('assistant',
-            `任务完成！共 ${plan.subTasks.length} 个步骤全部执行成功。`,
-            { taskId: plan.id }
-          )
-          messages.push(completeMsg)
-          this.addMessage(completeMsg)
-          break
-        }
+            // 更新失败计数
+            if (batchResults.hasFailures) {
+              this.consecutiveFailures++
+            } else {
+              this.consecutiveFailures = 0
+            }
 
-        // 检查是否有失败且无法修复的子任务
-        if (stateTracker.hasFailedSubTasks() && !this.hasNextRepairableTask()) {
-          stateTracker.updatePlanStatus('failed')
-          this.emitEvent('plan_failed', plan)
-          const failMsg = this.createMessage('assistant',
-            `任务执行失败。部分步骤无法完成，请检查错误信息。`,
-            { taskId: plan.id }
-          )
-          messages.push(failMsg)
-          this.addMessage(failMsg)
-          break
+            // 检查无限循环
+            if (this.checkInfiniteLoop(plan)) {
+              this.emitEvent('infinite_loop_detected', null)
+              const loopMsg = this.createMessage('assistant',
+                `检测到重复执行相同工具超过 ${this.config.maxToolRepeats} 次，自动终止循环。`
+              )
+              messages.push(loopMsg)
+              this.addMessage(loopMsg)
+              phase = 'terminating'
+              continue
+            }
+
+            phase = 'validating'
+            break
+          }
+
+          case 'validating': {
+            // 检查是否需要修复
+            if (this.config.enableSelfRepair && this.hasNextRepairableTask()) {
+              phase = 'repairing'
+            } else if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+              // 连续失败超限，终止
+              stateTracker.updatePlanStatus('failed')
+              this.emitEvent('plan_failed', plan)
+              const failMsg = this.createMessage('assistant',
+                `任务执行失败：连续 ${this.consecutiveFailures} 个步骤失败。`
+              )
+              messages.push(failMsg)
+              this.addMessage(failMsg)
+              phase = 'terminating'
+            } else if (this.shouldTerminateEarly(plan)) {
+              phase = 'completing'
+            } else {
+              phase = 'executing'
+            }
+            break
+          }
+
+          case 'repairing': {
+            const repairMessages = await this.attemptBatchRepair(plan)
+            messages.push(...repairMessages)
+            this.consecutiveFailures = 0
+            phase = 'executing'
+            break
+          }
+
+          case 'completing': {
+            if (this.isResultGoodEnough(plan)) {
+              stateTracker.updatePlanStatus('completed')
+              this.emitEvent('plan_completed', plan)
+              const completeMsg = this.createMessage('assistant',
+                `任务${this.config.allowPartialSuccess ? '（部分）' : ''}完成！共 ${plan.subTasks.length} 个步骤。`,
+                { taskId: plan.id }
+              )
+              messages.push(completeMsg)
+              this.addMessage(completeMsg)
+            } else {
+              stateTracker.updatePlanStatus('failed')
+              this.emitEvent('plan_failed', plan)
+              const failMsg = this.createMessage('assistant',
+                `任务未达到完成标准（${this.getCompletionRatio(plan) * 100}% < ${this.config.goodEnoughThreshold * 100}%）。`
+              )
+              messages.push(failMsg)
+              this.addMessage(failMsg)
+            }
+            phase = 'terminating'
+            break
+          }
+
+          default: {
+            phase = 'terminating' as ExecutionPhase
+            break
+          }
         }
       }
     } catch (error) {
@@ -196,9 +287,91 @@ export class AgentOrchestrator {
   }
 
   /**
+   * 获取下一批可并行执行的任务
+   */
+  private getNextBatch(plan: TaskPlan): SubTask[] {
+    const pending = plan.subTasks.filter(t => t.status === 'pending')
+    if (pending.length === 0) return []
+
+    // 找出所有没有未满足依赖的 pending 任务
+    const ready: SubTask[] = []
+    for (const task of pending) {
+      const depsSatisfied = task.dependsOn.every(depId => {
+        const dep = plan.subTasks.find(s => s.id === depId)
+        return dep && (dep.status === 'done' || dep.status === 'skipped')
+      })
+      if (depsSatisfied) ready.push(task)
+    }
+
+    if (ready.length === 0) return []
+
+    // 找出有 parallelGroup 的任务，同组可并行
+    const grouped = ready.filter(t => t.parallelGroup)
+    if (grouped.length > 0) {
+      // 取第一个 parallelGroup 的所有任务
+      const groupId = grouped[0].parallelGroup!
+      return ready.filter(t => t.parallelGroup === groupId)
+    }
+
+    // 无并行组，只取第一个
+    return [ready[0]]
+  }
+
+  /**
+   * 执行一批任务（支持并行）
+   */
+  private async executeBatch(tasks: SubTask[]): Promise<{ messages: AgentMessage[]; hasFailures: boolean }> {
+    const messages: AgentMessage[] = []
+    let hasFailures = false
+
+    if (tasks.length === 1) {
+      // 单任务直接执行
+      const taskMessages = await this.executeSubTask(tasks[0])
+      messages.push(...taskMessages)
+      hasFailures = tasks[0].status === 'failed'
+    } else {
+      // 多任务并行执行
+      const startMsg = this.createMessage('assistant',
+        `并行执行 ${tasks.length} 个任务: ${tasks.map(t => t.name).join(', ')}...`
+      )
+      messages.push(startMsg)
+      this.addMessage(startMsg)
+
+      const promises = tasks.map(async (task) => {
+        return this.executeSubTask(task)
+      })
+
+      const results = await Promise.allSettled(promises)
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i]
+        if (result.status === 'fulfilled') {
+          messages.push(...result.value)
+          if (tasks[i].status === 'failed') hasFailures = true
+        } else {
+          const failMsg = this.createMessage('assistant',
+            `${tasks[i].name} 执行异常: ${String(result.reason)}`
+          )
+          messages.push(failMsg)
+          this.addMessage(failMsg)
+          hasFailures = true
+        }
+      }
+
+      const doneMsg = this.createMessage('assistant',
+        `${tasks.length} 个任务执行完成。`
+      )
+      messages.push(doneMsg)
+      this.addMessage(doneMsg)
+    }
+
+    return { messages, hasFailures }
+  }
+
+  /**
    * 执行单个子任务
    */
-  private async executeSubTask(subTask: import('./types').SubTask): Promise<AgentMessage[]> {
+  private async executeSubTask(subTask: SubTask): Promise<AgentMessage[]> {
     const messages: AgentMessage[] = []
 
     // 更新状态为运行中
@@ -213,11 +386,13 @@ export class AgentOrchestrator {
     this.addMessage(startMsg)
 
     if (!subTask.toolName) {
-      // 没有工具的子任务直接标记完成
       stateTracker.updateSubTaskStatus(subTask.id, 'done')
       this.emitEvent('subtask_completed', subTask)
       return messages
     }
+
+    // 记录工具调用（用于无限循环检测）
+    this.reflectionEngine.incrementRepeatCount(subTask.toolName)
 
     // 调用工具
     this.emitEvent('tool_called', { toolName: subTask.toolName, params: subTask.toolParams })
@@ -243,8 +418,25 @@ export class AgentOrchestrator {
     // 验证结果
     const validation = resultVerifier.verify(result, subTask.toolName)
 
+    // 反思评估
+    const reflection = this.reflectionEngine.reflect({
+      toolName: subTask.toolName,
+      result,
+      validation,
+      historicalContext: stateTracker.getToolCallHistory(),
+    })
+    this.emitEvent('reflection_completed', reflection)
+
+    if (reflection.shouldReplan) {
+      this.emitEvent('replan_recommended', reflection)
+      const replanMsg = this.createMessage('assistant',
+        `[反思] ${subTask.name} 结果置信度 ${(reflection.confidence * 100).toFixed(0)}%，建议重新规划。`
+      )
+      messages.push(replanMsg)
+      this.addMessage(replanMsg)
+    }
+
     if (validation.passed) {
-      // 验证通过
       stateTracker.updateSubTaskStatus(subTask.id, 'done', result)
       this.emitEvent('verification_passed', validation)
       this.emitEvent('subtask_completed', subTask)
@@ -257,11 +449,9 @@ export class AgentOrchestrator {
       messages.push(doneMsg)
       this.addMessage(doneMsg)
     } else {
-      // 验证失败
       this.emitEvent('verification_failed', validation)
 
       if (this.config.enableSelfRepair) {
-        // 尝试自修复
         const repairStrategies = selfRepairEngine.analyzeFailure(subTask.toolName!, result, subTask)
 
         if (repairStrategies.length > 0 && subTask.retryCount < this.config.maxRepairAttempts) {
@@ -279,11 +469,9 @@ export class AgentOrchestrator {
           messages.push(repairMsg)
           this.addMessage(repairMsg)
 
-          // 递归执行修复后的任务
           const repairMessages = await this.executeSubTask(repairedTask)
           messages.push(...repairMessages)
         } else {
-          // 修复失败或超过重试次数
           stateTracker.updateSubTaskStatus(subTask.id, 'failed', result, validation.summary)
           this.emitEvent('subtask_failed', subTask)
 
@@ -339,7 +527,6 @@ export class AgentOrchestrator {
       this.addMessage(msg)
     }
 
-    // 继续执行后续任务
     if (stateTracker.isExecuting) {
       const remainingMessages = await this.executePlan(plan)
       messages.push(...remainingMessages)
@@ -348,48 +535,35 @@ export class AgentOrchestrator {
     return messages
   }
 
-  /**
-   * 暂停执行
-   */
+  /** 暂停执行 */
   pause(): void {
     stateTracker.pauseExecution()
   }
 
-  /**
-   * 恢复执行
-   */
+  /** 恢复执行 */
   async resume(): Promise<AgentMessage[]> {
     const plan = stateTracker.getCurrentPlan()
     if (!plan) return []
-
     stateTracker.resumeExecution()
     return this.executePlan(plan)
   }
 
-  /**
-   * 取消执行
-   */
+  /** 取消执行 */
   cancel(): void {
     stateTracker.cancelExecution()
   }
 
-  /**
-   * 获取评估指标
-   */
+  /** 获取评估指标 */
   getMetrics(): AgentMetrics {
     return stateTracker.getMetrics()
   }
 
-  /**
-   * 切换 Agent 模式
-   */
+  /** 切换 Agent 模式 */
   setAgentMode(enabled: boolean): void {
     stateTracker.setAgentMode(enabled)
   }
 
-  /**
-   * 获取消息历史
-   */
+  /** 获取消息历史 */
   getMessages(): AgentMessage[] {
     return [...this.messageHistory]
   }
@@ -438,17 +612,28 @@ export class AgentOrchestrator {
 
   private addMessage(msg: AgentMessage): void {
     this.messageHistory.push(msg)
+
+    // 上下文压缩检查
+    if (this.contextCompressor.needsCompression(this.messageHistory)) {
+      const compressed = this.contextCompressor.compress(this.messageHistory)
+      if (compressed.compressedCount > 0) {
+        this.emitEvent('context_compressed', compressed)
+        // 替换历史为压缩后的（保留的 + 摘要消息）
+        const summaryMsg = this.createMessage('system', compressed.summary, {
+          metadata: { type: 'compressed_summary', ...compressed }
+        })
+        this.messageHistory = [...compressed.preservedMessages, summaryMsg]
+      }
+    }
   }
 
   private summarizeResult(result: ToolResult, toolName: string): string {
     if (!result.data || typeof result.data !== 'object') return ''
     const data = result.data as Record<string, unknown>
 
-    interface MeshData { nodes?: number; elements?: number }
-
     switch (toolName) {
       case 'get_model_info': {
-        const mesh = data.mesh as MeshData | undefined
+        const mesh = data.mesh as { nodes?: number; elements?: number } | undefined
         return `几何: ${data.geometryType || 'N/A'}, 网格: ${mesh?.nodes || 0} 节点 / ${mesh?.elements || 0} 单元`
       }
       case 'set_material':
@@ -458,7 +643,7 @@ export class AgentOrchestrator {
       case 'run_simulation':
         return `求解${data.convergence ? '收敛' : '未收敛'}, 迭代 ${data.iterations || 'N/A'} 次`
       case 'get_results':
-        return `Von Mises: ${(data.maxVonMises as number / 1e6 || 0).toFixed(1)} MPa, 位移: ${((data.maxDisplacement as number || 0) * 1000).toFixed(3)} mm`
+        return `Von Mises: ${((data.maxVonMises as number) / 1e6 || 0).toFixed(1)} MPa, 位移: ${((data.maxDisplacement as number) || 0) * 1000} mm`
       case 'render_contour':
         return `云图已生成 (${data.field || 'N/A'})`
       case 'generate_mesh':
@@ -467,6 +652,8 @@ export class AgentOrchestrator {
         return data.passed ? '网格质量合格' : '网格质量需优化'
       case 'validate_results':
         return data.passed ? '结果验证通过' : '结果验证未通过'
+      case 'tc4_multimodal_predict':
+        return `失效模式: ${data.failure_mode || 'N/A'}, 寿命: ${data.cycles || 'N/A'} cycles`
       default:
         return '执行完成'
     }
@@ -484,7 +671,73 @@ export class AgentOrchestrator {
   private hasNextRepairableTask(): boolean {
     const plan = stateTracker.getCurrentPlan()
     if (!plan) return false
-    return plan.subTasks.some(t => t.status === 'pending' || (t.status === 'failed' && t.retryCount < this.config.maxRepairAttempts))
+    return plan.subTasks.some(t =>
+      (t.status === 'pending') ||
+      (t.status === 'failed' && t.retryCount < this.config.maxRepairAttempts)
+    )
+  }
+
+  private checkInfiniteLoop(plan: TaskPlan): boolean {
+    for (const task of plan.subTasks) {
+      if (task.toolName) {
+        const count = this.reflectionEngine.incrementRepeatCount(task.toolName)
+        if (count >= this.config.maxToolRepeats) return true
+      }
+    }
+    return false
+  }
+
+  private shouldTerminateEarly(_plan: TaskPlan): boolean {
+    // 检查是否全部完成
+    if (stateTracker.isAllSubTasksCompleted()) return true
+    // 检查是否有失败且无修复选项
+    if (stateTracker.hasFailedSubTasks() && !this.hasNextRepairableTask()) return true
+    return false
+  }
+
+  private isResultGoodEnough(plan: TaskPlan): boolean {
+    if (this.config.enableGoodEnoughTermination) {
+      const ratio = this.getCompletionRatio(plan)
+      if (ratio >= this.config.goodEnoughThreshold) {
+        // 检查 critical 任务（无依赖）是否全完成
+        const criticalTasks = plan.subTasks.filter(t => t.dependsOn.length === 0)
+        const criticalDone = criticalTasks.every(t => t.status === 'done')
+        return criticalDone
+      }
+      return false
+    }
+    return stateTracker.isAllSubTasksCompleted()
+  }
+
+  private getCompletionRatio(plan: TaskPlan): number {
+    const completed = plan.subTasks.filter(t => t.status === 'done').length
+    return completed / plan.subTasks.length
+  }
+
+  private async attemptBatchRepair(plan: TaskPlan): Promise<AgentMessage[]> {
+    const messages: AgentMessage[] = []
+    const repairMsg = this.createMessage('assistant', '开始批量修复...')
+    messages.push(repairMsg)
+    this.addMessage(repairMsg)
+
+    const failedTasks = plan.subTasks.filter(t => t.status === 'failed' && t.retryCount < this.config.maxRepairAttempts)
+    for (const task of failedTasks) {
+      const repairStrategies = selfRepairEngine.analyzeFailure(task.toolName!, task.result!, task)
+      if (repairStrategies.length > 0) {
+        const strategy = repairStrategies[0]
+        selfRepairEngine.applyStrategy(task, strategy)
+        stateTracker.updateSubTaskStatus(task.id, 'pending')
+        stateTracker.incrementRetry(task.id)
+
+        const taskRepairMsg = this.createMessage('assistant',
+          `修复 ${task.name}: ${strategy.description}`
+        )
+        messages.push(taskRepairMsg)
+        this.addMessage(taskRepairMsg)
+      }
+    }
+
+    return messages
   }
 }
 

@@ -4,7 +4,7 @@
  * 需要 LLM 理解错误日志
  */
 
-import type { ToolResult, RepairStrategy, SubTask, ValidationResult } from './types'
+import type { ToolResult, RepairStrategy, SubTask } from './types'
 import { resultVerifier } from './resultVerifier'
 
 /** 自修复策略库 */
@@ -80,7 +80,7 @@ const REPAIR_STRATEGIES: Record<string, (error: string, params: Record<string, u
     return strategies
   },
 
-  'get_results': (error, params) => {
+  'get_results': (_error, params) => {
     return [{
       description: '重新获取结果',
       toolName: 'get_results',
@@ -89,7 +89,7 @@ const REPAIR_STRATEGIES: Record<string, (error: string, params: Record<string, u
     }]
   },
 
-  'apply_bc': (error, params) => {
+  'apply_bc': (_error, _params) => {
     return [{
       description: '使用默认边界条件',
       toolName: 'apply_bc',

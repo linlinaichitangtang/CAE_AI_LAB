@@ -55,6 +55,7 @@ export interface SubTask {
   createdAt: number
   startedAt?: number
   completedAt?: number
+  parallelGroup?: string  // 并行任务组标记，同组任务可并行执行
 }
 
 /** 任务计划 */
@@ -236,3 +237,87 @@ export interface ReActStep {
 
 /** ReAct 循环状态 */
 export type ReActStatus = 'thinking' | 'acting' | 'observing' | 'finished' | 'error'
+
+// ============================================================================
+// 执行循环增强 (Claude Code 对齐)
+// ============================================================================
+
+/** 执行循环阶段 */
+export type ExecutionPhase = 'executing' | 'validating' | 'repairing' | 'replanning' | 'completing' | 'terminating'
+
+/** 反思结果 */
+export interface ReflectionResult {
+  confidence: number           // 0-1
+  quality: 'excellent' | 'good' | 'marginal' | 'poor'
+  shouldReplan: boolean        // 是否触发重规划
+  reason: string
+  suggestions: string[]       // 改进建议
+}
+
+/** 工具反思数据 */
+export interface ToolReflection {
+  toolName: string
+  result: ToolResult
+  validation: ValidationResult
+  historicalContext: ToolCallRecord[]
+}
+
+/** 上下文压缩配置 */
+export interface CompressionConfig {
+  maxMessages: number          // 保留最近 N 条原文 (default: 50)
+  summaryThreshold: number      // 超过此数量则触发压缩 (default: 100)
+  aggressiveSummary: boolean    // 是否激进压缩
+}
+
+/** 压缩后的上下文 */
+export interface CompressedContext {
+  summary: string               // 压缩摘要
+  messageCount: number          // 原始消息数
+  compressedCount: number       // 被压缩的消息数
+  preservedMessages: AgentMessage[]  // 保留的原文消息
+  compressionRatio: number       // 压缩率
+}
+
+/** 批量执行结果 */
+export interface BatchExecuteResult {
+  results: Map<string, ToolResult>
+  totalTime: number
+  errors: string[]
+}
+
+// ============================================================================
+// SubTask 扩展
+// ============================================================================
+
+/** 子任务（扩展） */
+export interface SubTask {
+  id: string
+  name: string
+  description: string
+  toolName?: string
+  toolParams?: Record<string, unknown>
+  status: SubTaskStatus
+  result?: ToolResult
+  error?: string
+  retryCount: number
+  maxRetries: number
+  dependsOn: string[]
+  estimatedTime?: number
+  actualTime?: number
+  createdAt: number
+  startedAt?: number
+  completedAt?: number
+  parallelGroup?: string        // 并行组ID，同组任务可并行执行
+}
+
+/** Agent Orchestrator 配置 */
+export interface AgentOrchestratorConfig {
+  enableSelfRepair: boolean           // 是否启用自修复 (default: true)
+  enableGoodEnoughTermination: boolean // 是否启用"足够好"终止 (default: true)
+  goodEnoughThreshold: number           // 终止阈值 (default: 0.8)
+  maxToolRepeats: number               // 同一工具最大连续调用次数 (default: 5)
+  allowPartialSuccess: boolean         // 是否允许部分成功 (default: false)
+  replanThreshold: number              // 反思重规划阈值 (default: 0.6)
+  summaryThreshold: number             // 上下文压缩阈值 (default: 100)
+  maxMessages: number                  // 压缩保留消息数 (default: 50)
+}
