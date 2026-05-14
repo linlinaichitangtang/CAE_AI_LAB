@@ -360,6 +360,11 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '求解器安装' }
   },
   {
+    path: '/tc4-failure',
+    name: 'Tc4Failure',
+    component: () => import('./views/components/tc4/Tc4FailureAnalysisView.vue')
+  },
+  {
     path: '/help',
     name: 'help',
     component: () => import('./views/HelpView.vue')

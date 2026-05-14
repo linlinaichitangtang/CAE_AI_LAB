@@ -3,6 +3,36 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
+/// Database errors
+#[derive(Debug)]
+pub enum Error {
+    Rusqlite(rusqlite::Error),
+    LockFailed(String),
+}
+
+impl From<rusqlite::Error> for Error {
+    fn from(e: rusqlite::Error) -> Self {
+        Error::Rusqlite(e)
+    }
+}
+
+impl From<String> for Error {
+    fn from(s: String) -> Self {
+        Error::LockFailed(s)
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Rusqlite(e) => write!(f, "Database error: {}", e),
+            Error::LockFailed(s) => write!(f, "Lock failed: {}", s),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 /// Database manager for SQLite operations
 pub struct Database {
     pub conn: Mutex<Connection>,
@@ -10,13 +40,13 @@ pub struct Database {
 
 impl Database {
     /// Initialize database with the given path
-    pub fn new(db_path: PathBuf) -> Result<Self> {
+    pub fn new(db_path: PathBuf) -> Result<Self, Error> {
         // Ensure parent directory exists
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).ok();
         }
-        
-        let conn = Connection::open(&db_path)?;
+
+        let conn = Connection::open(&db_path).map_err(Error::Rusqlite)?;
         let db = Self {
             conn: Mutex::new(conn),
         };
@@ -28,7 +58,7 @@ impl Database {
     }
 
     /// Initialize database tables
-    fn init_tables(&self) -> Result<()> {
+    fn init_tables(&self) -> Result<(), Error> {
         let conn = self.conn.lock()
             .map_err(|e| format!("failed to lock database connection: {}", e))?;
         
@@ -310,21 +340,23 @@ impl Database {
     }
 
     /// Initialize V2.5 simulation archive table
-    fn init_archive_table(&self) -> Result<()> {
+    fn init_archive_table(&self) -> Result<(), Error> {
         let conn = self.conn.lock()
             .map_err(|e| format!("failed to lock database connection: {}", e))?;
         crate::commands::simulation_archive::create_archive_table(&conn)
+            .map_err(Error::Rusqlite)
     }
 
     /// Initialize V2.8 material property table
-    fn init_material_property_table(&self) -> Result<()> {
+    fn init_material_property_table(&self) -> Result<(), Error> {
         let conn = self.conn.lock()
             .map_err(|e| format!("failed to lock database connection: {}", e))?;
         crate::commands::material_data_platform::create_material_property_table(&conn)
+            .map_err(Error::Rusqlite)
     }
 
     /// Initialize built-in materials
-    fn init_builtin_materials(&self) -> Result<()> {
+    fn init_builtin_materials(&self) -> Result<(), Error> {
         let conn = self.conn.lock()
             .map_err(|e| format!("failed to lock database connection: {}", e))?;
         

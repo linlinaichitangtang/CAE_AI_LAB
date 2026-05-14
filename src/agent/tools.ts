@@ -881,6 +881,104 @@ const predict_with_surrogate: ToolDefinition = {
 }
 
 // ============================================================================
+// TC4 失效分析工具 (V3.8)
+// ============================================================================
+
+const tc4_generate_synthetic_data: ToolDefinition = {
+  name: 'tc4_generate_synthetic_data',
+  description: '生成 TC4 合成数据，用于验证多模态失效分析流程。生成 ebsd_synthetic.csv, sem_synthetic.csv, load_synthetic.csv, failure_labels.csv 四个文件',
+  category: 'simulation',
+  params: [
+    { name: 'num_samples', type: 'number', description: '样本数量', required: false, default: 100 },
+    { name: 'output_dir', type: 'string', description: '输出目录', required: false, default: './tc4_synthetic' },
+    { name: 'use_tc4', type: 'boolean', description: '是否使用 TC4 HCP 参数（false 用 Al FCC 先跑通）', required: false, default: true },
+    { name: 'seed', type: 'number', description: '随机种子', required: false, default: 42 }
+  ],
+  returnType: 'string',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_generate_synthetic',
+  isDestructive: false,
+  examples: ['生成 100 个 TC4 合成样本', '生成 Al FCC 测试数据']
+}
+
+const tc4_load_ebsd: ToolDefinition = {
+  name: 'tc4_load_ebsd',
+  description: '加载 EBSD 晶格数据，从 .ctf/.ang 文件或 CSV 提取 80 维晶格特征向量',
+  category: 'simulation',
+  params: [
+    { name: 'ebsd_path', type: 'string', description: 'EBSD 文件路径（.ctf/.ang/.csv）', required: true },
+    { name: 'material', type: 'string', description: '材料类型（TC4 或 Al）', required: false, default: 'TC4' }
+  ],
+  returnType: 'EbsdFeatures',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_load_ebsd',
+  isDestructive: false,
+  examples: ['加载 EBSD 数据', '读取 TC4 晶格特征']
+}
+
+const tc4_load_sem: ToolDefinition = {
+  name: 'tc4_load_sem',
+  description: '加载 SEM 断口图像，提取 768 维 ViT 特征向量',
+  category: 'simulation',
+  params: [
+    { name: 'sem_image_path', type: 'string', description: 'SEM 图像路径（.jpg/.png/.csv）', required: true }
+  ],
+  returnType: 'SemFeatures',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_load_sem',
+  isDestructive: false,
+  examples: ['加载 SEM 图像', '提取断口图像特征']
+}
+
+const tc4_load_load: ToolDefinition = {
+  name: 'tc4_load_load',
+  description: '加载载荷历史数据，从 CSV 提取 30 维载荷特征向量',
+  category: 'simulation',
+  params: [
+    { name: 'load_path', type: 'string', description: '载荷数据文件路径（.csv）', required: true }
+  ],
+  returnType: 'LoadFeatures',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_load_load',
+  isDestructive: false,
+  examples: ['加载载荷数据', '读取载荷历史']
+}
+
+const tc4_predict_failure: ToolDefinition = {
+  name: 'tc4_predict_failure',
+  description: '多模态失效预测 - 三路输入（EBSD + SEM + Load）预测失效模式和疲劳寿命',
+  category: 'simulation',
+  params: [
+    { name: 'ebsd', type: 'object', description: 'EBSD 晶格特征 {sample_id, features, a, c, c_to_a}', required: true },
+    { name: 'sem', type: 'object', description: 'SEM 图像特征 {sample_id, features, quality_score}', required: true },
+    { name: 'load', type: 'object', description: 'Load 载荷特征 {sample_id, features, load_type}', required: true }
+  ],
+  returnType: 'MultimodalPrediction',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_multimodal_predict',
+  isDestructive: false,
+  examples: ['预测 TC4 失效模式', '多模态预测疲劳寿命']
+}
+
+const tc4_md_validation: ToolDefinition = {
+  name: 'tc4_md_validation',
+  description: 'LAMMPS 分子动力学验证裂纹扩展或位错演化，输入晶格参数和裂纹配置，输出裂纹速度、位错密度、断裂能等',
+  category: 'simulation',
+  params: [
+    { name: 'lattice_a', type: 'number', description: '晶格参数 a (Å)', required: true },
+    { name: 'lattice_c', type: 'number', description: '晶格参数 c (Å)', required: true },
+    { name: 'crack_plane', type: 'string', description: '裂纹面 (如 (0001), (10-10), (11-20))', required: true },
+    { name: 'crack_direction', type: 'string', description: '裂纹方向 (如 [11-20], [1-100])', required: true },
+    { name: 'validation_type', type: 'string', description: '验证类型 (crack_propagation / dislocation_evolution)', required: true }
+  ],
+  returnType: 'string',
+  requiresConfirmation: false,
+  tauriCommand: 'tc4_failure::tc4_md_validation',
+  isDestructive: false,
+  examples: ['MD 验证裂纹扩展', '模拟位错演化']
+}
+
+// ============================================================================
 // 工具注册表
 // ============================================================================
 
@@ -922,6 +1020,8 @@ function initToolRegistry(): void {
     train_pinn_model, predict_pinn,
     // Surrogate Model 工具 (V3.7)
     create_surrogate_model, train_surrogate, predict_with_surrogate,
+    // TC4 失效分析工具 (V3.8)
+    tc4_generate_synthetic_data, tc4_load_ebsd, tc4_load_sem, tc4_load_load, tc4_predict_failure, tc4_md_validation,
   ]
 
   for (const tool of allTools) {

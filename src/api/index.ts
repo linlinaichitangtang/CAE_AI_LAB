@@ -366,6 +366,10 @@ export async function getFileCategories(projectId: string) {
 
 export * from './biomechanics'
 
+// ============ TC4 失效分析 API ============
+
+export * from './tc4Failure'
+
 // ============ DFT 输入生成器 API ============
 
 export * from './dftInput'
