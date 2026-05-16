@@ -176,8 +176,8 @@ function saveNow() {
 }
 
 /** 恢复版本 */
-function restore(versionId: string) {
-  const success = restoreVersion(versionId)
+async function restore(versionId: string) {
+  const success = await restoreVersion(versionId)
   if (success) {
     selectedVersion.value = null
   } else {

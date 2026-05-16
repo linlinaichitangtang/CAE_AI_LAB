@@ -91,7 +91,7 @@ export interface ToolParamSchema {
 export interface ToolDefinition {
   name: string
   description: string
-  category: 'modeling' | 'simulation' | 'postprocess' | 'code' | 'notes' | 'analysis' | 'system'
+  category: 'modeling' | 'simulation' | 'postprocess' | 'code' | 'notes' | 'analysis' | 'system' | 'ml'
   params: ToolParamSchema[]
   returnType: string
   requiresConfirmation: boolean  // 是否需要用户确认
@@ -320,4 +320,286 @@ export interface AgentOrchestratorConfig {
   replanThreshold: number              // 反思重规划阈值 (default: 0.6)
   summaryThreshold: number             // 上下文压缩阈值 (default: 100)
   maxMessages: number                  // 压缩保留消息数 (default: 50)
+}
+
+// ============================================================================
+// V3.9 Agent 记忆系统 (五层记忆架构)
+// ============================================================================
+
+/** 疲劳 S-N 曲线参数 */
+export interface FatigueSNCurve {
+  material: string
+  stressRatio: number
+  curveType: 'basquin' | 'whler' | 'custom'
+  basquinB?: number
+  basquinM?: number
+  fatigueLimit?: number
+  cutoffCycles?: number
+  coefficientA?: number
+  thresholdB?: number
+  exponentC?: number
+  standardSource?: string
+  testConditions?: string
+}
+
+/** 热性能参数 */
+export interface ThermalParams {
+  thermalConductivity?: number
+  specificHeat?: number
+  thermalExpansion: number
+  maxTemperature?: number
+  thermalFatigueFactor?: string
+}
+
+/** 网格划分指南 */
+export interface MeshGuidelines {
+  elementType: 'tet10' | 'hex20' | 'tet4' | 'hex8' | 'mixed'
+  minSize?: number
+  maxSize?: number
+  localRefinement?: number
+  qualityTarget?: number
+  boundaryLayerRatio?: number
+  transitionStrategy?: 'gradual' | 'single' | 'hierarchical'
+}
+
+/** 求解器推荐设置 */
+export interface SolverSettings {
+  solverType: 'direct' | 'iterative' | 'multigrid'
+  maxIterations?: number
+  tolerance?: number
+  preconditioner?: 'amg' | 'ilu' | 'jacobi' | 'none'
+  linearSolver?: string
+  nonlinearStrategy?: 'newton' | 'arc_length' | 'modified_newton'
+  timeStepStrategy?: 'fixed' | 'adaptive' | 'automatic'
+}
+
+/** 材料知识库 */
+export interface MaterialKnowledge {
+  material_id: string
+  name: string
+  category: 'steel' | 'aluminum' | 'titanium' | 'polymer' | 'composite' | 'ceramic' | 'other'
+  elastic_modulus: number
+  poissons_ratio: number
+  density: number
+  yield_strength: number
+  ultimate_strength?: number
+  fatigue_params?: FatigueSNCurve[]
+  thermal_params?: ThermalParams
+  mesh_guidelines?: MeshGuidelines
+  solver_settings?: SolverSettings
+  common_errors?: string[]
+  last_analysis?: number
+  project_ids?: string[]
+  notes?: string
+}
+
+/** 设计规范来源 */
+export type DesignStandardSource = 'BMS7-368E' | 'VDA' | 'GB/T' | 'ASTM' | 'ISO' | 'JIS' | 'enterprise'
+
+/** 载荷工况 */
+export interface LoadCase {
+  name: string
+  type: string
+  description?: string
+}
+
+/** 设计规范规则 */
+export interface DesignStandard {
+  id: string
+  name: string
+  version: string
+  source: DesignStandardSource
+  scope: string
+  safety_factor: number
+  allowable_stress?: number
+  applicable_load_cases?: LoadCase[]
+  rules?: string
+  industry?: string
+  issue_date?: string
+  notes?: string
+}
+
+/** 失效模式类型 */
+export type FailureModeType = 'HCF' | 'LCF' | 'TMF' | 'CREEP' | 'OVERLOAD' | 'FOD' | 'CORROSION' | 'WEAR'
+
+/** 失效机制描述 */
+export interface FailureMechanism {
+  name: string
+  drivingFactors: string[]
+  predictors: string[]
+  mitigationStrategies: string[]
+  criticalThresholds?: Record<string, number>
+}
+
+/** 失效模式图谱节点 */
+export interface FailureModeGraph {
+  id: string
+  mode_type: FailureModeType
+  description: string
+  applicable_materials?: string[]
+  temperatureRange?: { min: number; max: number }
+  mechanisms: FailureMechanism[]
+  uncertainty: 'high' | 'medium' | 'low'
+  related_standards?: string[]
+  case_study_ids?: string[]
+  priority: number
+}
+
+/** 用户偏好 */
+export interface UserPreference {
+  unitSystem: 'metric' | 'imperial'
+  language: string
+  theme?: string
+  frequentMaterials?: string[]
+  frequentSimulationTypes?: string[]
+  preferredPostprocessor?: string
+}
+
+/** 项目历史摘要 */
+export interface ProjectHistoryEntry {
+  project_id: string
+  project_name: string
+  description?: string
+  created_at: number
+  last_accessed_at: number
+  tags?: string[]
+  completed_analyses?: number
+}
+
+/** 用户画像 */
+export interface UserProfile {
+  user_id: string
+  nickname?: string
+  email?: string
+  company?: string
+  position?: string
+  preferences: UserPreference
+  project_history: ProjectHistoryEntry[]
+  expertise_tags?: string[]
+  created_at: number
+  last_login_at: number
+}
+
+/** 知识召回请求 */
+export interface KnowledgeRecallRequest {
+  keywords: string[]
+  context_type?: 'material' | 'standard' | 'failure_mode' | 'mesh' | 'solver' | 'all'
+  project_id?: string
+  simulation_type?: string
+  limit?: number
+}
+
+/** 知识召回结果 */
+export interface KnowledgeRecallResult {
+  materials?: MaterialKnowledge[]
+  standards?: DesignStandard[]
+  failure_modes?: FailureModeGraph[]
+  confidence: number
+  hit_description: string
+  source: 'local' | 'cross_session' | 'long_term'
+}
+
+// ============================================================================
+// V3.10 Agent RAG 向量推理 (Knowledge Retrieval-Augmented Generation)
+// ============================================================================
+
+/** 向量嵌入维度 (TF-IDF 特征数) */
+export const VECTOR_DIM = 128
+
+/** 嵌入向量类型 (固定维度实数向量) */
+export type EmbeddingVector = number[]
+
+/** 知识片段来源类型 */
+export type KnowledgeSourceType = 'simulation_result' | 'material_data' | 'design_standard' | 'failure_analysis' | 'user_note' | 'chat_history' | 'project_doc'
+
+/** 向量嵌入记录 */
+export interface EmbeddingRecord {
+  id: string
+  /** 来源类型 */
+  source_type: KnowledgeSourceType
+  /** 关联项目 ID */
+  project_id?: string
+  /** 关联用户 ID */
+  user_id?: string
+  /** 知识片段文本 */
+  content: string
+  /** TF-IDF 嵌入向量 (VECTOR_DIM 维) */
+  embedding: EmbeddingVector
+  /** 关键词标签 */
+  tags: string[]
+  /** 创建时间 */
+  created_at: number
+  /** 最后被检索时间 */
+  last_accessed_at?: number
+  /** 检索次数 */
+  access_count: number
+  /** 元数据 (JSON) */
+  metadata_json?: string
+}
+
+/** 向量搜索结果 */
+export interface VectorSearchResult {
+  /** 匹配的嵌入记录 */
+  record: EmbeddingRecord
+  /** 余弦相似度 (0-1) */
+  similarity: number
+  /** 排名 (1-based) */
+  rank: number
+  /** 命中描述 */
+  snippet: string
+}
+
+/** 向量搜索请求 */
+export interface VectorSearchRequest {
+  /** 查询文本 */
+  query: string
+  /** 查询嵌入向量 (可选，不填则自动生成) */
+  query_embedding?: EmbeddingVector
+  /** 搜索范围: 'project' | 'user' | 'global' */
+  scope: 'project' | 'user' | 'global'
+  /** 关联项目 ID (scope=project 时必填) */
+  project_id?: string
+  /** 关联用户 ID (scope=user 时必填) */
+  user_id?: string
+  /** 返回数量上限 */
+  limit?: number
+  /** 相似度阈值 (低于此值不返回) */
+  similarity_threshold?: number
+  /** 过滤来源类型 */
+  source_types?: KnowledgeSourceType[]
+}
+
+/** 主动回忆请求 */
+export interface ActiveRecallRequest {
+  /** 当前仿真类型 */
+  simulation_type: string
+  /** 当前材料 */
+  material?: string
+  /** 当前项目 ID */
+  project_id?: string
+  /** 关联用户 ID */
+  user_id?: string
+  /** 召回数量 */
+  limit?: number
+}
+
+/** 主动回忆结果 */
+export interface ActiveRecallResult {
+  /** 检索到的知识片段列表 */
+  records: VectorSearchResult[]
+  /** 上下文完整性评分 (0-1) */
+  context_completeness: number
+  /** 建议补充的方向 */
+  suggested_directions: string[]
+  /** 来源汇总 */
+  source_summary: string
+}
+
+/** 跨会话知识摘要 */
+export interface CrossSessionKnowledgeSummary {
+  total_records: number
+  top_sources: KnowledgeSourceType[]
+  recent_topics: string[]
+  mastery_level: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  recommendations: string[]
 }

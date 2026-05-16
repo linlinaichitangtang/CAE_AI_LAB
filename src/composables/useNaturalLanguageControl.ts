@@ -723,6 +723,7 @@ export function useNaturalLanguageControl() {
         type: 'create_geometry',
         description: intent.language === 'zh' ? '创建几何模型' : 'Creating geometry',
         status: 'pending',
+        steps: [],
         startTime: new Date().toISOString()
       }]
     }
@@ -742,6 +743,7 @@ export function useNaturalLanguageControl() {
         type: 'generate_mesh',
         description: intent.language === 'zh' ? '生成网格' : 'Generating mesh',
         status: 'pending',
+        steps: [],
         startTime: new Date().toISOString()
       }]
     }
@@ -759,6 +761,7 @@ export function useNaturalLanguageControl() {
         type: 'run_simulation',
         description: intent.language === 'zh' ? '运行仿真' : 'Running simulation',
         status: 'pending',
+        steps: [],
         startTime: new Date().toISOString()
       }]
     }
@@ -800,6 +803,7 @@ export function useNaturalLanguageControl() {
         description: intent.language === 'zh' ? '查询结果' : 'Querying results',
         status: 'completed',
         result: { [resultType]: value },
+        steps: [],
         startTime: new Date().toISOString()
       }]
     }

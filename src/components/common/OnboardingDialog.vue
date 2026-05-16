@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { OnboardingStep } from './useOnboarding'
+import type { OnboardingStep } from '@/composables/useOnboarding'
 
 const props = defineProps<{
   visible: boolean

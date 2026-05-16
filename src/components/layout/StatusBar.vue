@@ -121,7 +121,7 @@ import { useSyncService, type SyncStatus } from '@/api/syncService'
 const { lastSaveTime, isAutoSaving } = useAutoSave()
 
 // Offline mode state
-const { statusText, toggleOfflineMode } = useOfflineMode()
+const { statusText, toggleOfflineMode, isOnline, isOfflineModeEnabled } = useOfflineMode()
 
 // Sync state
 const syncService = useSyncService()

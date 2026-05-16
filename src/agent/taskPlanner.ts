@@ -13,6 +13,31 @@ function shortId(): string {
 
 /** 任务规划器 */
 export class TaskPlanner {
+  private contextKnowledge: {
+    material_id: string
+    name: string
+    elastic_modulus?: number
+    yield_strength?: number
+    fatigue_params?: unknown
+    mesh_guidelines?: unknown
+    solver_settings?: unknown
+  } | null = null
+
+  /**
+   * 设置上下文知识（从知识召回注入）
+   */
+  setContextKnowledge(knowledge: {
+    material_id: string
+    name: string
+    elastic_modulus?: number
+    yield_strength?: number
+    fatigue_params?: unknown
+    mesh_guidelines?: unknown
+    solver_settings?: unknown
+  }): void {
+    this.contextKnowledge = knowledge
+  }
+
   /**
    * 根据意图和用户查询生成任务计划
    */
@@ -38,6 +63,11 @@ export class TaskPlanner {
   private decomposeTask(query: string, intent: IntentResult): SubTask[] {
     const subTasks: SubTask[] = []
     const now = Date.now()
+
+    // V3.9: 如果有上下文知识，优先使用材料的求解器设置
+    if (this.contextKnowledge?.solver_settings) {
+      // contextKnowledge 可用于后续步骤参数调整
+    }
 
     switch (intent.intent) {
       case 'simulation': {

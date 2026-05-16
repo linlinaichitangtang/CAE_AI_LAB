@@ -283,6 +283,13 @@ const stressIcon = computed(() => {
   return '\u274C'
 })
 
+const stressIconBg = computed(() => {
+  if (safetyFactor.value === null) return 'bg-gray-100 dark:bg-gray-700'
+  if (safetyFactor.value >= 1.5) return 'bg-green-100 dark:bg-green-900/40'
+  if (safetyFactor.value >= 1.0) return 'bg-yellow-100 dark:bg-yellow-900/40'
+  return 'bg-red-100 dark:bg-red-900/40'
+})
+
 const stressBgClass = computed(() => {
   if (safetyFactor.value === null) return 'bg-gray-50 dark:bg-gray-700/50'
   if (safetyFactor.value >= 1.5) return 'bg-green-50 dark:bg-green-900/20'

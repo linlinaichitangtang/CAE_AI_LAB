@@ -3,7 +3,7 @@
  * TemplateMarketplace.vue — V3.0-003 模板市场
  * 老师发布模板，学生/其他用户浏览、搜索、评分、克隆
  */
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   type ProjectTemplate,
@@ -356,16 +356,16 @@ watch(templateRatings, (val) => {
           <!-- 统计 -->
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="bg-[var(--bg-elevated)] rounded-lg p-3 text-center">
-              <p class="text-2xl font-bold text-[var(--primary)]">{{ formatNumber(selectedTemplate.cloneCount) }}</p>
+              <p class="text-2xl font-bold text-[var(--primary)]">{{ formatNumber(selectedTemplate!.cloneCount) }}</p>
               <p class="text-xs text-[var(--text-muted)]">克隆次数</p>
             </div>
             <div class="bg-[var(--bg-elevated)] rounded-lg p-3 text-center">
-              <p class="text-2xl font-bold text-yellow-500">{{ getAverageRating(selectedTemplate).toFixed(1) }}</p>
+              <p class="text-2xl font-bold text-yellow-500">{{ getAverageRating(selectedTemplate!).toFixed(1) }}</p>
               <p class="text-xs text-[var(--text-muted)]">平均评分</p>
             </div>
             <div class="bg-[var(--bg-elevated)] rounded-lg p-3 text-center">
-              <p class="text-2xl font-bold text-blue-500">{{ CATEGORIES.find(c => c.id === selectedTemplate.category)?.icon || '📦' }}</p>
-              <p class="text-xs text-[var(--text-muted)]">{{ CATEGORIES.find(c => c.id === selectedTemplate.category)?.name || '其他' }}</p>
+              <p class="text-2xl font-bold text-blue-500">{{ CATEGORIES.find(c => c.id === selectedTemplate!.category)?.icon || '📦' }}</p>
+              <p class="text-xs text-[var(--text-muted)]">{{ CATEGORIES.find(c => c.id === selectedTemplate!.category)?.name || '其他' }}</p>
             </div>
           </div>
 

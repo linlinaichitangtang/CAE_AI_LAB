@@ -407,6 +407,14 @@ function setupNetworkListeners() {
     addToSyncQueue,
     processSyncQueue,
     getSyncQueueSize,
-    getCachedResults
+    getCachedResults,
+    statusText: computed(() => isOnline.value ? '在线' : '离线'),
+    toggleOfflineMode: () => {
+      if (isOfflineModeEnabled.value) {
+        disableOfflineMode()
+      } else {
+        enableOfflineMode()
+      }
+    }
   }
 }

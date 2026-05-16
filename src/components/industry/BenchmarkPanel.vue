@@ -84,6 +84,12 @@ function getScoreColor(score: number): string {
   return 'text-red-600'
 }
 
+// Computed: filtered results for selected case
+const selectedCaseResults = computed(() => {
+  if (!selectedCase.value) return []
+  return results.value.filter((r: BenchmarkResult) => r.caseId === selectedCase.value!.id)
+})
+
 // ============ 操作函数 ============
 function handleRunBenchmark() {
   if (!selectedCase.value) return
@@ -397,16 +403,17 @@ function getCategoryInfo(category: string) {
             </div>
 
             <!-- 历史结果 -->
-            <div v-if="results.filter(r => r.caseId === selectedCase.id).length > 0" class="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
-              <div class="px-6 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
-                <h3 class="font-semibold text-[var(--text-primary)]">📜 历史验证结果</h3>
-                <span class="text-xs text-[var(--text-muted)]">
-                  共 {{ results.filter(r => r.caseId === selectedCase.id).length }} 次
-                </span>
-              </div>
-              <div class="divide-y divide-[var(--border-subtle)]">
-                <div
-                  v-for="result in results.filter(r => r.caseId === selectedCase.id).slice(0, 5)"
+            <template v-if="selectedCase">
+              <div v-if="selectedCaseResults.length > 0" class="bg-[var(--bg-surface)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
+                <div class="px-6 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
+                  <h3 class="font-semibold text-[var(--text-primary)]">📜 历史验证结果</h3>
+                  <span class="text-xs text-[var(--text-muted)]">
+                    共 {{ selectedCaseResults.length }} 次
+                  </span>
+                </div>
+                <div class="divide-y divide-[var(--border-subtle)]">
+                  <div
+                    v-for="result in selectedCaseResults.slice(0, 5)"
                   :key="result.executedAt"
                   class="px-6 py-3 flex items-center justify-between"
                 >
@@ -432,6 +439,7 @@ function getCategoryInfo(category: string) {
                 </div>
               </div>
             </div>
+            </template>
           </div>
         </div>
       </div>

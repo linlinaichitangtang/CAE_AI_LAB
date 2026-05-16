@@ -7,6 +7,7 @@
 import type {
   TaskPlan, SubTask, AgentMessage,
   ToolResult, AgentMetrics, ExecutionPhase, AgentOrchestratorConfig as AgentOrchConfig,
+  IntentResult,
 } from './types'
 import { intentClassifier } from './intentClassifier'
 import { taskPlanner } from './taskPlanner'
@@ -16,6 +17,8 @@ import { resultVerifier } from './resultVerifier'
 import { selfRepairEngine } from './selfRepair'
 import { ReflectionEngine } from './reflectionEngine'
 import { ContextCompressor } from './contextCompressor'
+import { recallFromUserInput } from './knowledgeRecall'
+import { recallBeforeSimulation } from './vectorRecall'
 
 /** Agent 编排器事件 */
 export type AgentEventType =
@@ -120,6 +123,14 @@ export class AgentOrchestrator {
       messages.push(qaMsg)
       this.addMessage(qaMsg)
       return messages
+    }
+
+    // V3.9: 知识召回 — 在规划前注入相关知识上下文
+    await this.injectKnowledgeContext(input, intent)
+
+    // V3.10: 主动回忆 — 仿真前自动检索相关历史
+    if (intent.intent === 'simulation') {
+      await this.injectActiveRecallContext(input, intent)
     }
 
     // 4. 任务规划
@@ -594,6 +605,151 @@ export class AgentOrchestrator {
         try { listener(event) } catch (e) { console.error('Event listener error:', e) }
       }
     }
+  }
+
+  // ============================================================================
+  // V3.9: 知识召回集成
+  // ============================================================================
+
+  /**
+   * 注入知识上下文 — 在任务规划前触发知识召回
+   * 将材料知识、设计规范、失效模式注入到消息历史中
+   */
+  private async injectKnowledgeContext(input: string, intent: IntentResult): Promise<void> {
+    try {
+      const result = await recallFromUserInput(input, intent.intent)
+      if (!result || !result.knowledgeHint) return
+
+      // 将知识召回结果作为系统消息注入
+      const knowledgeMsg = this.createMessage('system', result.knowledgeHint, {
+        metadata: {
+          type: 'knowledge_recall',
+          confidence: result.material ? 0.8 : 0.5,
+          source: 'v3.9_memory',
+          material: result.material,
+          standards: result.standards,
+          failureModes: result.failureModes,
+        }
+      })
+      this.addMessage(knowledgeMsg)
+
+      // 如果有相关材料知识，注入到 taskPlanner
+      if (result.material) {
+        taskPlanner.setContextKnowledge(result.material as {
+          material_id: string
+          name: string
+          elastic_modulus?: number
+          yield_strength?: number
+          fatigue_params?: unknown
+          mesh_guidelines?: unknown
+          solver_settings?: unknown
+        })
+      }
+
+      this.emitEvent('message', knowledgeMsg)
+    } catch (e) {
+      // 知识召回失败不影响主流程
+      console.warn('injectKnowledgeContext failed:', e)
+    }
+  }
+
+  /**
+   * V3.10: 主动回忆上下文注入 — 仿真任务前自动检索跨会话历史知识
+   * 基于 TF-IDF 向量相似度搜索
+   */
+  private async injectActiveRecallContext(input: string, intent: IntentResult): Promise<void> {
+    try {
+      // 提取仿真类型和材料
+      const simType = this.extractSimulationType(input, intent)
+      const material = this.extractMaterialFromInput(input)
+
+      // 获取当前项目/用户 ID (如果有)
+      const projectId = this.getCurrentProjectId?.() ?? undefined
+      const userId = this.getCurrentUserId?.() ?? 'default'
+
+      const recallHint = await recallBeforeSimulation({
+        simulationType: simType,
+        material,
+        projectId,
+        userId,
+      })
+
+      if (!recallHint) return
+
+      // 将主动回忆结果作为系统消息注入
+      const recallMsg = this.createMessage('system', recallHint, {
+        metadata: {
+          type: 'active_recall',
+          source: 'v3.10_vector_rag',
+          simulationType: simType,
+          material: material || null,
+        }
+      })
+      this.addMessage(recallMsg)
+      this.emitEvent('message', recallMsg)
+    } catch (e) {
+      // 主动回忆失败不影响主流程
+      console.warn('injectActiveRecallContext failed:', e)
+    }
+  }
+
+  /**
+   * 从用户输入中提取仿真类型
+   */
+  private extractSimulationType(input: string, intent: IntentResult): string {
+    if (intent.subIntent) return intent.subIntent
+
+    const simPatterns: Array<[RegExp, string]> = [
+      [/\b(静态|静力|static)\b/i, 'simulation.static'],
+      [/\b(动态|dynamic)\b/i, 'simulation.dynamic'],
+      [/\b(模态|modal|振型)\b/i, 'simulation.modal'],
+      [/\b(疲劳|fatigue|HCF|LCF)\b/i, 'simulation.fatigue'],
+      [/\b(热|thermal|热应力)\b/i, 'simulation.thermal'],
+      [/\b(屈曲|buckling|失稳)\b/i, 'simulation.buckling'],
+      [/\b(接触|contact)\b/i, 'simulation.contact'],
+      [/\b(瞬态|transient)\b/i, 'simulation.transient'],
+    ]
+
+    for (const [pattern, type] of simPatterns) {
+      if (pattern.test(input)) return type
+    }
+
+    return 'simulation.static'
+  }
+
+  /**
+   * 从用户输入中提取材料名称
+   */
+  private extractMaterialFromInput(input: string): string | undefined {
+    const materialPatterns = [
+      /\b(TC4|Ti-6Al-4V)\b/i,
+      /\b(AA\s*7075|7075-T6)\b/i,
+      /\b(Q235|Q345|Q355)\b/i,
+      /\b(SS\s*316L|316L)\b/i,
+      /\b(Inconel\s*718|718)\b/i,
+      /\b(A36|S235|S355)\b/i,
+    ]
+
+    for (const pattern of materialPatterns) {
+      const match = input.match(pattern)
+      if (match) return match[0]
+    }
+
+    return undefined
+  }
+
+  /** 获取当前项目 ID (由外部设置) */
+  private getCurrentProjectId?(): string | undefined
+
+  /** 获取当前用户 ID (由外部设置) */
+  private getCurrentUserId?(): string | undefined
+
+  /**
+   * 设置项目/用户 ID 回调 (由 Vue 组件调用)
+   */
+  setContextProvider(getProjectId: () => string | undefined, getUserId: () => string | undefined): void {
+    this.getCurrentProjectId = getProjectId
+    this.getCurrentUserId = getUserId
   }
 
   // ============================================================================

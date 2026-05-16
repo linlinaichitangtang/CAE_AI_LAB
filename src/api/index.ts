@@ -398,14 +398,21 @@ export * from './coordinateMapping'
 export * from './coarseGraining'
 
 // ============ V1.8+ 扩展分析 API ============
+// Note: Using selective exports to avoid name collisions (Parameter, ScanCaseResult, ScaleLevel)
+// between cae.ts, coordinateMapping.ts, parametric.ts, and materialDataPlatform.ts
 
 export * from './fsi'
-export * from './parametric'
-export * from './materialDataPlatform'
-export * from './mlPotential'
-export * from './multiscale'
-export * from './remoteSolver'
-export * from './solverManager'
+export { type FsiNodeData, type FsiMaterial, type FsiConfig, type FsiResult, type FsiTemplate, runFsiAnalysis, mapCfdToStructural, getFsiTemplates } from './fsi'
+
+export { type DoeParameter, type DoeConfig, type DoeResult, type SensitivityResult, type ScanCaseResult as ParametricScanCaseResult, type Parameter as DoeParameterBase, runDoeStudy, calculateSensitivity, SAMPLING_METHOD_LABELS, SAMPLING_METHOD_DESCRIPTIONS } from './parametric'
+
+export { type MaterialPropertyRecord, type MaterialDataWriteRequest, type MaterialDataQuery, type CoverageAnalysis, writeMaterialProperty, queryMaterialProperties } from './materialDataPlatform'
+
+export { type MLPotentialInfo, type MLPotentialComputeRequest, type MLPotentialComputeResult, type PotentialSelectionRequest, type PotentialSelectionResult, type GpuInfo, type GpuResourceStatus, type TrainingConfig, type TrainingResult, listMlPotentials, computeMlPotential, autoSelectPotential, getGpuStatus, recommendTrainingHyperparams, submitTrainingJob, validateMlPotential, runMdWithMlPotential } from './mlPotential'
+
+export { type ScaleLevel, type BridgeMethod, type AtomisticData, type PhaseFieldData, type MultiscaleBridgeConfig, type MultiscaleBridgeResult, type CoarseGrainedResult, type EquivalentBC, type MultiscaleTemplate, runMultiscaleBridge, coarseGrainMD, generateEquivalentBC, getMultiscaleTemplates } from './multiscale'
+export { type RemoteSolverConfig, type RemoteJob, submitRemoteJob, getRemoteJobStatus, cancelRemoteJob, downloadRemoteResult, pollJobUntilComplete } from './remoteSolver'
+export { type SolverStatus, type SolverVerifyResult, type InstallResult, type UninstallResult, type InstallMethod, type SolverInfo, detectSolvers, checkSolverWorks, installSolver, uninstallSolver, getInstallMethods, getSolverInfo } from './solverManager'
 
 // ============ 辅助服务 API ============
 

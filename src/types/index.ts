@@ -76,6 +76,18 @@ export interface SimulationResult {
   stress?: { step: number; data: Record<string, Record<string, number>> }
   vonMises?: { step: number; data: Record<string, number> }
   deformationScale?: number
+  max_displacement?: number
+  max_stress?: number
+  max_strain?: number
+  lastError?: TranslatedError
+}
+
+/** Error translation for solver messages (V2.9-003) */
+export interface TranslatedError {
+  severity: 'error' | 'warning' | 'info'
+  message: string
+  possibleCause: string
+  suggestedAction: string
 }
 
 export interface EmbeddedObject {
