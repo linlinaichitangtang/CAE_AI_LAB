@@ -243,7 +243,8 @@ const speechRate = ref(1.0)
 const inputMessage = ref('')
 
 // 模式定义
-const tutoringModes = [
+type TutoringMode = 'explanation' | 'demonstration' | 'practice' | 'quiz'
+const tutoringModes: Array<{ id: TutoringMode; icon: string; label: string }> = [
   { id: 'explanation', icon: '📖', label: '讲解' },
   { id: 'demonstration', icon: '🎬', label: '演示' },
   { id: 'practice', icon: '✏️', label: '练习' },
@@ -261,13 +262,16 @@ const currentLesson = computed(() => {
 })
 
 const availableLessons = computed(() => {
-  return Object.values(lessonLibrary).map(lesson => ({
-    id: lesson.id,
-    title: lesson.title,
-    icon: lesson.id === 'beam_analysis' ? '🏛️' : lesson.id === 'mesh_generation' ? '🔲' : '⚙️',
-    steps: lesson.steps,
-    difficulty: lesson.difficulty
-  }))
+  return (Object.keys(lessonLibrary) as Array<keyof typeof lessonLibrary>).map(key => {
+    const lesson = lessonLibrary[key]
+    return {
+      id: key,
+      title: lesson.title,
+      icon: key === 'beam_analysis' ? '🏛️' : key === 'mesh_generation' ? '🔲' : '⚙️',
+      steps: lesson.steps,
+      difficulty: lesson.difficulty
+    }
+  })
 })
 
 const tutorStatusText = computed(() => {
@@ -291,7 +295,7 @@ function switchMode(mode: 'explanation' | 'demonstration' | 'practice' | 'quiz')
   tutoringMode.value = mode
 }
 
-function selectLesson(lessonId: string) {
+function selectLesson(lessonId: keyof typeof lessonLibrary) {
   startLesson(lessonId)
 }
 

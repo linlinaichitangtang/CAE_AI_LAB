@@ -49,6 +49,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/ModelingView.vue')
   },
   {
+    path: '/wizard',
+    name: 'Wizard',
+    component: () => import('./components/wizard/SimulationWizard.vue')
+  },
+  {
     path: '/code',
     name: 'Code',
     component: () => import('./views/CodeView.vue')
@@ -232,6 +237,11 @@ const routes: RouteRecordRaw[] = [
     path: '/certification',
     name: 'Certification',
     component: () => import('./views/CertificationView.vue')
+  },
+  {
+    path: '/compliance',
+    name: 'ComplianceHub',
+    component: () => import('./views/ComplianceHubView.vue')
   },
   {
     path: '/ai',

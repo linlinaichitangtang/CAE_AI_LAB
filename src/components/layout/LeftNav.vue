@@ -80,6 +80,14 @@ const SimulationIcon = {
   ])
 }
 
+const WizardIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M12 2L2 7l10 5 10-5-10-5z' }),
+    h('path', { d: 'M2 17l10 5 10-5' }),
+    h('path', { d: 'M2 12l10 5 10-5' })
+  ])
+}
+
 const FatigueIcon = {
   render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
     h('path', { d: 'M22 12h-4l-3 9L9 3l-3 9H2' })
@@ -479,6 +487,12 @@ const SettingsIcon = {
   ])
 }
 
+const ComplianceIcon = {
+  render: () => h('svg', { class: 'nav-icon', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5' }, [
+    h('path', { d: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' })
+  ])
+}
+
 const mainNavItems: Array<{
   path: string
   icon: any
@@ -486,6 +500,7 @@ const mainNavItems: Array<{
   badge?: string
 }> = [
   { path: '/', icon: HomeIcon, label: '首页' },
+  { path: '/wizard', icon: WizardIcon, label: '向导' },
   { path: '/notes', icon: NotesIcon, label: '笔记' },
   { path: '/modeling', icon: ModelingIcon, label: '建模' },
   { path: '/code', icon: CodeIcon, label: '代码' },
@@ -508,6 +523,7 @@ const mainNavItems: Array<{
   { path: '/multiscale', icon: MultiscaleIcon, label: '多尺度' },
   { path: '/data-asset', icon: DataIcon, label: '数据' },
   { path: '/certification', icon: CertIcon, label: '认证' },
+  { path: '/compliance', icon: ComplianceIcon, label: '可信' },
   { path: '/md', icon: MdIcon, label: 'MD' },
   { path: '/atom-builder', icon: AtomIcon, label: '原子建模' },
   { path: '/phase-field', icon: PhaseFieldIcon, label: '相场' },

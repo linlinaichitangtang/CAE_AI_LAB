@@ -831,6 +831,117 @@ export function useReportGenerator() {
 
     // 数据
     REPORT_TEMPLATES,
-    REPORT_STYLES
+    REPORT_STYLES,
+
+    // ========== V4.1-002 新增：合规检查集成报告 ==========
+
+    /**
+     * 从仿真结果快速生成含合规检查的分析报告
+     */
+    generateComplianceReport,
+
+    /**
+     * 导出为 Markdown
+     */
+    exportMarkdown
   }
+}
+
+// ========== V4.1-002 合规检查报告生成 ==========
+
+export interface ComplianceReportData {
+  projectName: string
+  simulationName: string
+  author: string
+  date: string
+  results: {
+    maxStress?: number
+    maxDisplacement?: number
+    safetyFactor?: number
+    meshElements?: number
+    meshNodes?: number
+    materialName?: string
+    analysisType?: string
+  }
+  complianceReport?: {
+    overallStatus: string
+    results: Array<{
+      rule: { standardName: string; clause: string; description: string }
+      actualValue: number
+      passed: boolean
+      margin: number
+      message: string
+    }>
+  }
+}
+
+function generateComplianceReport(data: ComplianceReportData): string {
+  const lines: string[] = [
+    `# ${data.projectName} — 仿真分析报告`,
+    '',
+    `**仿真名称**: ${data.simulationName}`,
+    `**报告人**: ${data.author}`,
+    `**日期**: ${data.date}`,
+    '',
+    '---',
+    '',
+    '## 1. 项目概述',
+    '',
+    `本项目对 ${data.simulationName} 进行有限元仿真分析，评估结构在指定载荷条件下的力学响应。`,
+    '',
+    '## 2. 模型信息',
+    '',
+    '| 参数 | 数值 |',
+    '|------|------|',
+    `| 分析类型 | ${data.results.analysisType || '静力分析'} |`,
+    `| 材料 | ${data.results.materialName || '结构钢'} |`,
+    `| 网格单元数 | ${data.results.meshElements || '-'} |`,
+    `| 网格节点数 | ${data.results.meshNodes || '-'} |`,
+    '',
+    '## 3. 仿真结果',
+    '',
+    '| 结果项 | 数值 | 单位 |',
+    '|--------|------|------|',
+    `| 最大 von Mises 应力 | ${data.results.maxStress ? data.results.maxStress.toFixed(2) : '-'} | MPa |`,
+    `| 最大位移 | ${data.results.maxDisplacement ? (data.results.maxDisplacement * 1000).toFixed(3) : '-'} | mm |`,
+    `| 安全系数 | ${data.results.safetyFactor ? data.results.safetyFactor.toFixed(2) : '-'} | - |`,
+    ''
+  ]
+
+  if (data.complianceReport) {
+    lines.push('## 4. 合规检查')
+    lines.push('')
+    const status = data.complianceReport.overallStatus
+    lines.push(`**总体状态**: ${status === 'pass' ? '✅ 通过' : status === 'fail' ? '❌ 未通过' : '⚠️ 部分通过'}`)
+    lines.push('')
+    for (const r of data.complianceReport.results) {
+      lines.push(`- ${r.passed ? '✅' : '❌'} **${r.rule.standardName} 条款 ${r.rule.clause}**`)
+      lines.push(`  - ${r.message}`)
+      lines.push(`  - 实际值: ${r.actualValue.toFixed(2)}, 裕度: ${(r.margin * 100).toFixed(1)}%`)
+      lines.push('')
+    }
+    lines.push('## 5. 结论')
+  } else {
+    lines.push('## 4. 结论')
+  }
+
+  lines.push('')
+  lines.push(data.complianceReport
+    ? `仿真分析已完成。合规检查总体状态：${data.complianceReport.overallStatus === 'pass' ? '通过' : data.complianceReport.overallStatus === 'fail' ? '未通过' : '部分通过'}。详见上文。`
+    : '仿真分析已完成，结果已汇总。')
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push('*本报告由 CAELab 自动生成 | 仅供工程参考*')
+
+  return lines.join('\n')
+}
+
+function exportMarkdown(data: ComplianceReportData): void {
+  const md = generateComplianceReport(data)
+  const blob = new Blob([md], { type: 'text/markdown' })
+  const link = document.createElement('a')
+  link.download = `${data.projectName}_report_${Date.now()}.md`
+  link.href = URL.createObjectURL(blob)
+  link.click()
 }

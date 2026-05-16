@@ -421,6 +421,233 @@ function generateExplanation(topic: string, _level: DifficultyLevel): string {
   return explanations[topic] || '这个主题的讲解内容正在准备中...'
 }
 
+// ============ LLM 对话功能 (V4.0-006) ============
+
+interface LLMConfig {
+  apiEndpoint?: string
+  model?: string
+  maxTokens?: number
+  temperature?: number
+}
+
+const llmConfig = ref<LLMConfig>({
+  model: 'gpt-4',
+  maxTokens: 500,
+  temperature: 0.7
+})
+
+const isAILoading = ref(false)
+const llmError = ref<string | null>(null)
+
+/**
+ * 发送消息给 LLM 并获取回复
+ * 集成了 difficultyLevel 和 teachingMode 的影响
+ */
+async function sendLLMMessage(
+  message: string,
+  context?: {
+    currentLesson?: string
+    currentStep?: string
+    userQuestion?: string
+  }
+): Promise<string> {
+  isAILoading.value = true
+  llmError.value = null
+
+  try {
+    // 构建系统提示词，包含难度级别和教学模式
+    const systemPrompt = buildSystemPrompt()
+
+    // 构建用户消息
+    const userMessage = buildUserMessage(message, context)
+
+    // 调用后端 LLM API
+    const response = await callLLMAPI(systemPrompt, userMessage)
+
+    // 添加到对话历史
+    addToConversation('student', message)
+    addToConversation('ai', response)
+
+    return response
+  } catch (error) {
+    llmError.value = error instanceof Error ? error.message : 'LLM 调用失败'
+    return `抱歉，AI 导师暂时无法回答您的问题。错误: ${llmError.value}`
+  } finally {
+    isAILoading.value = false
+  }
+}
+
+/**
+ * 根据 difficultyLevel 和 teachingMode 构建系统提示词
+ */
+function buildSystemPrompt(): string {
+  const mode = tutoringMode.value
+  const level = difficultyLevel.value
+
+  const modeInstructions: Record<TutoringMode, string> = {
+    explanation: '你是 CAELab 的 AI 教学助手，擅长用通俗易懂的语言解释有限元分析和 CAE 概念。请结合图示和例子进行讲解。',
+    demonstration: '你是 CAELab 的 AI 教学助手，通过演示和步骤引导帮助学生学习。每个回复应该包含具体的操作步骤。',
+    practice: '你是 CAELab 的 AI 教学助手，通过练习和问题引导学生主动思考。不要直接给出答案，而是引导用户自己找到解决方案。',
+    quiz: '你是 CAELab 的 AI 教学助手，通过测验检验学生的学习效果。提出有挑战性的问题，并根据用户回答给予反馈。'
+  }
+
+  const levelInstructions: Record<DifficultyLevel, string> = {
+    beginner: '请使用简单的语言，避免专业术语，假设学生没有任何基础。每解释一个概念都要从最基本的定义开始。',
+    intermediate: '可以使用一些专业术语，假设学生有一定的基础知识。可以讨论更深层次的原理和应用。',
+    advanced: '请使用精确的专业术语，讨论高级概念和最新研究进展。假设学生有扎实的理论基础和实践经验。'
+  }
+
+  return `${modeInstructions[mode]}\n\n${levelInstructions[level]}\n\n注意：\n- 用中文回答\n- 适当使用 Markdown 格式化\n- 如果需要，可以请求查看图示\n- 保持在 500 字以内`
+}
+
+/**
+ * 构建用户消息，包含上下文信息
+ */
+function buildUserMessage(
+  message: string,
+  context?: {
+    currentLesson?: string
+    currentStep?: string
+    userQuestion?: string
+  }
+): string {
+  let fullMessage = message
+
+  if (context?.currentLesson) {
+    fullMessage = `[当前课程: ${context.currentLesson}]\n${fullMessage}`
+  }
+
+  if (context?.currentStep) {
+    fullMessage = `[当前步骤: ${context.currentStep}]\n${fullMessage}`
+  }
+
+  return fullMessage
+}
+
+/**
+ * 调用后端 LLM API
+ * 实际实现需要根据后端 API 调整
+ */
+async function callLLMAPI(systemPrompt: string, userMessage: string): Promise<string> {
+  // TODO: 实际调用后端 LLM API
+  // 目前返回模拟响应
+  try {
+    // 模拟 API 调用
+    // 实际应该使用 tauri.core.invoke 调用后端命令
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // 根据消息内容生成智能回复
+    return generateSmartResponse(userMessage, systemPrompt)
+  } catch {
+    throw new Error('LLM API 调用失败')
+  }
+}
+
+/**
+ * 生成智能回复（当后端 API 不可用时的本地回退）
+ */
+function generateSmartResponse(message: string, _context: string): string {
+  const lowerMessage = message.toLowerCase()
+
+  // 基于关键词生成回复
+  if (lowerMessage.includes('von mises') || lowerMessage.includes('应力')) {
+    return `von Mises 应力是一种等效应力准则，用于判断材料是否进入塑性状态。
+
+**公式：**
+\`σ_v = √[(σ₁-σ₂)² + (σ₂-σ₃)² + (σ₃-σ₁)²] / 2\`
+
+**通俗解释：**
+想象你在拉扯一块橡皮泥。如果你向多个方向同时用力，橡皮泥可能会在某个方向先坏掉。von Mises 应力就是把所有方向的力"合并"成一个等效的拉力，让我们能够与材料的屈服强度直接比较。
+
+**判断标准：**
+- σ_v < σ_y：材料安全（弹性状态）
+- σ_v ≥ σ_y：材料开始屈服（塑性状态）
+
+需要我详细解释某个部分吗？`
+  }
+
+  if (lowerMessage.includes('泊松比')) {
+    return `泊松比 ν 是描述材料横向变形的重要参数。
+
+**定义：**
+ν = - (横向应变 / 轴向应变)
+
+**常见材料的泊松比：**
+- 钢材：≈ 0.3
+- 铝材：≈ 0.33
+- 橡胶：≈ 0.5（接近不可压缩）
+- 混凝土：≈ 0.2
+- 软木：≈ 0（几乎没有横向收缩）
+
+**物理意义：**
+当你拉伸一根橡皮筋时，它会变细。泊松比描述的就是这种"变细"程度相对于"变长"程度的比值。
+
+需要了解泊松比在有限元分析中的应用吗？`
+  }
+
+  if (lowerMessage.includes('网格') || lowerMessage.includes('mesh')) {
+    return `网格是有限元分析的基础，它将连续的几何模型离散成有限个单元。
+
+**关键概念：**
+
+1. **网格密度**：网格越细，计算精度越高，但计算时间越长
+
+2. **单元类型**：
+   - Tet4/Tet10：四面体单元，适合复杂几何
+   - Hex8/Hex20：六面体单元，精度高但需要规则几何
+
+3. **网格质量指标**：
+   - Jacobian：描述单元畸变程度
+   - Aspect Ratio：长宽比
+   - Skewness：歪斜度
+
+**实用建议：**
+- 应力集中区域需要加密网格
+- 网格应该从粗到细逐步过渡
+- 使用网格收敛性测试验证结果
+
+需要我演示如何生成高质量网格吗？`
+  }
+
+  if (lowerMessage.includes('悬臂梁')) {
+    return `悬臂梁是结构力学中最经典的案例之一。
+
+**问题描述：**
+梁的一端固定（固定端），另一端自由（自由端）。在自由端施加集中力 F。
+
+**理论解：**
+- 最大弯矩：M_max = F × L（发生在固定端）
+- 最大剪力：V_max = F
+- 最大挠度：δ_max = FL³/(3EI)
+
+**仿真要点：**
+1. 固定端需要约束所有自由度（Ux, Uy, Uz, Rx, Ry, Rz）
+2. 集中力应施加在自由端面中心
+3. 网格在固定端附近需要加密
+
+**验证方法：**
+仿真结果应该与理论解相差在 10% 以内。如果偏差过大，检查边界条件和网格质量。
+
+想开始一个悬臂梁分析的实践练习吗？`
+  }
+
+  // 默认回复
+  return `您的问题是："${message}"
+
+作为 CAELab 的 AI 教学助手，我建议您：
+
+1. 如果您是初学者，可以从"仿真向导"开始，选择"悬臂梁分析"作为第一个案例
+2. 如果您想了解特定概念，可以直接询问（如"什么是 von Mises 应力"）
+3. 如果您在实际操作中遇到问题，可以描述具体的错误信息
+
+有什么具体问题我可以帮您解答吗？`
+}
+
+// 设置 LLM 配置
+function setLLMConfig(config: Partial<LLMConfig>) {
+  llmConfig.value = { ...llmConfig.value, ...config }
+}
+
 // ============ 导出 ============
 
 export function useAITutor() {
@@ -456,6 +683,12 @@ export function useAITutor() {
     // AI 讲解
     generateExplanation,
     addToConversation,
+
+    // LLM 功能 (V4.0-006)
+    sendLLMMessage,
+    setLLMConfig,
+    isAILoading,
+    llmError,
 
     // 计算属性
     currentStep: computed(() => currentLessonSteps.value[currentStepIndex.value]),
