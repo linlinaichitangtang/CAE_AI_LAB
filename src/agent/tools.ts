@@ -705,7 +705,7 @@ const correlate_with_simulation: ToolDefinition = {
 const create_ml_dataset: ToolDefinition = {
   name: 'create_ml_dataset',
   description: '创建 ML 训练数据集，管理 SEM/TEM 图像和标注数据，支持分类/检测/分割任务',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'datasetName', type: 'string', description: '数据集名称', required: true },
     { name: 'rootPath', type: 'string', description: '数据根目录路径', required: true },
@@ -720,7 +720,7 @@ const create_ml_dataset: ToolDefinition = {
 const train_image_classifier: ToolDefinition = {
   name: 'train_image_classifier',
   description: '训练图像分类/检测/分割模型（ResNet/UNet/YOLOv8），支持数据增强和迁移学习',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'datasetId', type: 'string', description: '数据集 ID', required: true },
     { name: 'modelType', type: 'string', description: '模型类型: classifier/detector/segmenter', required: true },
@@ -737,7 +737,7 @@ const train_image_classifier: ToolDefinition = {
 const predict_with_trained_model: ToolDefinition = {
   name: 'predict_with_trained_model',
   description: '使用训练好的模型对新图像进行预测（分类/检测/分割）',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'imageId', type: 'string', description: '待预测图像 ID', required: true },
     { name: 'modelId', type: 'string', description: '训练好的模型 ID', required: true }
@@ -755,7 +755,7 @@ const predict_with_trained_model: ToolDefinition = {
 const initialize_active_learning: ToolDefinition = {
   name: 'initialize_active_learning',
   description: '初始化主动学习数据池，准备采集策略（uncertainty/variance/density）',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'features', type: 'array', description: '特征矩阵 [[f1, f2, ...], ...]', required: true },
     { name: 'strategy', type: 'string', description: '采集策略: uncertainty/variance/density/expected_model_change/random', required: false, default: 'uncertainty' },
@@ -770,7 +770,7 @@ const initialize_active_learning: ToolDefinition = {
 const acquire_next_points: ToolDefinition = {
   name: 'acquire_next_points',
   description: '根据当前采集策略推荐最有价值的数据点进行标注/实验',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'poolId', type: 'string', description: '数据池 ID', required: true },
     { name: 'numPoints', type: 'number', description: '采集点数', required: false, default: 5 }
@@ -784,7 +784,7 @@ const acquire_next_points: ToolDefinition = {
 const run_active_learning_iteration: ToolDefinition = {
   name: 'run_active_learning_iteration',
   description: '执行一轮主动学习：选择点 → 更新模型 → 评估指标',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'poolId', type: 'string', description: '数据池 ID', required: true },
     { name: 'labeledData', type: 'array', description: '新标注数据 [{features, label}]', required: true }
@@ -802,7 +802,7 @@ const run_active_learning_iteration: ToolDefinition = {
 const train_pinn_model: ToolDefinition = {
   name: 'train_pinn_model',
   description: '训练物理约束神经网络 (PINN)，将物理定律嵌入训练过程，满足边界条件和平衡方程',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'modelName', type: 'string', description: '模型名称', required: true },
     { name: 'physicsType', type: 'string', description: '物理类型: linear_elasticity/nonlinear_elasticity/heat_equation/navier_stokes/diffusion', required: true },
@@ -819,7 +819,7 @@ const train_pinn_model: ToolDefinition = {
 const predict_pinn: ToolDefinition = {
   name: 'predict_pinn',
   description: '使用训练好的 PINN 模型进行预测，结果满足物理约束',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'pinnId', type: 'string', description: 'PINN 模型 ID', required: true },
     { name: 'position', type: 'array', description: '位置坐标 [x] 或 [x, y] 或 [x, y, z]', required: true },
@@ -838,7 +838,7 @@ const predict_pinn: ToolDefinition = {
 const create_surrogate_model: ToolDefinition = {
   name: 'create_surrogate_model',
   description: '创建代理模型，用 ML 模型替代完整 MD/FE 求解器，加速预测',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'modelName', type: 'string', description: '模型名称', required: true },
     { name: 'inputDimensions', type: 'array', description: '输入维度名称列表', required: true },
@@ -854,7 +854,7 @@ const create_surrogate_model: ToolDefinition = {
 const train_surrogate: ToolDefinition = {
   name: 'train_surrogate',
   description: '从 MD/FE 模拟数据训练代理模型，学习输入参数到输出的映射',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'surrogateId', type: 'string', description: '代理模型 ID', required: true },
     { name: 'trainingData', type: 'array', description: '训练数据 [{inputs: [], outputs: []}]', required: true },
@@ -869,7 +869,7 @@ const train_surrogate: ToolDefinition = {
 const predict_with_surrogate: ToolDefinition = {
   name: 'predict_with_surrogate',
   description: '使用训练好的代理模型快速预测，无需运行完整 MD/FE 模拟',
-  category: 'ml',
+  category: 'system',
   params: [
     { name: 'surrogateId', type: 'string', description: '代理模型 ID', required: true },
     { name: 'inputs', type: 'array', description: '输入参数 [温度, 压力, 材料属性, ...]', required: true }

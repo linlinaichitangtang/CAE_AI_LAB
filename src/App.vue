@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TopBar from './components/layout/TopBar.vue'
 import LeftNav from './components/layout/LeftNav.vue'
@@ -137,7 +137,7 @@ import OnboardingDialog from './components/common/OnboardingDialog.vue'
 import { defaultOnboardingSteps } from './composables/useOnboarding'
 
 // Platform detection for responsive layout
-const { isMobile, isTablet, isDesktop, isTouchDevice } = usePlatform()
+const { isDesktop, isTouchDevice } = usePlatform()
 
 // Orientation detection for adaptive layout
 const { isPortrait, isLandscape } = useOrientation()

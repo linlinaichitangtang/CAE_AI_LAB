@@ -11,10 +11,7 @@ import { taskPlanner } from '../taskPlanner'
 import { toolRegistry } from '../tools'
 import { toolExecutor } from '../toolExecutor'
 import { resultVerifier } from '../resultVerifier'
-import { selfRepairEngine } from '../selfRepair'
 import { stateTracker } from '../stateTracker'
-import { agentOrchestrator } from '../agentOrchestrator'
-import type { IntentResult, ToolResult } from '../types'
 
 // ============================================================================
 // V2.4-001: 意图识别准确率测试 (>90%, 100条测试用例)
