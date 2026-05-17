@@ -4,7 +4,8 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate, material_data_platform, tc4_failure, active_learning};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate, material_data_platform, tc4_failure, active_learning, knowledge_memory, vector_store};
+pub mod python_bridge;
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -711,6 +712,30 @@ pub fn run() {
             commands::material_data_platform::get_active_learning_recommendations,
             commands::material_data_platform::run_closed_loop_verification,
             commands::material_data_platform::generate_active_learning_report,
+            // V3.9: Agent Memory System commands
+            commands::knowledge_memory::get_material_knowledge_list,
+            commands::knowledge_memory::save_material_knowledge,
+            commands::knowledge_memory::get_design_standards_list,
+            commands::knowledge_memory::save_design_standard,
+            commands::knowledge_memory::get_failure_modes_list,
+            commands::knowledge_memory::save_failure_mode,
+            commands::knowledge_memory::get_user_profile,
+            commands::knowledge_memory::save_user_profile,
+            commands::knowledge_memory::recall_knowledge,
+            // V3.10: RAG Vector Store commands
+            commands::vector_store::write_embedding_record,
+            commands::vector_store::batch_write_embeddings,
+            commands::vector_store::search_vector_store,
+            commands::vector_store::active_recall,
+            commands::vector_store::get_cross_session_summary,
+            commands::vector_store::delete_embedding_record,
+            commands::vector_store::update_embedding_access,
+            // V4.2-001: Python bridge
+            python_bridge::python_check_environment,
+            python_bridge::python_run_script,
+            python_bridge::python_run_module,
+            python_bridge::python_check_package,
+            python_bridge::python_install_package,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

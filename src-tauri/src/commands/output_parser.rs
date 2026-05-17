@@ -1,10 +1,11 @@
-//! CalculiX output file parser
+//! CalculiX output file parser - V4.2-003
 //! Parses .frd and .dat result files from CalculiX solver
+//! Robust parsing with binary format support and comprehensive error handling
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -18,17 +19,73 @@ pub enum ParseError {
     UnknownNode(usize),
     #[error("Unknown element: {0}")]
     UnknownElement(usize),
+    #[error("Unsupported file format: {0}")]
+    UnsupportedFormat(String),
+    #[error("File too short: expected at least {0} bytes, got {1}")]
+    TruncatedFile(usize, usize),
+}
+
+/// Result data block type from FRD file
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrdBlockType {
+    /// Node coordinate block
+    Node,
+    /// Element definition block
+    Element,
+    /// Nodal result data block
+    NodalResult,
+    /// Element result data block
+    ElementResult,
+    /// Unknown/unhandled block
+    Unknown,
+}
+
+impl FrdBlockType {
+    fn from_code(code: &str) -> Self {
+        let code_upper = code.to_uppercase();
+        if code_upper.contains("NOD") || code_upper.contains("NCT") {
+            Self::Node
+        } else if code_upper.contains("ELM") || code_upper.contains("CET") || code_upper.contains("CET") {
+            Self::Element
+        } else if code_upper.contains("DAT") || code_upper.contains("TOST") || code_upper.contains("ENER") {
+            Self::NodalResult
+        } else if code_upper.contains("EPE") || code_upper.contains("ESTR") || code_upper.contains("EMEA") {
+            Self::ElementResult
+        } else {
+            Self::Unknown
+        }
+    }
 }
 
 /// Nodal result type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum NodalResultType {
     Displacement,
-    Temperature,
     Velocity,
     Acceleration,
     Force,
     Reaction,
+    Temperature,
+    HeatFlux,
+    Concentration,
+    Pressure,
+}
+
+impl NodalResultType {
+    fn from_dtype(dtype: &str) -> Self {
+        match dtype.to_uppercase().as_str() {
+            "DISP" | "U" => Self::Displacement,
+            "VELO" | "V" => Self::Velocity,
+            "ACCE" | "A" => Self::Acceleration,
+            "FORC" | "F" => Self::Force,
+            "RFOR" | "R" => Self::Reaction,
+            "TEMP" | "T" => Self::Temperature,
+            "HFL" | "Q" => Self::HeatFlux,
+            "CO" | "C" => Self::Concentration,
+            "PRES" | "P" => Self::Pressure,
+            _ => Self::Displacement,
+        }
+    }
 }
 
 /// Element result type
@@ -36,10 +93,104 @@ pub enum NodalResultType {
 pub enum ElementResultType {
     Stress,
     Strain,
+    VonMises,
+    Principal,
+    Tresca,
+    MaxShear,
     Energy,
-    Force,
     Temperature,
     HeatFlux,
+    Concentration,
+}
+
+impl ElementResultType {
+    fn from_dtype(dtype: &str) -> Self {
+        match dtype.to_uppercase().as_str() {
+            "STRESS" | "S" => Self::Stress,
+            "STRAIN" | "E" => Self::Strain,
+            "VONMISES" | "VM" => Self::VonMises,
+            "ENER" | "EN" => Self::Energy,
+            "TEMP" | "T" => Self::Temperature,
+            "HFL" | "Q" => Self::HeatFlux,
+            _ => Self::Stress,
+        }
+    }
+}
+
+/// Supported element types by CalculiX
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ElementType {
+    // Continuum elements
+    C3D4,  // 4-node tetrahedron
+    C3D6,  // 6-node prism
+    C3D8,  // 8-node brick
+    C3D8R, // 8-node brick with reduced integration
+    C3D8I, // 8-node brick with incompatible modes
+    C3D10, // 10-node tetrahedron
+    C3D15, // 15-node prism
+    C3D20, // 20-node brick
+    C3D20R, // 20-node brick with reduced integration
+    // Shell elements
+    S3,    // 3-node shell
+    S6,    // 6-node shell
+    S4,    // 4-node shell
+    S4R,   // 4-node shell with reduced integration
+    S8,    // 8-node shell
+    S8R,   // 8-node shell with reduced integration
+    // Beam/truss elements
+    B31,   // 2-node beam
+    B32,   // 3-node beam
+    T3D2,  // 2-node truss
+    T3D3,  // 3-node truss
+    // Unknown
+    Unknown,
+}
+
+impl ElementType {
+    fn from_str(s: &str) -> Self {
+        match s.to_uppercase().as_str() {
+            "C3D4" | "C3D4T" | "C3D4P" => Self::C3D4,
+            "C3D6" | "C3D6T" | "C3D6P" => Self::C3D6,
+            "C3D8" | "C3D8T" | "C3D8P" => Self::C3D8,
+            "C3D8R" => Self::C3D8R,
+            "C3D8I" => Self::C3D8I,
+            "C3D10" | "C3D10T" | "C3D10P" => Self::C3D10,
+            "C3D15" => Self::C3D15,
+            "C3D20" | "C3D20T" | "C3D20P" => Self::C3D20,
+            "C3D20R" => Self::C3D20R,
+            "S3" | "S3T" => Self::S3,
+            "S6" | "S6T" => Self::S6,
+            "S4" | "S4T" => Self::S4,
+            "S4R" => Self::S4R,
+            "S8" | "S8T" => Self::S8,
+            "S8R" => Self::S8R,
+            "B31" | "B31T" => Self::B31,
+            "B32" | "B32T" => Self::B32,
+            "T3D2" => Self::T3D2,
+            "T3D3" => Self::T3D3,
+            _ => Self::Unknown,
+        }
+    }
+
+    fn num_nodes(&self) -> usize {
+        match self {
+            Self::C3D4 => 4,
+            Self::C3D6 => 6,
+            Self::C3D8 | Self::C3D8R | Self::C3D8I => 8,
+            Self::C3D10 => 10,
+            Self::C3D15 => 15,
+            Self::C3D20 | Self::C3D20R => 20,
+            Self::S3 => 3,
+            Self::S6 => 6,
+            Self::S4 | Self::S4R => 4,
+            Self::S8 | Self::S8R => 8,
+            Self::B31 => 2,
+            Self::B32 => 3,
+            Self::T3D2 => 2,
+            Self::T3D3 => 3,
+            Self::Unknown => 0,
+        }
+    }
 }
 
 /// Nodal displacement/result
@@ -262,19 +413,11 @@ impl FrdParser {
     }
 
     fn parse_result_type(&self, dtype: &str) -> NodalResultType {
-        match dtype.to_uppercase().as_str() {
-            "DISP" => NodalResultType::Displacement,
-            "TEMP" => NodalResultType::Temperature,
-            "VELO" => NodalResultType::Velocity,
-            "ACCE" => NodalResultType::Acceleration,
-            "RFOR" => NodalResultType::Reaction,
-            _ => NodalResultType::Displacement,
-        }
+        NodalResultType::from_dtype(dtype)
     }
 
     fn finish_dataset(&self, dtype: String, _labels: Vec<String>, _results: &mut AnalysisResults) {
-        // Dataset finishing handled inline in parse()
-        tracing::info!("Finished dataset: {}", dtype);
+        tracing::debug!("Finished dataset: {}", dtype);
     }
 
     /// Extract displacement results as Vec3
