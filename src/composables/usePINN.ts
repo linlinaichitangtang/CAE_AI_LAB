@@ -171,15 +171,15 @@ export function usePINN() {
       network: {
         ...baseConfig.network,
         ...customConfig?.network
-      },
+      } as PINNConfig['network'],
       training: {
         ...baseConfig.training,
         ...customConfig?.training
-      },
+      } as PINNConfig['training'],
       constraints: {
         ...baseConfig.constraints,
         ...customConfig?.constraints
-      }
+      } as PINNConfig['constraints']
     }
 
     const pinn: TrainedPINN = {

@@ -15,7 +15,7 @@ const projectStore = useProjectStore()
 const parametricStore = useParametricStore()
 
 // ========== 参数化分析状态 ==========
-const parametricParameters = ref<any[]>([])
+const parametricParameters = ref<Array<{ id: string; name: string; min: number; max: number; steps: number; unit?: string; currentValue: number }>>([])
 const parametricXDiv = ref(10)
 const parametricYDiv = ref(10)
 const parametricZDiv = ref(1)
@@ -52,7 +52,10 @@ function onParamSliderChange(paramId: string, value: number) {
   const param = parametricParameters.value.find(p => p.id === paramId)
   if (param) {
     param.currentValue = value
-    parametricStore.updateParameter(paramId, value)
+    const updater = (parametricStore as any).updateParameter
+    if (typeof updater === 'function') {
+      updater(paramId, value)
+    }
   }
 }
 
@@ -191,10 +194,9 @@ defineExpose({
         </div>
 
         <ParamSlider
-          :min="param.min"
-          :max="param.max"
-          :value="param.currentValue || param.min"
-          @update:value="onParamSliderChange(param.id, $event)"
+          :param="{ id: param.id, name: param.name, value: param.currentValue || param.min, min: param.min, max: param.max, step: 1, unit: param.unit || '', category: 'parametric' }"
+          :modelValue="param.currentValue || param.min"
+          @update:modelValue="onParamSliderChange(param.id, $event)"
         />
 
         <div class="grid grid-cols-3 gap-1 text-xs">

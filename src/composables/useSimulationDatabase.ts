@@ -306,17 +306,17 @@ export function useSimulationDatabase() {
     metric: 'maxDisplacement' | 'maxStress' | 'maxStrain' | 'firstFrequency',
     filters?: SearchFilters
   ): Array<{ date: string; value: number; recordId: string; recordName: string }> {
-    const records = filters ? searchRecords(filters) : records.value
+    const recs = filters ? searchRecords(filters) : records.value
 
-    return records
-      .filter(r => r.results[metric] !== undefined && !r.isArchived)
-      .map(r => ({
+    return recs
+      .filter((r: SimulationRecord) => r.results[metric] !== undefined && !r.isArchived)
+      .map((r: SimulationRecord) => ({
         date: r.createdAt,
         value: r.results[metric] as number,
         recordId: r.id,
         recordName: r.name
       }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a: { date: string }, b: { date: string }) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }
 
   // ============ 对比分析 ============

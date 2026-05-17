@@ -76,7 +76,7 @@ export interface MilestoneSubmission {
   milestoneId: string
   studentId: string
   checkpointSubmissions: CheckpointSubmission[]
-  status: 'locked' | 'in_progress' | 'submitted' | 'graded'
+  status: 'not_started' | 'in_progress' | 'submitted' | 'graded'
   startedAt?: string
   submittedAt?: string
   totalScore?: number
@@ -124,7 +124,7 @@ export interface StudentProgress {
   studentId: string
   assignmentId: string
   milestoneProgress: Record<string, {
-    status: 'locked' | 'in_progress' | 'submitted' | 'graded'
+    status: 'not_started' | 'in_progress' | 'submitted' | 'graded'
     score?: number
     completedCheckpoints: number
     totalCheckpoints: number
@@ -340,7 +340,8 @@ export function useMilestoneAssignments() {
         name: template.name,
         description: template.description,
         order: 0,
-        checkpoints: template.checkpoints.map(c => ({
+        checkpoints: template.checkpoints.map((c, idx) => ({
+          id: `cp_${idx}`,
           name: c.name,
           description: c.description,
           order: c.order,
@@ -407,7 +408,7 @@ export function useMilestoneAssignments() {
           submission.checkpointSubmissions.push({
             id: generateId(),
             checkpointId: checkpoint.id,
-            status: milestone.order === 0 ? 'not_started' : 'locked'
+            status: milestone.order === 0 ? 'not_started' : 'not_started'
           })
         }
       }
@@ -449,7 +450,7 @@ export function useMilestoneAssignments() {
       const msScore = milestoneSubmissions.reduce((sum, cs) => sum + (cs.score || 0), 0)
       totalScore += msScore
 
-      let status: StudentProgress['milestoneProgress'][string]['status'] = 'locked'
+      let status: StudentProgress['milestoneProgress'][string]['status'] = 'not_started'
       if (submission) {
         if (msCompleted === msTotal) {
           status = 'submitted'
@@ -526,7 +527,7 @@ export function useMilestoneAssignments() {
     if (!submission) return false
 
     const checkpoint = submission.checkpointSubmissions.find(cs => cs.checkpointId === checkpointId)
-    if (!checkpoint || checkpoint.status === 'locked') return false
+    if (!checkpoint || checkpoint.status === 'not_started') return false
 
     checkpoint.status = 'submitted'
     checkpoint.submittedAt = new Date().toISOString()
@@ -629,7 +630,7 @@ export function useMilestoneAssignments() {
     // 解锁下一个 milestone 的所有检查点
     for (const checkpoint of nextMilestone.checkpoints) {
       const cs = submission.checkpointSubmissions.find(c => c.checkpointId === checkpoint.id)
-      if (cs && cs.status === 'locked') {
+      if (cs && cs.status === 'not_started') {
         cs.status = 'not_started'
       }
     }

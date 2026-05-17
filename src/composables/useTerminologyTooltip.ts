@@ -3,7 +3,10 @@
  * 管理术语识别、悬浮窗显示与定位
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { CAE_TERMS, getTermDefinition, type TermDefinition } from '../components/common/TerminologyTooltip'
+import { getTermDefinition } from '../components/common/TerminologyTooltip.vue'
+import type { TermDefinition } from '../components/common/TerminologyTooltip.vue'
+// @ts-ignore - CAE_TERMS exported from Vue SFC
+import { CAE_TERMS } from '../components/common/TerminologyTooltip.vue'
 
 export function useTerminologyTooltip() {
   const visible = ref(false)

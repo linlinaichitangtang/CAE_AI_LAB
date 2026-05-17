@@ -45,7 +45,7 @@ const isPureHarmony = ref(false)
 const openHarmonyVersion = ref<string | null>(null)
 
 export function useHarmonyAdaptation() {
-  const { isHarmony, isOpenHarmony, isHarmonyPencilSupported, deviceType, screenWidth, screenHeight } = usePlatform()
+  const { isHarmony, isOpenHarmony, isHarmonyPencilSupported, deviceType, screenWidth, screenHeight, isTouchDevice } = usePlatform()
 
   /**
    * 初始化鸿蒙设备信息
@@ -68,11 +68,11 @@ export function useHarmonyAdaptation() {
 
     // 确定设备类别
     let category: HarmonyDeviceCategory = 'phone'
-    if (deviceType.value === 'foldable') {
+    if (deviceType === 'foldable') {
       category = 'foldable'
-    } else if (deviceType.value === 'laptop') {
+    } else if (deviceType === 'laptop') {
       category = 'laptop'
-    } else if (deviceType.value === 'tablet') {
+    } else if (deviceType === 'tablet') {
       category = 'tablet'
     } else if (!isTouchDevice.value) {
       category = 'desktop'

@@ -59,8 +59,8 @@ function showAIResultDialog() {
 
 // 获取当前材料
 function getCurrentMaterial() {
-  if (projectStore.currentMaterial) {
-    return projectStore.currentMaterial
+  if ((projectStore as any).currentMaterial) {
+    return (projectStore as any).currentMaterial
   }
   return { elastic_modulus: 210000, poisson_ratio: 0.3 }
 }

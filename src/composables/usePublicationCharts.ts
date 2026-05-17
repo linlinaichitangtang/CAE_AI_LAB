@@ -223,7 +223,7 @@ export function usePublicationCharts() {
     const lines: string[] = []
 
     // 背景
-    if (config.background !== 'transparent') {
+    if ((config as any).background !== 'transparent') {
       lines.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="white"/>`)
     }
 
@@ -248,7 +248,7 @@ export function usePublicationCharts() {
       const color = s.color || colors[si % colors.length]
 
       // 线
-      if (s.lineStyle !== 'none') {
+      if ((s.lineStyle as string) !== 'none') {
         const strokeDash = s.lineStyle === 'dashed' ? 'stroke-dasharray="5,3"' : s.lineStyle === 'dotted' ? 'stroke-dasharray="2,2"' : ''
         lines.push(`<path d="${s.data.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(2)} ${scaleY(p.y).toFixed(2)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="${lineWidth}" ${strokeDash}/>`)
       }
@@ -325,7 +325,7 @@ ${lines.join('\n')}
     options: ExportOptions
   ): Promise<Blob> {
     const config = { ...currentConfig.value, ...options }
-    const size = JOURNAL_SIZES[options.width as keyof typeof JOURNAL_SIZES] || { width: options.width, height: options.height }
+    const size = JOURNAL_SIZES[options.width as unknown as keyof typeof JOURNAL_SIZES] || { width: options.width, height: options.height }
 
     let content: string
 

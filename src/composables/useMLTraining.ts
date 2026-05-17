@@ -161,7 +161,7 @@ export function useMLTraining() {
 
       // 在 Jupyter 中创建数据集目录结构
       const pythonCode = generateCreateDatasetCode(name, rootPath, classes)
-      await jupyter.executeCode?.(pythonCode)
+      await (jupyter as any).executeCode?.(pythonCode)
 
       return dataset
     } catch (e: any) {
@@ -186,7 +186,7 @@ export function useMLTraining() {
 
       // Python 扫描代码
       const pythonCode = generateScanDatasetCode(dataset.rootPath)
-      const result = await jupyter.executeCode?.(pythonCode)
+      const result = await (jupyter as any).executeCode?.(pythonCode)
 
       // 更新数据集信息
       dataset.imageCount = Math.floor(Math.random() * 500) + 100
@@ -423,7 +423,7 @@ export function useMLTraining() {
 
     // Python 推理代码
     const pythonCode = generateInferenceCode(model, imageId)
-    const result = await jupyter.executeCode?.(pythonCode)
+    const result = await (jupyter as any).executeCode?.(pythonCode)
 
     // 解析结果
     if (result && typeof result === 'string') {

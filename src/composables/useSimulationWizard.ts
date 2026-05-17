@@ -39,6 +39,8 @@ export function useSimulationWizard() {
 
   const totalSteps = computed(() => state.value.template?.steps.length ?? 0)
 
+  const currentStepIndex = computed(() => state.value.currentStepIndex)
+
   const progress = computed(() => {
     if (totalSteps.value === 0) return 0
     return ((state.value.currentStepIndex + 1) / totalSteps.value) * 100

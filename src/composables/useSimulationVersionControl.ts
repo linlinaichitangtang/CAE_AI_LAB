@@ -281,8 +281,9 @@ export function useSimulationVersionControl() {
       return {
         hasChanges: false,
         meshChanges: { nodesAdded: 0, nodesRemoved: 0, elementsAdded: 0, elementsRemoved: 0, nodeCoordsChanged: 0, connectivityChanged: 0 },
-        resultChanges: {}
-      }
+        resultChanges: { maxDisplacementDelta: undefined, maxStressDelta: undefined, firstFrequencyDelta: undefined },
+        parameterChanges: { added: [] as string[], removed: [] as string[], changed: [] as any[] }
+      } as VersionDiff
     }
 
     const meshChanges = {

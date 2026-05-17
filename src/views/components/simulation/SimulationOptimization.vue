@@ -83,7 +83,7 @@ async function runOptimization() {
         penalization_factor: penalizationFactor.value,
         min_density: minDensity.value,
         design_domain: designDomain.value,
-        mesh_id: projectStore.currentMesh?.id
+        mesh_id: (projectStore.currentMesh as any)?.id
       }
     })
 

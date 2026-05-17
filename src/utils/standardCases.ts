@@ -9,6 +9,7 @@ export interface StandardCase {
   nameEn: string
   description: string
   category: 'structural' | 'modal' | 'thermal' | 'buckling'
+  analysisType?: string
   // 几何参数
   geometry: {
     type: 'beam' | 'plate' | 'cylinder'
@@ -30,6 +31,7 @@ export interface StandardCase {
     elastic_modulus: number  // Pa
     poisson_ratio: number
     density: number         // kg/m³
+    yield_strength?: number
   }
   // 边界条件
   boundaryConditions: {

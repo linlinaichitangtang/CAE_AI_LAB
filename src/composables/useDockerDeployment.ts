@@ -630,7 +630,7 @@ docker-compose up -d
     deploymentProgress.value = { stage: 'preparing', progress: 0 }
     currentEnvironment.value = env
 
-    addLog('info', `开始部署环境: ${env.name}`)
+    addLog('info', 'System', `开始部署环境: ${env.name}`)
 
     try {
       // 阶段1: 拉取镜像
@@ -686,8 +686,8 @@ docker-compose up -d
     const env = environments.value.find(e => e.id === envId)
     if (!env) return false
 
-    deploymentProgress.value = { stage: 'stopping', progress: 0 }
-    addLog('info', `停止环境: ${env.name}`)
+    deploymentProgress.value = { stage: 'stopped', progress: 0 }
+    addLog('info', 'System', `停止环境: ${env.name}`)
 
     try {
       for (const container of env.containers) {
@@ -707,12 +707,12 @@ docker-compose up -d
 
   async function removeEnvironment(envId: string): Promise<boolean> {
     deploymentProgress.value = { stage: 'removing', progress: 0 }
-    addLog('info', `移除环境`)
+    addLog('info', 'System', `移除环境`)
 
     try {
       await simulateDelay(1000)
       deploymentProgress.value = { stage: 'idle', progress: 100 }
-      addLog('info', '环境已移除')
+      addLog('info', 'System', '环境已移除')
       return true
     } catch (e: any) {
       deploymentProgress.value = { stage: 'error', progress: 0, errorMessage: e.message }

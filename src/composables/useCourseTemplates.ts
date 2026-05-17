@@ -279,7 +279,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     ],
     simulation: { analysisType: 'static' },
     postprocess: [
-      { name: 'Shear Stress', type: 'contour', quantity: 'stress', component: 'xy' },
+      { name: 'Shear Stress', type: 'contour', quantity: 'stress', component: 'x' },
       { name: 'Angle of Twist', type: 'deformation', quantity: 'rotation', component: 'z' }
     ],
     relatedFormulas: [
@@ -314,7 +314,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     postprocess: [
       { name: 'Bending Stress', type: 'contour', quantity: 'stress', component: 'x' },
       { name: 'Deflection', type: 'deformation', quantity: 'displacement', component: 'y' },
-      { name: 'Shear Diagram', type: 'diagram', quantity: 'stress', component: 'xy' }
+      { name: 'Shear Diagram', type: 'diagram', quantity: 'stress', component: 'x' }
     ],
     relatedFormulas: [
       { name: 'Bending Stress', equation: 'σ = M*y/I' },
@@ -451,7 +451,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     simulation: { analysisType: 'static' },
     postprocess: [
       { name: 'Deformation', type: 'deformation', quantity: 'displacement', component: 'magnitude' },
-      { name: 'Axial Force', type: 'diagram', quantity: 'force', component: 'axial' }
+      { name: 'Axial Force', type: 'diagram', quantity: 'force', component: 'x' }
     ],
     relatedFormulas: [
       { name: 'Stiffness Matrix', equation: '[k] = (AE/L)[1 -1;-1 1]' },
@@ -473,7 +473,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       'Analyze stress concentration around discontinuities'
     ],
     geometry: { type: 'plate', dimensions: { length: 0.1, width: 0.05, height: 0.005 } },
-    mesh: { elementType: 'quad4', meshSize: 0.002, refinementZones: [{ type: 'cylinder', center: [0.05, 0.025, 0], size: [0.015, 0.015, 0.01], meshSize: 0.001 }] },
+    mesh: { elementType: 'tet4', meshSize: 0.002, refinementZones: [{ type: 'cylinder', center: [0.05, 0.025, 0], size: [0.015, 0.015, 0.01], meshSize: 0.001 }] },
     materials: [{ name: 'Aluminum', type: ' isotropic', model: 'linear', properties: { E: 70e9, nu: 0.33, rho: 2700 } }],
     boundaryConditions: [
       { name: 'Symmetry X', type: 'displacement', location: 'face', region: 'x=0', values: { ux: 0 } },
@@ -514,8 +514,8 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     ],
     simulation: { analysisType: 'modal', solver: 'lanczos', convergence: { maxIterations: 200 } },
     postprocess: [
-      { name: 'First Mode', type: 'deformation', quantity: 'mode_shape', component: '1' },
-      { name: 'Second Mode', type: 'deformation', quantity: 'mode_shape', component: '2' },
+      { name: 'First Mode', type: 'deformation', quantity: 'mode_shape', component: 'min' },
+      { name: 'Second Mode', type: 'deformation', quantity: 'mode_shape', component: 'max' },
       { name: 'Frequency Table', type: 'diagram', quantity: 'frequency' }
     ],
     relatedFormulas: [

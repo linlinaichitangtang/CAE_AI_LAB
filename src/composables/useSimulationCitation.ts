@@ -135,9 +135,9 @@ export function useSimulationCitation() {
                (projectStore.boundaryConditions.uniformLoads?.length || 0)
       },
       results: {
-        maxDisplacement: projectStore.lastResult?.max_displacement,
-        maxStress: projectStore.lastResult?.max_stress,
-        maxStrain: projectStore.lastResult?.max_strain
+        maxDisplacement: (projectStore.lastResult as any)?.max_displacement,
+        maxStress: (projectStore.lastResult as any)?.max_stress,
+        maxStrain: (projectStore.lastResult as any)?.max_strain
       },
       parameters: {}
     }

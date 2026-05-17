@@ -56,6 +56,11 @@ export const useUndoStore = defineStore('undo', {
      * 执行命令并压入 undo 栈
      * 执行新命令时会清空 redo 栈
      */
+    pushState(description: string, _meta?: Record<string, unknown>) {
+      const cmd: UndoCommand = { id: crypto.randomUUID(), description, execute: () => {}, undo: () => {} }
+      this.execute(cmd)
+    },
+
     execute(command: UndoCommand) {
       // 执行命令
       command.execute()

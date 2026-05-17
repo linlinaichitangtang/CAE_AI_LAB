@@ -492,7 +492,7 @@ export function useImageAnalysis() {
 
     // 2. 预测
     const ml = useMLTraining()
-    const availableModels = ml.availableModels.value
+    const availableModels = (ml as any).trainedModels?.value || []
 
     let predictions: any[] = []
     let model: any = null

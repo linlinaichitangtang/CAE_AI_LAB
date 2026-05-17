@@ -597,7 +597,7 @@ export function useANSYSIntegration() {
    * 导入 ANSYS 结果到 CAELab
    */
   async function importANSYSResults(files: FileList): Promise<ANSYSImportResult> {
-    importProgress.value = { status: 'analyzing', progress: 0, currentFile: '' }
+    importProgress.value = { status: 'analyzing', progress: 0, currentFile: '', errorMessage: '' }
 
     const startTime = Date.now()
     const errors: string[] = []
@@ -608,7 +608,7 @@ export function useANSYSIntegration() {
 
     try {
       // 分析文件
-      importProgress.value = { status: 'analyzing', progress: 10, currentFile: '分析文件...' }
+      importProgress.value = { status: 'analyzing', progress: 10, currentFile: '分析文件...', errorMessage: '' }
       const fileNames = Array.from(files).map(f => f.name)
 
       // 查找关键文件
@@ -622,7 +622,7 @@ export function useANSYSIntegration() {
 
       // 导入几何和网格
       if (hasCDB) {
-        importProgress.value = { status: 'converting', progress: 30, currentFile: 'geometry.cdb' }
+        importProgress.value = { status: 'converting', progress: 30, currentFile: 'geometry.cdb', errorMessage: '' }
         await simulateDelay(500)
         geometryImported = true
         meshImported = true  // CDB 包含网格
@@ -630,13 +630,13 @@ export function useANSYSIntegration() {
 
       // 导入结果
       if (hasRST) {
-        importProgress.value = { status: 'transferring', progress: 60, currentFile: 'results.rst' }
+        importProgress.value = { status: 'transferring', progress: 60, currentFile: 'results.rst', errorMessage: '' }
         await simulateDelay(500)
         resultsImported = true
       }
 
       // 完成
-      importProgress.value = { status: 'complete', progress: 100 }
+      importProgress.value = { status: 'complete', progress: 100, currentFile: '', errorMessage: '' }
 
       const result: ANSYSImportResult = {
         id: generateId(),
@@ -656,7 +656,7 @@ export function useANSYSIntegration() {
       importHistory.value.unshift(result)
       return result
     } catch (e: any) {
-      importProgress.value = { status: 'error', progress: 0, errorMessage: e.message }
+      importProgress.value = { status: 'error', progress: 0, currentFile: '', errorMessage: e.message }
 
       return {
         id: generateId(),
@@ -691,7 +691,9 @@ export function useANSYSIntegration() {
 
     const mesh: ANSYSMeshData = {
       nodes: [],
-      elements: []
+      elements: [],
+      nodeSets: [],
+      elementSets: []
     }
 
     const lines = content.split('\n')

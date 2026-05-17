@@ -479,7 +479,7 @@ export function useOptimizationWorkflow() {
       result.designPoints.push(point)
 
       // 简化梯度估计：随机扰动
-      const gradient = estimateGradient(result, currentParams, currentFitness)
+      const gradient = await estimateGradient(result, currentParams, currentFitness)
       for (const param of result.parameters) {
         if (gradient[param.name] !== undefined) {
           currentParams[param.name] -= learningRate * gradient[param.name]
@@ -674,7 +674,7 @@ export function useOptimizationWorkflow() {
     }
 
     // 添加约束惩罚
-    for (const constraint of result.constraints || []) {
+    for (const constraint of constraints || []) {
       const c = point.constraints[constraint.name]
       if (c && !c.satisfied) {
         fitness += c.penalty * 10
@@ -729,18 +729,18 @@ export function useOptimizationWorkflow() {
     }
   }
 
-  function estimateGradient(
+  async function estimateGradient(
     result: OptimizationResult,
     params: Record<string, number>,
     currentFitness: number
-  ): Record<string, number> {
+  ): Promise<Record<string, number>> {
     const gradient: Record<string, number> = {}
     const epsilon = 0.001
 
     for (const param of result.parameters) {
       const perturbed = { ...params }
       perturbed[param.name] += epsilon
-      const perturbedFitness = evaluateParams(result, perturbed)
+      const perturbedFitness = await evaluateParams(result, perturbed)
       gradient[param.name] = (perturbedFitness - currentFitness) / epsilon
     }
 

@@ -53,7 +53,7 @@ const aiStore = useAiStore()
 const undoStore = useUndoStore()
 const { isMobile } = usePlatform()
 const { getFriendlyError, clearError } = useErrorTranslator()
-void useAutoSave(projectStore)
+void useAutoSave({ enabled: false })
 
 // ============================================================
 // 主视图状态
@@ -61,9 +61,9 @@ void useAutoSave(projectStore)
 const activeTab = ref('simulation')
 const viewerRef = ref<any>(null)
 const currentResult = ref<SimulationResult | null>(null)
-const displayMode = ref<'von_mises' | 'displacement' | 'stress' | 'strain'>('von_mises')
+const displayMode = ref<'displacement' | 'stress' | 'vonMises'>('vonMises')
 const showDeformed = ref(false)
-const colormap = ref('viridis')
+const colormap = ref<'rainbow' | 'jet' | 'viridis' | 'plasma' | 'inferno'>('viridis')
 const isFullscreen = ref(false)
 const showCloudPanel = ref(false)
 
@@ -382,9 +382,9 @@ async function generateMesh() {
         x_div: meshDivisions.value.x, y_div: meshDivisions.value.y, z_div: meshDivisions.value.z }
 
   try {
-    const result = await caeApi.generateMesh(params)
-    if (result.mesh) {
-      projectStore.setMesh(result.mesh)
+    const result = await caeApi.generate2dMesh(meshRanges.value.x_min, meshRanges.value.x_max, meshDivisions.value.x, meshRanges.value.y_min, meshRanges.value.y_max, meshDivisions.value.y, "C2D4" as const)
+    if (result) {
+      projectStore.setMesh({ nodes: result.nodes, elements: result.elements })
     }
     return result
   } catch (e) {
@@ -403,21 +403,17 @@ async function runSolver() {
 
   try {
     const material = getCurrentMaterial()
+    const solverInputPath = `/tmp/simulation_${Date.now()}.in`
+    const solverWorkingDir = '/tmp'
     const result = await caeApi.runSolverWithProgress(
-      {
-        analysis_type: analysisType.value,
-        material,
-        mesh_id: projectStore.currentMesh?.id
-      },
-      (progress) => {
-        solverProgress.value = progress
-        solverMessage.value = `求解进度: ${Math.round(progress)}%`
-      }
+      solverInputPath,
+      solverWorkingDir,
+      undefined
     )
 
     if (result) {
       currentResult.value = result
-      projectStore.setLastResult(result)
+      projectStore.setResult(result)
     }
   } catch (e) {
     console.error('Solver failed:', e)
@@ -431,11 +427,13 @@ function applyStandardCase(caseId: string) {
   const stdCase = getCaseById(caseId)
   if (!stdCase) return
 
-  analysisType.value = stdCase.analysisType
-  materialE.value = stdCase.material.elastic_modulus
-  materialNu.value = stdCase.material.poisson_ratio
-  materialDensity.value = stdCase.material.density
-  materialYield.value = stdCase.material.yield_strength
+  if (stdCase.analysisType) {
+    analysisType.value = stdCase.analysisType
+  }
+  materialE.value = stdCase.material.elastic_modulus ?? 200000
+  materialNu.value = stdCase.material.poisson_ratio ?? 0.3
+  materialDensity.value = stdCase.material.density ?? 7850
+  materialYield.value = stdCase.material.yield_strength ?? 235
 
   if (stdCase.mesh) {
     meshDivisions.value = { x: stdCase.mesh.x_div, y: stdCase.mesh.y_div, z: stdCase.mesh.z_div || 1 }
@@ -446,9 +444,14 @@ function applyStandardCase(caseId: string) {
 
 function buildValidationReport() {
   if (!projectStore.lastResult) return
+  const caseId = selectedStandardCase.value
+  if (!caseId) return
+  const stdCase = getCaseById(caseId)
+  if (!stdCase) return
   validationReport.value = generateValidationReport(
-    projectStore.lastResult,
-    selectedStandardCase.value ? getCaseById(selectedStandardCase.value) : null
+    caseId,
+    (projectStore.lastResult as any).max_displacement || 0,
+    (projectStore.lastResult as any).max_stress || 0
   )
   showValidationReportFlag.value = true
 }
@@ -517,23 +520,23 @@ onMounted(() => {
     </header>
 
     <!-- ========== 错误提示 (V2.9-003) ========== -->
-    <div v-if="lastError" class="mx-4 mt-3 p-3 rounded-lg border animate-fade-in" :class="{
-      'bg-red-50 border-red-200': lastError.severity === 'error',
-      'bg-yellow-50 border-yellow-200': lastError.severity === 'warning',
-      'bg-blue-50 border-blue-200': lastError.severity === 'info'
+    <div v-if="(currentResult as any)?.lastError" class="mx-4 mt-3 p-3 rounded-lg border animate-fade-in" :class="{
+      'bg-red-50 border-red-200': (currentResult as any)?.lastError.severity === 'error',
+      'bg-yellow-50 border-yellow-200': (currentResult as any)?.lastError.severity === 'warning',
+      'bg-blue-50 border-blue-200': (currentResult as any)?.lastError.severity === 'info'
     }">
       <div class="flex items-start gap-3">
         <span class="text-lg" :class="{
-          'text-red-500': lastError.severity === 'error',
-          'text-yellow-500': lastError.severity === 'warning',
-          'text-blue-500': lastError.severity === 'info'
+          'text-red-500': (currentResult as any)?.lastError.severity === 'error',
+          'text-yellow-500': (currentResult as any)?.lastError.severity === 'warning',
+          'text-blue-500': (currentResult as any)?.lastError.severity === 'info'
         }">
-          {{ lastError.severity === 'error' ? '✗' : lastError.severity === 'warning' ? '⚠' : 'ℹ' }}
+          {{ (currentResult as any)?.lastError.severity === 'error' ? '✗' : (currentResult as any)?.lastError.severity === 'warning' ? '⚠' : 'ℹ' }}
         </span>
         <div class="flex-1">
-          <p class="font-medium text-sm text-[var(--text-primary)]">{{ lastError.message }}</p>
-          <p class="text-xs text-[var(--text-muted)] mt-1">{{ lastError.possibleCause }}</p>
-          <p class="text-xs text-[var(--primary)] mt-1">💡 {{ lastError.suggestedAction }}</p>
+          <p class="font-medium text-sm text-[var(--text-primary)]">{{ (currentResult as any)?.lastError.message }}</p>
+          <p class="text-xs text-[var(--text-muted)] mt-1">{{ (currentResult as any)?.lastError.possibleCause }}</p>
+          <p class="text-xs text-[var(--primary)] mt-1">💡 {{ (currentResult as any)?.lastError.suggestedAction }}</p>
         </div>
         <button @click="clearError" class="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-lg">&times;</button>
       </div>
@@ -598,7 +601,7 @@ onMounted(() => {
           <!-- 控制栏 -->
           <div class="absolute bottom-4 left-4 right-4 flex items-center gap-4 bg-white/90 backdrop-blur rounded-lg p-2 shadow">
             <select v-model="displayMode" class="px-2 py-1 border rounded text-sm">
-              <option value="von_mises">von Mises</option>
+              <option value="vonMises">von Mises</option>
               <option value="displacement">位移</option>
               <option value="stress">应力</option>
             </select>

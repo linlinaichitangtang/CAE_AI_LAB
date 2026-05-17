@@ -308,7 +308,7 @@ export function useNaturalLanguageControl() {
   ): IntentType {
     const scores: Record<IntentType, number> = {} as Record<IntentType, number>
 
-    for (const [intent, patterns] of Object.entries(INTENT_PATTERNS)) {
+    for (const [intentKey, patterns] of Object.entries(INTENT_PATTERNS)) {
       const patternList = language === 'zh' ? patterns.zh : patterns.en
       let matchCount = 0
 
@@ -318,17 +318,17 @@ export function useNaturalLanguageControl() {
         }
       }
 
-      scores[intent] = matchCount * patterns.priority
+      scores[intentKey as IntentType] = matchCount * patterns.priority
     }
 
     // 找到最高分
     let bestIntent: IntentType = 'unknown'
     let bestScore = 0
 
-    for (const [intent, score] of Object.entries(scores)) {
+    for (const [intent, score] of Object.entries(scores) as [IntentType, number][]) {
       if (score > bestScore) {
         bestScore = score
-        bestIntent = intent as IntentType
+        bestIntent = intent
       }
     }
 
@@ -632,7 +632,7 @@ export function useNaturalLanguageControl() {
     response: string
     actions: NLAction[]
   }> {
-    const actions: NLAction[] = []
+    const actions: any[] = []
 
     // 需要澄清
     if (intent.requiresClarification && intent.clarificationQuestions) {
@@ -669,7 +669,7 @@ export function useNaturalLanguageControl() {
   // ============ 意图处理器 ============
 
   async function handleAnalysisRequest(intent: ParsedIntent): Promise<{ response: string; actions: NLAction[] }> {
-    const actions: NLAction[] = []
+    const actions: any[] = []
     const params = intent.parameters
 
     // 动作1: 确定几何

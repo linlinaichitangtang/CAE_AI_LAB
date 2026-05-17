@@ -440,7 +440,7 @@ export function useAssignmentDashboard() {
           const submission = getSubmission(student.id, assignment.id)
           if (submission?.status === 'graded') {
             totalGraded++
-            const ops = getOperationsByType(submission.id, area)
+            const ops = getOperationsByType(submission.id, (area as any))
             if (ops.length === 0) {
               affectedStudents++
             }
@@ -476,7 +476,7 @@ export function useAssignmentDashboard() {
         }
 
         reports.push({
-          area,
+          area: area as 'simulation' | 'modeling' | 'postprocess' | 'mesh',
           affectedStudents,
           totalStudents: students.value.length,
           severity,
