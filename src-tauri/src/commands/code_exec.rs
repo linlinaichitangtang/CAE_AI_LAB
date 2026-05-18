@@ -1,7 +1,6 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
 use tauri::AppHandle;
-use tauri::Manager;
 
 /// V4.4-001: 解析 Python 路径，优先使用 CAELab conda 环境
 fn resolve_python_path(_app: &AppHandle) -> String {

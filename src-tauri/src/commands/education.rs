@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /**
  * V4.3 教育市场模块
  * - V4.3-001: 课程模板管理
@@ -8,7 +9,6 @@
  */
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tauri::command;
 
 // ============================================================================
@@ -589,7 +589,7 @@ pub fn list_submissions(assignment_id: String) -> Result<Vec<Submission>, String
 /// 自动批改提交
 #[command]
 pub async fn auto_grade_submission(
-    submission_id: String,
+    _submission_id: String,
     experiment_id: String,
     project_file_path: String,
 ) -> Result<AutoGrade, String> {
@@ -715,7 +715,7 @@ pub fn get_class_progress_stats(
 /// 检测提交相似度
 #[command]
 pub async fn check_submission_similarity(
-    assignment_id: String,
+    _assignment_id: String,
 ) -> Result<Vec<SimilarityResult>, String> {
     let mut results = Vec::new();
 

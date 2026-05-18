@@ -209,7 +209,7 @@ pub fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
         norm_b += b[i] * b[i];
     }
 
-    let norm_product = (norm_a.sqrt() * norm_b.sqrt());
+    let norm_product = norm_a.sqrt() * norm_b.sqrt();
     if norm_product == 0.0 {
         return 0.0;
     }
@@ -499,7 +499,7 @@ pub fn db_active_recall(
     }
 
     // 从历史记录中学习标签
-    let tags = if let Some(mat) = material {
+    let _tags = if let Some(mat) = material {
         vec![mat.to_string(), simulation_type.to_string()]
     } else {
         vec![simulation_type.to_string()]

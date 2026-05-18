@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Modal analysis module
 //! Calculates natural frequencies and mode shapes using CalculiX *FREQUENCY analysis
 

@@ -7,7 +7,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::Manager;
@@ -160,7 +159,7 @@ where
     F: Fn(BootstrapProgress),
 {
     let conda = conda_bin(app_data);
-    let base_dir = conda_base_dir(app_data);
+    let _base_dir = conda_base_dir(app_data);
 
     // Stage 1: 下载 Miniconda（如果尚未安装）
     if !conda.exists() {
@@ -493,7 +492,7 @@ fn check_package_version(python: &Path, package: &str) -> Option<String> {
     None
 }
 
-fn list_env_packages(conda: &Path, app_data: &Path) -> Vec<String> {
+fn list_env_packages(conda: &Path, _app_data: &Path) -> Vec<String> {
     let output = Command::new(conda)
         .args(["list", "-n", "caelab-ml", "--json"])
         .output();

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! CalculiX output file parser - V4.2-003
 //! Parses .frd and .dat result files from CalculiX solver
 //! Robust parsing with binary format support and comprehensive error handling
@@ -10,7 +11,7 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 use tauri::command;
 use thiserror::Error;
-use tracing::{info, warn};
+use tracing::info;
 
 #[derive(Error, Debug)]
 pub enum ParseError {

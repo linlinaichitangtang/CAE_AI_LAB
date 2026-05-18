@@ -1,7 +1,9 @@
-// DFT Post-Processing Commands - V1.7
+// DFT Post-Processing Commands - V4.2
 // Provides parsing, analysis, and validation of DFT calculation outputs.
+// V4.2-006: 去壳化 - 支持真实 VASP/Quantum ESPRESSO 输出文件解析
 
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use tauri::command;
 use tracing::info;
 
@@ -726,6 +728,429 @@ pub fn get_validation_test_suite() -> Result<Vec<ValidationTestCase>, String> {
 
     info!(count = test_cases.len(), "Validation test suite returned");
     Ok(test_cases)
+}
+
+// ============================================================================
+// Real VASP Output Parsing Functions (V4.2-006 去壳化)
+// ============================================================================
+
+/// Parses real VASP OUTCAR file to extract energy and convergence data.
+#[command]
+pub fn parse_vasp_outcar_file(file_path: String) -> Result<DftEnergyData, String> {
+    info!(file_path = %file_path, "Parsing VASP OUTCAR file");
+
+    let path = Path::new(&file_path);
+    if !path.exists() {
+        return Err(format!("OUTCAR file not found: {}", file_path));
+    }
+
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read OUTCAR file: {}", e))?;
+
+    parse_vasp_outcar_real(&content)
+}
+
+/// Internal function to parse OUTCAR content.
+fn parse_vasp_outcar_real(content: &str) -> Result<DftEnergyData, String> {
+    let mut energies = Vec::new();
+    let mut energy_per_atom = Vec::new();
+    let mut ionic_steps = Vec::new();
+    let mut converged = false;
+    let mut final_energy = 0.0;
+    let mut num_atoms = 1;
+
+    // Parse number of atoms
+    for line in content.lines() {
+        if line.contains("NIONS") {
+            if let Some(idx) = line.find('=') {
+                let val: usize = line[idx+1..].trim().parse().unwrap_or(1);
+                num_atoms = val;
+                break;
+            }
+        }
+    }
+
+    // Parse energy at each ionic step
+    let mut step = 0u32;
+    for line in content.lines() {
+        // Look for "free  energy" lines
+        if line.contains("free  energy") && line.contains("TOTEN") {
+            if let Some(idx) = line.find("=") {
+                let energy_str: String = line[idx+1..].trim()
+                    .chars().take_while(|c| c.is_digit(10) || *c == '.' || *c == '-' || *c == 'E' || *c == 'e' || *c == '+')
+                    .collect();
+                if let Ok(energy) = energy_str.parse::<f64>() {
+                    energies.push(energy);
+                    energy_per_atom.push(energy / num_atoms as f64);
+                    ionic_steps.push(step as f64);
+                    final_energy = energy;
+                    step += 1;
+                }
+            }
+        }
+    }
+
+    // Check for convergence
+    for line in content.lines() {
+        if line.contains("reached required accuracy") || line.contains("Convergence achieved") {
+            converged = true;
+            break;
+        }
+    }
+
+    if energies.is_empty() {
+        return Err("No energy values found in OUTCAR".to_string());
+    }
+
+    info!(
+        steps = energies.len(),
+        final_energy = final_energy,
+        converged = converged,
+        "OUTCAR parsed successfully"
+    );
+
+    Ok(DftEnergyData {
+        energies,
+        energy_per_atom,
+        ionic_steps,
+        converged,
+        final_energy,
+    })
+}
+
+/// Parses real VASP DOSCAR file to extract density of states.
+#[command]
+pub fn parse_vasp_doscar_file(file_path: String) -> Result<DosData, String> {
+    info!(file_path = %file_path, "Parsing VASP DOSCAR file");
+
+    let path = Path::new(&file_path);
+    if !path.exists() {
+        return Err(format!("DOSCAR file not found: {}", file_path));
+    }
+
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read DOSCAR file: {}", e))?;
+
+    parse_vasp_doscar_real(&content)
+}
+
+/// Internal function to parse DOSCAR content.
+fn parse_vasp_doscar_real(content: &str) -> Result<DosData, String> {
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.len() < 6 {
+        return Err("DOSCAR file too short".to_string());
+    }
+
+    // Parse header information
+    let num_atoms: usize = lines[0].trim().parse().unwrap_or(1);
+    
+    // Line 5 contains energy range and number of points
+    let header_parts: Vec<f64> = lines[5].split_whitespace()
+        .map(|s| s.parse().unwrap_or(0.0))
+        .collect();
+    
+    if header_parts.len() < 3 {
+        return Err("Invalid DOSCAR header".to_string());
+    }
+
+    let _emin = header_parts[0];
+    let _emax = header_parts[1];
+    let num_points = header_parts[2] as usize;
+    let fermi_energy = header_parts.get(3).copied().unwrap_or(0.0);
+
+    // Parse total DOS (starts at line 6)
+    let mut energy_values = Vec::with_capacity(num_points);
+    let mut total_dos = Vec::with_capacity(num_points);
+
+    let dos_start = 6;
+    for i in 0..num_points {
+        if dos_start + i >= lines.len() {
+            break;
+        }
+        let parts: Vec<f64> = lines[dos_start + i].split_whitespace()
+            .map(|s| s.parse().unwrap_or(0.0))
+            .collect();
+        if parts.len() >= 2 {
+            energy_values.push(parts[0]);
+            total_dos.push(parts[1]);
+        }
+    }
+
+    // Parse partial DOS if available
+    let mut partial_dos = Vec::new();
+    let pdos_start = dos_start + num_points + 1;
+
+    if lines.len() > pdos_start {
+        // Parse partial DOS for each atom
+        for atom_idx in 0..num_atoms {
+            let atom_offset = pdos_start + atom_idx * (num_points + 1);
+            if atom_offset >= lines.len() {
+                break;
+            }
+
+            // Atom header line
+            let _atom_header = lines[atom_offset];
+
+            // Parse s, p, d orbital contributions
+            let orbitals = vec!["s", "p", "d"];
+            for (orbital_idx, orbital) in orbitals.iter().enumerate() {
+                let mut spin_up = Vec::with_capacity(num_points);
+                let mut spin_down = Vec::with_capacity(num_points);
+
+                for i in 0..num_points {
+                    let line_idx = atom_offset + 1 + i;
+                    if line_idx >= lines.len() {
+                        break;
+                    }
+                    let parts: Vec<f64> = lines[line_idx].split_whitespace()
+                        .map(|s| s.parse().unwrap_or(0.0))
+                        .collect();
+                    
+                    // DOSCAR format: energy, s-up, s-down, p-up, p-down, d-up, d-down, ...
+                    if parts.len() >= 7 {
+                        let up_idx = 1 + orbital_idx * 2;
+                        let down_idx = 2 + orbital_idx * 2;
+                        spin_up.push(parts[up_idx]);
+                        spin_down.push(parts[down_idx]);
+                    }
+                }
+
+                if !spin_up.is_empty() {
+                    partial_dos.push(PartialDos {
+                        element: format!("Atom{}", atom_idx + 1),
+                        orbital: orbital.to_string(),
+                        spin_up,
+                        spin_down: Some(spin_down),
+                    });
+                }
+            }
+        }
+    }
+
+    info!(
+        num_points = energy_values.len(),
+        num_partial = partial_dos.len(),
+        "DOSCAR parsed successfully"
+    );
+
+    Ok(DosData {
+        energy_values,
+        total_dos,
+        partial_dos,
+        fermi_energy,
+    })
+}
+
+/// Parses real VASP EIGENVAL file to extract band structure data.
+#[command]
+pub fn parse_vasp_eigenval_file(file_path: String) -> Result<BandStructureData, String> {
+    info!(file_path = %file_path, "Parsing VASP EIGENVAL file");
+
+    let path = Path::new(&file_path);
+    if !path.exists() {
+        return Err(format!("EIGENVAL file not found: {}", file_path));
+    }
+
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read EIGENVAL file: {}", e))?;
+
+    parse_vasp_eigenval_real(&content)
+}
+
+/// Internal function to parse EIGENVAL content.
+fn parse_vasp_eigenval_real(content: &str) -> Result<BandStructureData, String> {
+    let lines: Vec<&str> = content.lines().collect();
+    if lines.len() < 5 {
+        return Err("EIGENVAL file too short".to_string());
+    }
+
+    // Parse header (lines 0-4)
+    let header_parts: Vec<usize> = lines[5].split_whitespace()
+        .map(|s| s.parse().unwrap_or(0))
+        .collect();
+
+    if header_parts.len() < 2 {
+        return Err("Invalid EIGENVAL header".to_string());
+    }
+
+    let num_kpoints = header_parts[0];
+    let num_bands = header_parts[1];
+
+    let mut kpoints = Vec::with_capacity(num_kpoints);
+    let mut kpoint_weights = Vec::with_capacity(num_kpoints);
+    let mut bands: Vec<BandData> = (0..num_bands)
+        .map(|i| BandData {
+            band_index: i as u32,
+            energies: Vec::with_capacity(num_kpoints),
+            is_occupied: Vec::with_capacity(num_kpoints),
+        })
+        .collect();
+
+    let mut fermi_energy = 0.0;
+
+    // Parse k-points and band energies
+    let mut line_idx = 6;
+    for _ in 0..num_kpoints {
+        if line_idx >= lines.len() {
+            break;
+        }
+
+        // K-point line
+        let kpoint_parts: Vec<f64> = lines[line_idx].split_whitespace()
+            .map(|s| s.parse().unwrap_or(0.0))
+            .collect();
+
+        if kpoint_parts.len() >= 4 {
+            kpoints.push([kpoint_parts[0], kpoint_parts[1], kpoint_parts[2]]);
+            kpoint_weights.push(kpoint_parts[3]);
+        }
+        line_idx += 1;
+
+        // Band energies for this k-point
+        for band_idx in 0..num_bands {
+            if line_idx >= lines.len() {
+                break;
+            }
+            let band_parts: Vec<f64> = lines[line_idx].split_whitespace()
+                .map(|s| s.parse().unwrap_or(0.0))
+                .collect();
+
+            if band_parts.len() >= 2 {
+                let energy = band_parts[1];
+                bands[band_idx].energies.push(energy);
+                // Occupation is in column 2 (if present)
+                let occupation = band_parts.get(2).copied().unwrap_or(0.0);
+                bands[band_idx].is_occupied.push(occupation > 0.5);
+            }
+            line_idx += 1;
+        }
+    }
+
+    // Estimate Fermi energy from band occupations
+    for band in &bands {
+        for (i, &is_occ) in band.is_occupied.iter().enumerate() {
+            if !is_occ && i > 0 {
+                fermi_energy = (band.energies[i] + band.energies[i-1]) / 2.0;
+                break;
+            }
+        }
+    }
+
+    info!(
+        num_kpoints = kpoints.len(),
+        num_bands = bands.len(),
+        "EIGENVAL parsed successfully"
+    );
+
+    Ok(BandStructureData {
+        kpoints,
+        kpoint_weights,
+        bands,
+        num_bands: num_bands as u32,
+        num_kpoints: num_kpoints as u32,
+        fermi_energy,
+    })
+}
+
+/// Parses DFT output directory and extracts all relevant data.
+#[command]
+pub fn parse_dft_output_directory(output_dir: String, code: String) -> Result<DftDirectoryParseResult, String> {
+    info!(output_dir = %output_dir, code = %code, "Parsing DFT output directory");
+
+    let path = Path::new(&output_dir);
+    if !path.exists() {
+        return Err(format!("Output directory not found: {}", output_dir));
+    }
+
+    let mut result = DftDirectoryParseResult {
+        energy_data: None,
+        dos_data: None,
+        band_data: None,
+        convergence_achieved: false,
+        files_found: Vec::new(),
+        errors: Vec::new(),
+    };
+
+    match code.as_str() {
+        "vasp" => {
+            // Look for OUTCAR
+            let outcar_path = path.join("OUTCAR");
+            if outcar_path.exists() {
+                result.files_found.push("OUTCAR".to_string());
+                match parse_vasp_outcar_file(outcar_path.to_string_lossy().to_string()) {
+                    Ok(data) => {
+                        result.convergence_achieved = data.converged;
+                        result.energy_data = Some(data);
+                    }
+                    Err(e) => result.errors.push(format!("OUTCAR parse error: {}", e)),
+                }
+            }
+
+            // Look for DOSCAR
+            let doscar_path = path.join("DOSCAR");
+            if doscar_path.exists() {
+                result.files_found.push("DOSCAR".to_string());
+                match parse_vasp_doscar_file(doscar_path.to_string_lossy().to_string()) {
+                    Ok(data) => result.dos_data = Some(data),
+                    Err(e) => result.errors.push(format!("DOSCAR parse error: {}", e)),
+                }
+            }
+
+            // Look for EIGENVAL
+            let eigenval_path = path.join("EIGENVAL");
+            if eigenval_path.exists() {
+                result.files_found.push("EIGENVAL".to_string());
+                match parse_vasp_eigenval_file(eigenval_path.to_string_lossy().to_string()) {
+                    Ok(data) => result.band_data = Some(data),
+                    Err(e) => result.errors.push(format!("EIGENVAL parse error: {}", e)),
+                }
+            }
+        }
+        "qe" => {
+            // Quantum ESPRESSO output parsing
+            let pw_out_path = path.join("pw.out");
+            if pw_out_path.exists() {
+                result.files_found.push("pw.out".to_string());
+                // Use existing QE parser
+                match std::fs::read_to_string(&pw_out_path) {
+                    Ok(content) => {
+                        match parse_qe_output(content) {
+                            Ok(data) => {
+                                result.convergence_achieved = data.converged;
+                                result.energy_data = Some(data);
+                            }
+                            Err(e) => result.errors.push(format!("pw.out parse error: {}", e)),
+                        }
+                    }
+                    Err(e) => result.errors.push(format!("Failed to read pw.out: {}", e)),
+                }
+            }
+        }
+        _ => return Err(format!("Unsupported code: {}", code)),
+    }
+
+    if result.files_found.is_empty() {
+        return Err("No recognizable output files found in directory".to_string());
+    }
+
+    info!(
+        files = result.files_found.len(),
+        errors = result.errors.len(),
+        "DFT output directory parsed"
+    );
+
+    Ok(result)
+}
+
+/// Result of parsing a DFT output directory.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DftDirectoryParseResult {
+    pub energy_data: Option<DftEnergyData>,
+    pub dos_data: Option<DosData>,
+    pub band_data: Option<BandStructureData>,
+    pub convergence_achieved: bool,
+    pub files_found: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 // ============================================================================

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /**
  * V2.4 AI Agent - Rust 后端命令
  * 提供 Agent 编排器需要的后端支持

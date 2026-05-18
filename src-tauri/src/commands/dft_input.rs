@@ -2,7 +2,6 @@
 // Provides VASP and Quantum ESPRESSO input generation, parsing, and template management.
 // V4.2-006: 去壳化 - 真正生成 VASP/Quantum ESPRESSO 输入文件，支持 POTCAR 生成和 k-point 收敛测试
 
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -1508,7 +1507,7 @@ pub async fn run_kpoint_convergence_test(config: KpointConvergenceConfig) -> Res
     }
 
     // Generate POTCAR if configuration provided
-    let potcar_content = if let Some(ref potcar_config) = config.potcar_config {
+    let _potcar_content = if let Some(ref potcar_config) = config.potcar_config {
         match generate_potcar(potcar_config.clone()) {
             Ok(content) => Some(content),
             Err(e) => {

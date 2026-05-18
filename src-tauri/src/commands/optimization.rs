@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Topology, Shape, and Size Optimization Module
 //! Implements SIMP-based topology optimization with OC (Optimality Criteria) method
 

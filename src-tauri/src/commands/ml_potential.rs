@@ -13,7 +13,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 // ============================================================================
@@ -1763,7 +1763,7 @@ pub async fn run_ml_lammps_simulation(
         let mut mock_thermo = Vec::new();
         let thermo_freq = config.thermo_freq.max(1);
         for s in (0..=num_steps).step_by(thermo_freq as usize).take(500) {
-            let ratio = s as f64 / num_steps as f64;
+            let _ratio = s as f64 / num_steps as f64;
             mock_thermo.push(LammpsThermoData {
                 step: s,
                 temp: config.temperature + rand_factor() * 10.0 - 5.0,

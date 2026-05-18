@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Thermal-Structural Coupling Analysis Commands
 //! Sequential coupling: thermal analysis first, then structural with temperature loads
 //! Exposes thermal coupling functionality to the Tauri frontend

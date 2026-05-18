@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /**
  * V3.9 Active Learning Loop — ML 原子间势函数训练与部署
  *

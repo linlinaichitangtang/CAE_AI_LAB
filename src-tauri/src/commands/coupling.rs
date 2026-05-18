@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Thermomechanical coupling analysis
 //! Supports:
 //!   - Sequential coupling: thermal analysis first, then structural with temperature loads

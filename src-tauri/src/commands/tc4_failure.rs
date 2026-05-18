@@ -287,7 +287,7 @@ fn rand_double() -> f64 {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .subsec_nanos();
-    (nanos as f64 / u32::MAX as f64)
+    nanos as f64 / u32::MAX as f64
 }
 
 fn uuid_simple() -> String {
