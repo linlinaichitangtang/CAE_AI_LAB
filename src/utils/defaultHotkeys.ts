@@ -11,7 +11,7 @@ export interface HotkeyConfig {
   /** 功能描述 */
   description: string
   /** 分类 */
-  category: 'global' | 'simulation' | 'modeling' | 'notes' | 'code'
+  category: 'global' | 'simulation' | 'modeling' | 'notes' | 'code' | 'ai'
 }
 
 export const defaultHotkeys: HotkeyConfig[] = [
