@@ -9,6 +9,7 @@ pub mod python_bridge;
 pub mod conda_env;
 pub mod solver;
 pub mod plugin;
+pub mod model_repo;
 mod db;
 mod models;
 pub mod api_server;
@@ -771,6 +772,12 @@ pub fn run() {
             conda_env::conda_get_status,
             conda_env::conda_bootstrap,
             conda_env::conda_install_package,
+            // V4.4-002: Pretrained model repository
+            model_repo::list_model_repo,
+            model_repo::get_model_repo_status,
+            model_repo::install_model_package,
+            model_repo::model_predict,
+            model_repo::export_model_to_onnx,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

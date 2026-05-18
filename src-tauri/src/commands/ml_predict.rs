@@ -1,13 +1,13 @@
 /**
  * V2.5 AI × ML 免仿真预测 - Rust 后端命令
- * ONNX Runtime 集成 + 预训练模型推理 (Mock 模式)
- *
- * 当前实现: Mock 推理引擎，返回基于材料成分的预设预测值
- * 后续接入: ort crate 实际加载 ONNX 模型进行推理
+ * V4.4-002: 替换 mock 为真实推理（通过 Python 桥接调用 caelab.models.inference）
  */
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use crate::model_repo;
+use crate::model_repo::PredictRequest as RepoPredictRequest;
 
 // ============================================================================
 // 数据结构
@@ -242,19 +242,55 @@ fn rand_factor() -> f64 {
 // ============================================================================
 
 /// ML 属性预测
+/// V4.4-002: 优先使用真实模型推理，回退到 mock
 #[tauri::command]
 pub async fn predict_material_properties(
     request: PredictionRequest,
 ) -> Result<PredictionResponse, String> {
     let start = std::time::Instant::now();
 
+    // 如果模型名不是 mock_ 前缀，尝试真实推理
+    if !request.model_name.starts_with("mock_") {
+        let composition = build_atoms_from_composition(&request.composition);
+        let repo_request = RepoPredictRequest {
+            model_name: request.model_name.clone(),
+            positions: composition.0,
+            atomic_numbers: composition.1,
+            cell: None,
+            properties: Some(request.target_properties.clone()),
+        };
+        match model_repo::model_predict(repo_request).await {
+            Ok(result) => {
+                let units = get_property_units();
+                let mut predictions = Vec::new();
+                if let Some(energy) = result.energy {
+                    let unit = units.get("energy").cloned().unwrap_or("eV".to_string());
+                    predictions.push(PropertyPrediction {
+                        property_name: "energy".to_string(),
+                        predicted_value: energy,
+                        unit,
+                        confidence_lower: energy * 0.95,
+                        confidence_upper: energy * 1.05,
+                        uncertainty: energy.abs() * 0.02,
+                    });
+                }
+                return Ok(PredictionResponse {
+                    model_name: request.model_name.clone(),
+                    is_mock: false,
+                    inference_time_ms: result.inference_time_ms,
+                    predictions,
+                });
+            }
+            Err(_) => { /* fall through to mock */ }
+        }
+    }
+
+    // Mock 回退
     let units = get_property_units();
     let mut predictions = Vec::new();
-
     for property in &request.target_properties {
         let (predicted, uncertainty) = mock_predict(&request.composition, property);
         let unit = units.get(property).cloned().unwrap_or_default();
-
         predictions.push(PropertyPrediction {
             property_name: property.clone(),
             predicted_value: predicted,
@@ -276,37 +312,51 @@ pub async fn predict_material_properties(
 }
 
 /// 获取可用 ML 模型列表
+/// V4.4-002: 从 Python 模型仓库获取真实模型状态，回退到 mock 列表
 #[tauri::command]
 pub async fn list_ml_models() -> Result<Vec<ModelInfo>, String> {
-    let models = vec![
+    // 尝试从 Python 模型仓库获取真实模型状态
+    if let Ok(repo_models) = model_repo::list_model_repo().await {
+        let models: Vec<ModelInfo> = repo_models
+            .iter()
+            .map(|m| ModelInfo {
+                name: m.name.clone(),
+                description: m.description.clone(),
+                supported_properties: m.supported_properties.clone(),
+                is_loaded: m.cached,
+                model_type: if m.installed { "real".to_string() } else { "available".to_string() },
+            })
+            .collect();
+        if !models.is_empty() {
+            return Ok(models);
+        }
+    }
+
+    // 回退到 mock 模型列表
+    Ok(vec![
         ModelInfo {
             name: "mock_chgnet".to_string(),
-            description: "CHGNet 通用材料属性预测模型 (Mock)".to_string(),
+            description: "CHGNet 材料属性预测模型 (Mock — 安装 chgnet 包启用真实推理)".to_string(),
             supported_properties: vec![
-                "elastic_modulus".to_string(),
-                "yield_strength".to_string(),
-                "thermal_conductivity".to_string(),
-                "density".to_string(),
-                "poissons_ratio".to_string(),
+                "energy".to_string(),
+                "forces".to_string(),
+                "stress".to_string(),
             ],
             is_loaded: true,
             model_type: "mock".to_string(),
         },
         ModelInfo {
             name: "mock_m3gnet".to_string(),
-            description: "M3GNet 材料图神经网络 (Mock)".to_string(),
+            description: "M3GNet 材料势函数 (Mock — 安装 matgl 包启用真实推理)".to_string(),
             supported_properties: vec![
-                "elastic_modulus".to_string(),
-                "shear_modulus".to_string(),
-                "bulk_modulus".to_string(),
-                "thermal_conductivity".to_string(),
+                "energy".to_string(),
+                "forces".to_string(),
+                "stress".to_string(),
             ],
             is_loaded: true,
             model_type: "mock".to_string(),
         },
-    ];
-
-    Ok(models)
+    ])
 }
 
 /// 运行精度评测: ML 预测 vs 参考值
@@ -386,4 +436,43 @@ fn build_mock_composition(material_name: &str) -> HashMap<String, f64> {
         }
     }
     comp
+}
+
+/// V4.4-002: 将成分字典转为虚拟晶体结构（positions + atomic_numbers）
+/// 用于调用结构推理模型
+fn build_atoms_from_composition(
+    composition: &HashMap<String, f64>,
+) -> (Vec<Vec<f64>>, Vec<i32>) {
+    // 元素符号 -> 原子序数映射
+    let z_map: HashMap<&str, i32> = [
+        ("H", 1), ("He", 2), ("Li", 3), ("Be", 4), ("B", 5), ("C", 6), ("N", 7), ("O", 8),
+        ("F", 9), ("Ne", 10), ("Na", 11), ("Mg", 12), ("Al", 13), ("Si", 14), ("P", 15),
+        ("S", 16), ("Cl", 17), ("Ar", 18), ("K", 19), ("Ca", 20), ("Sc", 21), ("Ti", 22),
+        ("V", 23), ("Cr", 24), ("Mn", 25), ("Fe", 26), ("Co", 27), ("Ni", 28), ("Cu", 29),
+        ("Zn", 30), ("Ga", 31), ("Ge", 32), ("As", 33), ("Se", 34), ("Br", 35), ("Kr", 36),
+        ("Mo", 42), ("Pd", 46), ("Ag", 47), ("Sn", 50), ("Pt", 78), ("Au", 79), ("Pb", 82),
+    ]
+    .iter()
+    .cloned()
+    .collect();
+
+    let mut positions = Vec::new();
+    let mut atomic_numbers = Vec::new();
+
+    // 构建简单立方虚拟结构，每个元素放在不同位置
+    let mut idx = 0;
+    for (elem, &fraction) in composition {
+        let count = ((fraction / 10.0).ceil() as usize).max(1).min(10);
+        let z = z_map.get(elem.as_str()).copied().unwrap_or(26); // 默认 Fe
+        for i in 0..count {
+            let x = (idx as f64) * 3.0;
+            let y = (i as f64) * 3.0;
+            let z_pos = 0.0;
+            positions.push(vec![x, y, z_pos]);
+            atomic_numbers.push(z);
+            idx += 1;
+        }
+    }
+
+    (positions, atomic_numbers)
 }
