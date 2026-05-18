@@ -11,6 +11,7 @@ pub mod solver;
 pub mod plugin;
 pub mod model_repo;
 pub mod training_manager;
+pub mod experiment_tracker;
 mod db;
 mod models;
 pub mod api_server;
@@ -783,6 +784,10 @@ pub fn run() {
             training_manager::recommend_training_config,
             training_manager::submit_real_training_job,
             training_manager::list_training_checkpoints,
+            // V4.4-004: Experiment tracking (W&B / MLflow)
+            experiment_tracker::create_experiment_tracker,
+            experiment_tracker::log_experiment_metrics,
+            experiment_tracker::list_experiment_trackers,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

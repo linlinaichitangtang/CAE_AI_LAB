@@ -137,6 +137,26 @@ class TrainingEngine:
         self.stress_weight = config.get("stress_weight", 1.0)
         self.cutoff = config.get("cutoff", 5.0)
         self.use_gpu = config.get("use_gpu", False)
+        # V4.4-004: 实验跟踪器
+        self._tracker = None
+        self._init_tracker()
+
+    def _init_tracker(self):
+        """初始化实验跟踪器（如果配置了）"""
+        tracker_cfg = self.config.get("tracker")
+        if not tracker_cfg:
+            return
+        try:
+            from .experiment_tracker import create_tracker
+            self._tracker = create_tracker(
+                backend=tracker_cfg["backend"],
+                project=tracker_cfg.get("project", "caelab-training"),
+                name=tracker_cfg.get("name"),
+                config=self.config,
+                **{k: v for k, v in tracker_cfg.items() if k not in ("backend", "project", "name")},
+            )
+        except Exception as e:
+            print(json.dumps({"type": "warning", "message": f"实验跟踪器初始化失败: {e}"}))
 
     def train(self, train_data: list[dict], val_data: list[dict] | None,
               output_dir: str, resume_from: str | None = None) -> dict[str, Any]:
@@ -147,6 +167,9 @@ class TrainingEngine:
         """输出进度到 stdout（JSON 行格式，供 Rust 捕获）"""
         record = {"type": "loss", "epoch": epoch, **metrics}
         print(json.dumps(record), flush=True)
+        # V4.4-004: 自动记录到实验跟踪器
+        if self._tracker:
+            self._tracker.log_metrics(metrics, step=epoch)
 
     def emit_status(self, status: str, message: str = ""):
         """输出状态事件"""
@@ -157,6 +180,15 @@ class TrainingEngine:
         """输出最终结果"""
         record = {"type": "result", **result}
         print(json.dumps(record), flush=True)
+        # V4.4-004: 记录最终结果并关闭跟踪器
+        if self._tracker:
+            self._tracker.log_metrics({
+                "final_energy_rmse": result.get("final_energy_rmse", 0),
+                "final_force_rmse": result.get("final_force_rmse", 0),
+                "best_epoch": result.get("best_epoch", 0),
+                "training_time_sec": result.get("training_time_sec", 0),
+            })
+            self._tracker.finish()
 
 
 class MACETrainer(TrainingEngine):
