@@ -14,6 +14,8 @@
     "build:harmony": "vite build --mode harmony",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "test:e2e": "playwright test",
+    "test:bench": "vitest run benchmarks/",
+    "docs:api": "typedoc",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {

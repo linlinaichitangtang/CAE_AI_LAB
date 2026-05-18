@@ -120,7 +120,7 @@ jobs:
         run: npm run build
 
   # ============================================================
-  # Job 5: E2E 端到端测试 (V4.6-003)
+  # Job 7: E2E 端到端测试 (V4.6-003)
   # ============================================================
   e2e-tests:
     name: E2E 端到端测试 (V4.6-003)
@@ -153,12 +153,73 @@ jobs:
           retention-days: 7
 
   # ============================================================
-  # Job 6: 失败自动提 Issue
+  # Job 8: 性能基准回归 (V4.6-004)
+  # ============================================================
+  perf-benchmark:
+    name: 性能基准回归检测 (V4.6-004)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行性能基准
+        run: npx vitest run benchmarks/performance.spec.ts
+
+      - name: 保存基准数据
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmarks/baseline.json
+          retention-days: 30
+
+  # ============================================================
+  # Job 9: API 文档生成 (V4.6-005)
+  # ============================================================
+  api-docs:
+    name: API 文档自动生成 (V4.6-005)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 生成 TypeScript API 文档
+        run: npx typedoc
+
+      - name: 上传文档
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: docs/api/
+          retention-days: 7
+
+  # ============================================================
+  # Job 10: 失败自动提 Issue
   # ============================================================
   error-monitor:
     name: 失败监控与自动提 Issue
     runs-on: ubuntu-24.04
-    needs: [python-smoke, calculix-parser, rust-check, frontend-check, e2e-tests]
+    needs: [python-smoke, calculix-parser, rust-check, frontend-check, e2e-tests, perf-benchmark, api-docs]
     if: failure()
     permissions:
       issues: write

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/api/", "src/composables/", "src/utils/"],
+  "out": "docs/api",
+  "name": "CAELab API 文档",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "includeVersion": true,
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "仿真核心",
+    "材料",
+    "合规检查",
+    "AI Agent",
+    "多尺度",
+    "其他"
+  ],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "plugin": [],
+  "tsconfig": "tsconfig.json"
+}
