@@ -3,7 +3,7 @@
  * 引导式仿真向导 — 内置 50 个教学案例（首批 8 个核心案例）
  */
 
-export type TemplateCategory = 'structural' | 'materials' | 'fatigue' | 'thermal' | 'modal' | 'buckling' | 'composite' | 'optimization'
+export type TemplateCategory = 'structural' | 'materials' | 'fatigue' | 'thermal' | 'modal' | 'buckling' | 'composite' | 'optimization' | 'steel'
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced'
 
 /** 向导步骤 */
@@ -950,6 +950,134 @@ export const boltedFlangeTemplate: SimulationTemplate = {
 }
 
 // ============================================================================
+// 钢铁行业模板 — 连铸 / 热轧 / 焊接 / 热处理
+// ============================================================================
+
+/** 连铸坯凝固传热 */
+export const continuousCastingTemplate: SimulationTemplate = {
+  id: 'continuous-casting',
+  name: '连铸坯凝固传热分析',
+  description: '板坯连铸凝固过程热分析，模拟结晶器→二冷区→空冷区的温度场演化和凝固壳生长。适用于钢铁连铸工艺优化。',
+  category: 'steel',
+  difficulty: 'advanced',
+  estimatedTime: 60,
+  tags: ['钢铁', '连铸', '凝固', '传热', '结晶器', '工业'],
+  steps: [
+    { id: 'intro', title: '案例介绍', description: '1.2m×0.22m 板坯，浇铸温度 1550°C，拉速 1.2m/min。结晶器水冷+二冷喷雾+空冷三段冷却。', icon: '📖', component: 'geometry', guidance: '连铸是钢铁生产的核心工序。凝固过程的温度控制直接影响铸坯质量。', tips: ['结晶器出口壳厚约 15mm', '二冷区温度控制在 900°C 左右', '完全凝固距离约 12m'] },
+    { id: 'geometry', title: '创建几何', description: '板坯 12m×1.2m×0.22m，利用对称性取四分之一模型。', icon: '📐', component: 'geometry' },
+    { id: 'material', title: '设置材料', description: 'Q235 碳素钢，含固/液相线温度和潜热。', icon: '🔧', component: 'material' },
+    { id: 'mesh', title: '划分网格', description: '表面层加密（凝固壳区域），采用 DC3D8 热传导单元。', icon: '🔲', component: 'mesh' },
+    { id: 'boundary', title: '施加边界条件', description: '沿拉坯方向分 5 个冷却区，各区换热系数不同。', icon: '⚓', component: 'boundary' },
+    { id: 'solver', title: '运行求解', description: '瞬态热分析，时间步 0.5s，总时长 600s。', icon: '▶️', component: 'solver' },
+    { id: 'review', title: '检查与验证', description: '验证凝固壳厚度和表面温度与工厂数据一致。', icon: '✅', component: 'review' },
+    { id: 'result', title: '查看结果', description: '温度场云图、凝固前沿推进、壳厚-距离曲线。', icon: '📊', component: 'result' }
+  ],
+  geometry: { type: 'solid', params: { length: 12000, width: 1200, height: 220 }, unit: 'mm' },
+  material: { name: 'Q235', category: '碳素结构钢', elasticModulus: 206000, poissonsRatio: 0.3, density: 7850, yieldStrength: 235, thermalExpansion: 12e-6 },
+  mesh: { elementType: 'hex8', globalSize: 50, localRefinement: [{ region: 'surface_shell', size: 5, description: '凝固壳表面层加密' }], qualityTarget: 0.7 },
+  boundaryConditions: [
+    { type: 'temperature', region: 'entry', values: { temperature: 1823 }, description: '浇铸温度 1550°C' },
+    { type: 'temperature', region: 'mold', values: { convection_coeff: 2000, T_fluid: 313 }, description: '结晶器水冷 h=2000' },
+    { type: 'temperature', region: 'secondary_cooling', values: { convection_coeff: 500, T_fluid: 298 }, description: '二冷喷雾 h=500' },
+    { type: 'temperature', region: 'air_cooling', values: { convection_coeff: 15, T_fluid: 298 }, description: '空冷 h=15' }
+  ],
+  solver: { analysisType: 'thermal', solverType: 'direct', maxIterations: 5000, tolerance: 1e-5 },
+  expectedResults: { maxStress: 180, maxDisplacement: undefined }
+}
+
+/** 热轧板坯温度场 */
+export const hotRollingTemplate: SimulationTemplate = {
+  id: 'hot-rolling',
+  name: '热轧板坯温度场与变形',
+  description: '中厚板多道次热轧过程热-结构耦合分析，模拟温度场分布和塑性变形。适用于轧制工艺参数优化。',
+  category: 'steel',
+  difficulty: 'advanced',
+  estimatedTime: 90,
+  tags: ['钢铁', '热轧', '塑性变形', '温度场', 'Johnson-Cook', '工业'],
+  steps: [
+    { id: 'intro', title: '案例介绍', description: 'Q345B 板坯 220mm→25mm，5 道次轧制，初始温度 1150°C，终轧温度 ≥850°C。', icon: '📖', component: 'geometry', guidance: '热轧是将板坯减薄至目标厚度的核心工艺。温度控制对产品性能至关重要。', tips: ['终轧温度影响晶粒尺寸和力学性能', '道次间温度降需控制在合理范围', '轧制力随温度降低而增大'] },
+    { id: 'geometry', title: '创建几何', description: '初始板坯 2.0m×1.2m×0.22m。', icon: '📐', component: 'geometry' },
+    { id: 'material', title: '设置材料', description: 'Q345B 低合金钢，Johnson-Cook 高温本构模型。', icon: '🔧', component: 'material' },
+    { id: 'mesh', title: '划分网格', description: '厚度方向加密至 20 层，采用 C3D8RT 热-力耦合单元。', icon: '🔲', component: 'mesh' },
+    { id: 'boundary', title: '施加边界条件', description: '5 道次轧辊位移+接触传热，表面与空气对流散热。', icon: '⚓', component: 'boundary' },
+    { id: 'solver', title: '运行求解', description: '热-结构耦合分析，弹塑性求解。', icon: '▶️', component: 'solver' },
+    { id: 'review', title: '检查与验证', description: '验证终轧温度和各道次轧制力。', icon: '✅', component: 'review' },
+    { id: 'result', title: '查看结果', description: '温度场、等效塑性应变、轧制力-时间曲线。', icon: '📊', component: 'result' }
+  ],
+  geometry: { type: 'solid', params: { length: 2000, width: 1200, height: 220 }, unit: 'mm' },
+  material: { name: 'Q345B', category: '低合金高强钢', elasticModulus: 206000, poissonsRatio: 0.3, density: 7850, yieldStrength: 345, thermalExpansion: 12e-6 },
+  mesh: { elementType: 'hex8', globalSize: 30, localRefinement: [{ region: 'thickness', size: 5, description: '厚度方向加密' }], qualityTarget: 0.7 },
+  boundaryConditions: [
+    { type: 'temperature', region: 'initial', values: { temperature: 1423 }, description: '初始温度 1150°C' },
+    { type: 'displacement', region: 'top', values: { uz: -40 }, description: '第1道次压下 40mm' },
+    { type: 'temperature', region: 'surface', values: { convection_coeff: 50, T_fluid: 298 }, description: '空气对流散热' }
+  ],
+  solver: { analysisType: 'static', solverType: 'iterative', maxIterations: 3000, tolerance: 1e-4 },
+  expectedResults: { maxStress: 470, maxDisplacement: 195 }
+}
+
+/** 埋弧焊接头分析 */
+export const submergedArcWeldingTemplate: SimulationTemplate = {
+  id: 'submerged-arc-welding',
+  name: '埋弧焊接头热-结构分析',
+  description: '厚板埋弧焊多道次焊接热-结构耦合分析，计算焊接残余应力和变形。适用于焊接结构安全评估。',
+  category: 'steel',
+  difficulty: 'advanced',
+  estimatedTime: 120,
+  tags: ['钢铁', '焊接', '埋弧焊', '残余应力', '多道次', 'Goldak', '工业'],
+  steps: [
+    { id: 'intro', title: '案例介绍', description: 'Q345R 厚板 30mm，V 型坡口 60°，3层5道焊接。焊接电流 550A，电压 32V。', icon: '📖', component: 'geometry', guidance: '焊接残余应力是焊接接头失效的主要原因之一。多道次焊接收缩变形需精确控制。', tips: ['焊接残余应力可达材料屈服强度', '层间温度控制在 150°C 以下', 'HAZ 是焊接接头的薄弱区域'] },
+    { id: 'geometry', title: '创建几何', description: '板件 600mm×300mm×30mm，V 型坡口。', icon: '📐', component: 'geometry' },
+    { id: 'material', title: '设置材料', description: 'Q345R 母材 + H10Mn2 焊丝填充材料。', icon: '🔧', component: 'material' },
+    { id: 'mesh', title: '划分网格', description: '焊缝区 1mm，HAZ 2mm，远端 5mm。', icon: '🔲', component: 'mesh' },
+    { id: 'boundary', title: '施加边界条件', description: 'Goldak 双椭球热源，5 道焊接路径，层间温度控制。', icon: '⚓', component: 'boundary' },
+    { id: 'solver', title: '运行求解', description: '热-结构耦合，生死单元技术模拟焊缝填充。', icon: '▶️', component: 'solver' },
+    { id: 'review', title: '检查与验证', description: '验证残余应力分布和焊接变形。', icon: '✅', component: 'review' },
+    { id: 'result', title: '查看结果', description: '残余应力场、温度场动画、焊接变形。', icon: '📊', component: 'result' }
+  ],
+  geometry: { type: 'solid', params: { length: 600, width: 300, height: 30 }, unit: 'mm' },
+  material: { name: 'Q345R', category: '压力容器钢', elasticModulus: 206000, poissonsRatio: 0.3, density: 7850, yieldStrength: 345 },
+  mesh: { elementType: 'tet10', globalSize: 5, localRefinement: [{ region: 'weld_seam', size: 1, description: '焊缝区加密' }, { region: 'HAZ', size: 2, description: '热影响区加密' }], qualityTarget: 0.8 },
+  boundaryConditions: [
+    { type: 'temperature', region: 'initial', values: { temperature: 298 }, description: '初始室温' },
+    { type: 'force', region: 'weld_path', values: { heat_flux: 1980000 }, description: '有效热输入 1980 kJ/m' },
+    { type: 'temperature', region: 'surface', values: { convection_coeff: 15, T_fluid: 298 }, description: '空气对流散热' }
+  ],
+  solver: { analysisType: 'thermal', solverType: 'iterative', maxIterations: 10000, tolerance: 1e-5 },
+  expectedResults: { maxStress: 345, maxDisplacement: 3.0 }
+}
+
+/** 淬火热处理 */
+export const quenchingTemplate: SimulationTemplate = {
+  id: 'quenching-heat-treatment',
+  name: '淬火热处理温度场与相变应力',
+  description: '圆柱形齿轮坯淬火热处理热-结构-相变耦合分析，计算淬火残余应力和马氏体相变分布。',
+  category: 'steel',
+  difficulty: 'advanced',
+  estimatedTime: 60,
+  tags: ['钢铁', '热处理', '淬火', '马氏体', '相变', '残余应力', '42CrMo', '工业'],
+  steps: [
+    { id: 'intro', title: '案例介绍', description: '42CrMo 齿轮坯 Φ200×80mm，奥氏体化 850°C 后油淬。表面压应力、心部拉应力。', icon: '📖', component: 'geometry', guidance: '淬火是钢件强化的关键工艺。残余应力分布影响零件的疲劳寿命和尺寸稳定性。', tips: ['马氏体转变产生约 4% 体积膨胀', '表面先冷→先相变→产生压应力', '淬火油的换热系数随温度变化'] },
+    { id: 'geometry', title: '创建几何', description: '圆柱体 Φ200mm×80mm，轴对称简化。', icon: '📐', component: 'geometry' },
+    { id: 'material', title: '设置材料', description: '42CrMo 合金钢，含奥氏体/马氏体/贝氏体三相材料参数。', icon: '🔧', component: 'material' },
+    { id: 'mesh', title: '划分网格', description: '径向 30 等分，轴向 16 等分，DC3D8 单元。', icon: '🔲', component: 'mesh' },
+    { id: 'boundary', title: '施加边界条件', description: '分段换热系数：膜沸腾→核沸腾→对流。', icon: '⚓', component: 'boundary' },
+    { id: 'solver', title: '运行求解', description: '热-结构-相变耦合分析，Koistinen-Marburger 相变模型。', icon: '▶️', component: 'solver' },
+    { id: 'review', title: '检查与验证', description: '验证冷却曲线和马氏体体积分数。', icon: '✅', component: 'review' },
+    { id: 'result', title: '查看结果', description: '温度场、马氏体分数分布、残余应力场。', icon: '📊', component: 'result' }
+  ],
+  geometry: { type: 'solid', params: { diameter: 200, height: 80 }, unit: 'mm' },
+  material: { name: '42CrMo', category: '合金结构钢', elasticModulus: 210000, poissonsRatio: 0.3, density: 7850, yieldStrength: 930, thermalExpansion: 12.3e-6 },
+  mesh: { elementType: 'hex8', globalSize: 5, qualityTarget: 0.8 },
+  boundaryConditions: [
+    { type: 'temperature', region: 'initial', values: { temperature: 1123 }, description: '奥氏体化温度 850°C' },
+    { type: 'temperature', region: 'outer_surface', values: { convection_coeff: 2000, T_fluid: 298 }, description: '淬火油冷却（平均换热系数）' }
+  ],
+  solver: { analysisType: 'thermal', solverType: 'iterative', maxIterations: 5000, tolerance: 1e-5 },
+  expectedResults: { maxStress: 1200, safetyFactor: undefined }
+}
+
+// ============================================================================
 // 全部模板列表
 // ============================================================================
 
@@ -963,7 +1091,11 @@ export const allTemplates: SimulationTemplate[] = [
   heatConductionBarTemplate,
   cantileverModalTemplate,
   columnBucklingTemplate,
-  boltedFlangeTemplate
+  boltedFlangeTemplate,
+  continuousCastingTemplate,
+  hotRollingTemplate,
+  submergedArcWeldingTemplate,
+  quenchingTemplate
 ]
 
 /** 按分类获取模板 */

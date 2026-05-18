@@ -1,0 +1,90 @@
+{
+  "id": "SC-01",
+  "name": "连铸坯凝固传热与热应力分析",
+  "nameEn": "Continuous Casting Slab Solidification and Thermal Stress Analysis",
+  "description": "板坯连铸凝固过程热-结构耦合模拟。板坯截面 1.2m×0.22m，浇铸温度 1823K(1550°C)，拉坯速度 1.2m/min。一冷区（结晶器）长度 0.8m，水冷换热系数 2000W/(m²·K)；二冷区（喷雾段）长度 8m，水冷换热系数 800W/(m²·K)；空冷区辐射换热。材料为 Q235 碳素钢，固相线 1766K(1493°C)，液相线 1803K(1530°C)。凝固壳厚度沿拉坯方向增长，结晶器出口处壳厚约 15mm，完全凝固距离约 12m。凝固收缩产生的热应力是铸坯裂纹的主要诱因。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["continuous_casting", "solidification", "thermal_stress", "slab", "steelmaking", "mold", "secondary_cooling"],
+  "geometry": {
+    "type": "plate",
+    "length": 12.0,
+    "width": 1.2,
+    "height": 0.22,
+    "radius": null,
+    "thickness": 0.22,
+    "dimension": "3d",
+    "symmetry": "quarter_model"
+  },
+  "mesh": {
+    "x_div": 120,
+    "y_div": 30,
+    "z_div": 12,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "Q235 碳素结构钢 (连铸态)",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "density_liquid": 7000,
+    "yield_stress": 235000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 30,
+    "thermal_conductivity_liquid": 28,
+    "specific_heat": 680,
+    "latent_heat": 272000,
+    "solidus_temperature": 1766,
+    "liquidus_temperature": 1803,
+    "poisson_ratio_high_temp": 0.495
+  },
+  "boundaryConditions": {
+    "fixed_face": "entry_face",
+    "load_type": "thermal",
+    "load_face": "variable",
+    "temperature_bc": {
+      "T_initial": 1823,
+      "T_boundary": null,
+      "T_ambient": 298,
+      "heat_flux": 0,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "zones": [
+        { "name": "结晶器", "x_start": 0, "x_end": 0.8, "h": 2000, "T_water": 313 },
+        { "name": "二冷一段", "x_start": 0.8, "x_end": 3.0, "h": 800, "T_water": 298 },
+        { "name": "二冷二段", "x_start": 3.0, "x_end": 5.5, "h": 500, "T_water": 298 },
+        { "name": "二冷三段", "x_start": 5.5, "x_end": 8.0, "h": 250, "T_water": 298 },
+        { "name": "空冷区", "x_start": 8.0, "x_end": 12.0, "h": 15, "T_ambient": 298 }
+      ]
+    }
+  },
+  "solver": {
+    "type": "transient_thermal",
+    "max_iterations": 5000,
+    "convergence_tolerance": 1e-5,
+    "time_step": 0.5,
+    "total_time": 600
+  },
+  "theoretical": {
+    "formula": "t_s(x) = ρL_v/2k · (V_slab · δ(x))²; δ(x) = k/(ρL_v·V_slab) · √(x/V_slab); T_surface = T_cast - Σ(h_i·A_i·Δt)/(ρ·c_p·V)",
+    "reference": "J.K. Brimacombe, F. Weinberg, Continuous Casting of Steel, Metallurgical Transactions B, 1977; 干勇等, 连续铸钢, 冶金工业出版社",
+    "max_temperature": 1823,
+    "shell_thickness_at_mold_exit": 0.015,
+    "complete_solidification_distance": 12.0
+  },
+  "acceptance": {
+    "temperature_error_limit": 5.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "结晶器出口表面温度", "value": 1173, "unit": "K", "tolerance": 10 },
+      { "name": "结晶器出口凝固壳厚", "value": 0.015, "unit": "m", "tolerance": 20 },
+      { "name": "完全凝固距离", "value": 12.0, "unit": "m", "tolerance": 15 },
+      { "name": "二冷区铸坯表面温度", "value": 1123, "unit": "K", "tolerance": 15 },
+      { "name": "最大热应力(von Mises)", "value": 180000000, "unit": "Pa", "tolerance": 25 },
+      { "name": "液芯长度", "value": 11.5, "unit": "m", "tolerance": 20 }
+    ]
+  }
+}

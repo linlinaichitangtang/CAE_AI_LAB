@@ -1,0 +1,109 @@
+{
+  "id": "SC-03",
+  "name": "埋弧焊接头热-结构耦合分析",
+  "nameEn": "Submerged Arc Welding Joint Thermo-Mechanical Analysis",
+  "description": "厚板埋弧焊(SAW)多道次焊接热-结构耦合模拟。母材为 Q345R 压力容器钢，板厚 30mm，V 型坡口(60°)，采用 3 层 5 道焊接工艺。焊接电流 550A，电弧电压 32V，焊接速度 8mm/s，热效率 0.90。采用 Goldak 双椭球热源模型，热输入 q = η·U·I/v = 0.90×32×550/0.008 = 1980kJ/m。焊缝区峰值温度超过 1700K，热影响区(HAZ)宽度约 8mm，粗晶热影响区(CGHAZ)宽度约 3mm。多道次焊接的层间温度控制在 423K(150°C)以下。焊接残余应力是焊接接头疲劳和应力腐蚀的主要诱因。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["saw_welding", "multi_pass", "residual_stress", "HAZ", "Goldak_model", "pressure_vessel", "V_groove"],
+  "geometry": {
+    "type": "plate",
+    "length": 0.6,
+    "width": 0.3,
+    "height": 0.030,
+    "radius": null,
+    "thickness": 0.030,
+    "dimension": "3d",
+    "groove_type": "V",
+    "groove_angle": 60,
+    "root_gap": 0.003
+  },
+  "mesh": {
+    "x_div": 120,
+    "y_div": 60,
+    "z_div": 20,
+    "element_type": "C3D8T",
+    "local_refinement": {
+      "weld_zone": { "size": 0.001, "width": 0.02 },
+      "HAZ": { "size": 0.002, "width": 0.015 }
+    }
+  },
+  "material": {
+    "name": "Q345R 压力容器钢",
+    "elastic_modulus": 206000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 345000000,
+    "tensile_stress": 510000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 42,
+    "specific_heat": 540,
+    "filler_material": {
+      "name": "H10Mn2 + SJ101",
+      "yield_stress": 420000000,
+      "tensile_stress": 550000000,
+      "thermal_conductivity": 38,
+      "specific_heat": 560
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "symmetry_and_end",
+    "load_type": "heat_flux",
+    "load_face": "weld_path",
+    "temperature_bc": {
+      "T_initial": 298,
+      "T_ambient": 298,
+      "convection_coeff": 15,
+      "interpass_temperature": 423,
+      "heat_source": "goldak",
+      "goldak_params": {
+        "power": 17600,
+        "efficiency": 0.90,
+        "a_f": 0.006,
+        "a_r": 0.012,
+        "b": 0.006,
+        "c": 0.015,
+        "f_f": 0.6,
+        "f_r": 1.4
+      },
+      "pass_schedule": [
+        { "pass": 1, "layer": 1, "type": "root", "current": 480, "voltage": 28, "speed": 0.008 },
+        { "pass": 2, "layer": 1, "type": "fill", "current": 550, "voltage": 32, "speed": 0.008 },
+        { "pass": 3, "layer": 2, "type": "fill", "current": 550, "voltage": 32, "speed": 0.008 },
+        { "pass": 4, "layer": 2, "type": "fill", "current": 550, "voltage": 32, "speed": 0.008 },
+        { "pass": 5, "layer": 3, "type": "cap", "current": 520, "voltage": 30, "speed": 0.009 }
+      ]
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 10000,
+    "convergence_tolerance": 1e-5,
+    "time_step": 0.05,
+    "total_time": 1800
+  },
+  "theoretical": {
+    "formula": "Q = η·U·I/v; Goldak: q(x,y,z) = (6√3·f·Q)/(a·b·c·π√π) · exp(-3x²/a² - 3y²/b² - 3z²/c²); T_peak = Q/(2πk·ρ·c_p·v·t)^(1/2) (Rosenthal)",
+    "reference": "Goldak, Chakravarti, Bibby, Metallurgical Transactions B, 1984; GB/T 150.4-2011 压力容器 制造、检验和验收; IIW-XII-1943-13 焊接工艺规程",
+    "peak_temperature": 2000,
+    "HAZ_width": 0.008,
+    "CGHAZ_width": 0.003
+  },
+  "acceptance": {
+    "temperature_error_limit": 10.0,
+    "stress_error_limit": 15.0,
+    "displacement_error_limit": 20.0
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "峰值温度(焊缝中心)", "value": 2000, "unit": "K", "tolerance": 15 },
+      { "name": "HAZ宽度", "value": 0.008, "unit": "m", "tolerance": 25 },
+      { "name": "纵向残余应力(焊缝中心)", "value": 345000000, "unit": "Pa", "tolerance": 20 },
+      { "name": "横向残余应力", "value": 200000000, "unit": "Pa", "tolerance": 25 },
+      { "name": "焊接变形(角变形)", "value": 0.003, "unit": "rad", "tolerance": 30 },
+      { "name": "层间温度", "value": 423, "unit": "K", "tolerance": 10 },
+      { "name": "有效热输入", "value": 1980, "unit": "kJ/m", "tolerance": 5 }
+    ]
+  }
+}

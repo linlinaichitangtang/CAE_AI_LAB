@@ -7,7 +7,7 @@ import { ref, computed } from 'vue'
 
 // ============ 类型定义 ============
 
-export type StandardType = 'asme' | 'nrc' | 'iec' | 'iso' | 'custom'
+export type StandardType = 'asme' | 'nrc' | 'iec' | 'iso' | 'gb' | 'custom'
 export type StandardVersion = 'yo14_5' | 'yo5_1' | '10cfr50' | 'ieee603' | 'iec61511' | 'iso9001' | 'asme_v'
 export type CheckSeverity = 'critical' | 'major' | 'minor' | 'info'
 export type CheckStatus = 'passed' | 'failed' | 'warning' | 'skipped' | 'not_applicable'
@@ -223,10 +223,151 @@ export const STANDARDS: Standard[] = [
         category: 'ndt'
       }
     ]
+  },
+  {
+    id: 'gb_50017_2017',
+    name: 'GB 50017-2017',
+    code: 'GB 50017',
+    version: '2017',
+    description: '钢结构设计标准 (Code for Design of Steel Structures)',
+    category: 'gb',
+    effectiveDate: '2018-07-01',
+    requirements: [
+      {
+        id: 'gb50017_6_1',
+        section: 'GB 50017-2017 第6.1条',
+        title: '轴心受力构件强度验算',
+        description: '轴心受拉/受压构件净截面应力不超过钢材强度设计值：N/A_n ≤ f',
+        checkRules: [
+          { id: 'gb_s1', type: 'stress', params: { maxStressRatio: 1.0, designStrength: true }, errorMessage: '轴心受力构件应力超过强度设计值 f', recommendation: '增大截面面积或选用更高强度钢材' }
+        ],
+        severity: 'critical',
+        category: 'strength'
+      },
+      {
+        id: 'gb50017_6_2',
+        section: 'GB 50017-2017 第6.2条',
+        title: '受弯构件强度验算',
+        description: '受弯构件正应力不超过强度设计值：M/(γ·W_nx) ≤ f，γ为截面塑性发展系数',
+        checkRules: [
+          { id: 'gb_s2', type: 'stress', params: { maxStressRatio: 1.0, designStrength: true, plasticFactor: 1.05 }, errorMessage: '受弯构件弯曲应力超过强度设计值', recommendation: '增大截面模量或选用更高强度钢材' }
+        ],
+        severity: 'critical',
+        category: 'strength'
+      },
+      {
+        id: 'gb50017_6_3',
+        section: 'GB 50017-2017 第6.3条',
+        title: '受弯构件挠度验算',
+        description: '受弯构件挠度不超过限值：δ ≤ L/250（一般楼盖梁）或 L/400（有悬挂起重机）',
+        checkRules: [
+          { id: 'gb_s3', type: 'dimension', params: { deflectionLimit: 250 }, errorMessage: '挠度超出 L/250 限值', recommendation: '增大截面惯性矩或减小跨度' }
+        ],
+        severity: 'major',
+        category: 'serviceability'
+      },
+      {
+        id: 'gb50017_7_1',
+        section: 'GB 50017-2017 第7.1条',
+        title: '轴心受压构件整体稳定性',
+        description: '轴心受压构件稳定性验算：N/(φ·A) ≤ f，φ为轴心受压构件稳定系数',
+        checkRules: [
+          { id: 'gb_s4', type: 'factor_of_safety', params: { minFOS: 1.0, stabilityCheck: true }, errorMessage: '压杆稳定应力超过强度设计值', recommendation: '减小长细比、增大截面回转半径或选用更高强度钢材' }
+        ],
+        severity: 'critical',
+        category: 'stability'
+      },
+      {
+        id: 'gb50017_7_2',
+        section: 'GB 50017-2017 第7.2条',
+        title: '受弯构件整体稳定性',
+        description: '受弯构件整体稳定验算：M_x/(φ_b·W_x) ≤ f',
+        checkRules: [
+          { id: 'gb_s5', type: 'factor_of_safety', params: { minFOS: 1.0, lateralTorsionalBuckling: true }, errorMessage: '受弯构件整体稳定性不满足要求', recommendation: '增设侧向支撑或增大受压翼缘宽度' }
+        ],
+        severity: 'critical',
+        category: 'stability'
+      },
+      {
+        id: 'gb50017_8_1',
+        section: 'GB 50017-2017 第8.1条',
+        title: '焊缝连接强度验算',
+        description: '对接焊缝/角焊缝强度验算：σ ≤ f_w^t / f_w^f',
+        checkRules: [
+          { id: 'gb_s6', type: 'stress', params: { weldCheck: true }, errorMessage: '焊缝强度不满足要求', recommendation: '增大焊缝尺寸或改用更高等级焊材' }
+        ],
+        severity: 'critical',
+        category: 'connection'
+      },
+      {
+        id: 'gb50017_16_1',
+        section: 'GB 50017-2017 第16.1条',
+        title: '疲劳验算（常幅疲劳）',
+        description: '常幅疲劳验算：Δσ ≤ [Δσ] = (C/n_f)^(1/β)',
+        checkRules: [
+          { id: 'gb_s7', type: 'factor_of_safety', params: { fatigueCheck: true }, errorMessage: '疲劳应力幅超出容许值', recommendation: '降低应力幅或提高构造细节等级' }
+        ],
+        severity: 'critical',
+        category: 'fatigue'
+      }
+    ]
+  },
+  {
+    id: 'gb_t_150_2011',
+    name: 'GB/T 150-2011',
+    code: 'GB/T 150',
+    version: '2011',
+    description: '压力容器 (Pressure Vessels)',
+    category: 'gb',
+    effectiveDate: '2012-03-01',
+    requirements: [
+      {
+        id: 'gb150_3_1',
+        section: 'GB/T 150.3 第3.1条',
+        title: '内压圆筒壁厚计算',
+        description: '计算壁厚 δ = P·D_i/(2·[σ]·φ - P)，φ为焊接接头系数',
+        checkRules: [
+          { id: 'gb_p1', type: 'factor_of_safety', params: { pressureVesselWall: true }, errorMessage: '圆筒壁厚不满足强度要求', recommendation: '增加壁厚或降低设计压力' }
+        ],
+        severity: 'critical',
+        category: 'pressure'
+      },
+      {
+        id: 'gb150_3_2',
+        section: 'GB/T 150.3 第3.2条',
+        title: '椭圆形封头壁厚计算',
+        description: '标准椭圆封头 δ_h = P·D_i/(2·[σ]·φ - 0.5P)',
+        checkRules: [
+          { id: 'gb_p2', type: 'factor_of_safety', params: { headWall: true }, errorMessage: '封头壁厚不满足强度要求', recommendation: '增加封头壁厚' }
+        ],
+        severity: 'critical',
+        category: 'pressure'
+      },
+      {
+        id: 'gb150_3_3',
+        section: 'GB/T 150.3 第6条',
+        title: '开孔补强验算',
+        description: '等面积补强法：A_r ≥ A_needed，开孔直径不超过限值',
+        checkRules: [
+          { id: 'gb_p3', type: 'dimension', params: { reinforcementCheck: true }, errorMessage: '开孔补强面积不足', recommendation: '增加补强板面积或减小开孔直径' }
+        ],
+        severity: 'critical',
+        category: 'reinforcement'
+      },
+      {
+        id: 'gb150_4_1',
+        section: 'GB/T 150.4 第10.4条',
+        title: '水压试验验算',
+        description: '试验压力 P_T = 1.25·P·[σ]_T/[σ]，试验应力不超过 0.9σ_s',
+        checkRules: [
+          { id: 'gb_p4', type: 'stress', params: { hydroTest: true }, errorMessage: '水压试验应力超过屈服强度的 90%', recommendation: '降低试验压力或增加壁厚' }
+        ],
+        severity: 'major',
+        category: 'testing'
+      }
+    ]
   }
 ]
-
-// ============ 公差表数据 ============
 
 export const TOLERANCE_TABLES: ToleranceTable[] = [
   {
@@ -247,6 +388,47 @@ export const TOLERANCE_TABLES: ToleranceTable[] = [
     values: {
       'k': { value: 0.020, unit: 'mm' },
       'm': { value: 0.05, unit: 'mm' }
+    }
+  },
+  {
+    standard: 'GB 50017',
+    dimensionRange: { min: 0, max: 60000 },
+    toleranceGrade: '设计强度值 (MPa)',
+    values: {
+      'Q235_f': { value: 215, unit: 'MPa' },
+      'Q345_f': { value: 305, unit: 'MPa' },
+      'Q390_f': { value: 335, unit: 'MPa' },
+      'Q420_f': { value: 360, unit: 'MPa' },
+      'Q460_f': { value: 390, unit: 'MPa' }
+    }
+  },
+  {
+    standard: 'GB 50017 (稳定系数φ)',
+    dimensionRange: { min: 0, max: 250 },
+    toleranceGrade: 'b类截面 (Q345)',
+    values: {
+      'λ40': { value: 0.897, unit: '-' },
+      'λ60': { value: 0.807, unit: '-' },
+      'λ80': { value: 0.688, unit: '-' },
+      'λ100': { value: 0.563, unit: '-' },
+      'λ120': { value: 0.449, unit: '-' },
+      'λ150': { value: 0.306, unit: '-' },
+      'λ200': { value: 0.164, unit: '-' }
+    }
+  },
+  {
+    standard: 'GB/T 150',
+    dimensionRange: { min: 0, max: 1000 },
+    toleranceGrade: 'Q345R 许用应力 (MPa)',
+    values: {
+      'T_20': { value: 185, unit: 'MPa' },
+      'T_100': { value: 185, unit: 'MPa' },
+      'T_150': { value: 185, unit: 'MPa' },
+      'T_200': { value: 181, unit: 'MPa' },
+      'T_250': { value: 172, unit: 'MPa' },
+      'T_300': { value: 163, unit: 'MPa' },
+      'T_350': { value: 153, unit: 'MPa' },
+      'T_400': { value: 143, unit: 'MPa' }
     }
   }
 ]

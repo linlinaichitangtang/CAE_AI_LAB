@@ -1,0 +1,56 @@
+{
+  "id": "CP-08",
+  "name": "GB 50017 压杆稳定性验算",
+  "nameEn": "GB 50017 Column Buckling Stability Check",
+  "description": "按GB 50017-2017《钢结构设计标准》进行轴心受压构件稳定性验算。焊接H型钢柱HW300×300，截面面积A=118.8cm²，强轴回转半径i_x=13.1cm，弱轴回转半径i_y=7.49cm。柱高6m，两端铰接(μ=1.0)。弱轴长细比λ_y=μL/i_y=80.1，按b类截面查表得稳定系数φ_y=0.688。材料Q355B，强度设计值f=305MPa。验算条件：N/(φ·A) ≤ f。轴心压力N=1500kN。同时验算整体稳定和局部稳定(翼缘宽厚比、腹板高厚比)。",
+  "category": "compliance",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["GB-50017", "压杆稳定", "长细比", "稳定系数", "b类截面", "局部稳定"],
+  "geometry": {
+    "type": "h_section_column",
+    "section": "HW300×300",
+    "height": 6.0,
+    "effective_length_factor": 1.0,
+    "section_area": 0.01188,
+    "moment_of_inertia_strong": 2.04e-4,
+    "moment_of_inertia_weak": 6.68e-5,
+    "radius_of_gyration_strong": 0.131,
+    "radius_of_gyration_weak": 0.0749,
+    "flange_width": 0.30,
+    "flange_thickness": 0.015,
+    "web_height": 0.270,
+    "web_thickness": 0.010,
+    "section_class": "b"
+  },
+  "material": {
+    "name": "Q355B",
+    "elastic_modulus": 206000000000.0,
+    "yield_strength": 355000000.0,
+    "design_strength": 305000000.0,
+    "density": 7850.0,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "axial_compression": 1500000.0,
+    "eccentricity": 0.0,
+    "slenderness_ratio_weak": 80.1,
+    "stability_coefficient_phi": 0.688,
+    "flange_width_thickness_ratio": 10.0,
+    "flange_limit": 13.7,
+    "web_height_thickness_ratio": 27.0,
+    "web_limit": 38.5
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "弱轴长细比λ_y", "value": 80.1, "unit": "-", "tolerance": 2 },
+      { "name": "稳定系数φ_y(b类)", "value": 0.688, "unit": "-", "tolerance": 5 },
+      { "name": "稳定应力σ=N/(φ·A)", "value": 181.7, "unit": "MPa", "tolerance": 5 },
+      { "name": "稳定应力比σ/f", "value": 0.60, "unit": "-", "tolerance": 5 },
+      { "name": "翼缘宽厚比", "value": 10.0, "unit": "-", "tolerance": 0 },
+      { "name": "翼缘宽厚比限值", "value": 13.7, "unit": "-", "tolerance": 5 },
+      { "name": "腹板高厚比", "value": 27.0, "unit": "-", "tolerance": 0 },
+      { "name": "腹板高厚比限值", "value": 38.5, "unit": "-", "tolerance": 5 }
+    ]
+  }
+}

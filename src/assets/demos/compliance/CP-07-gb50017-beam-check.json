@@ -1,0 +1,46 @@
+{
+  "id": "CP-07",
+  "name": "GB 50017 钢梁强度与挠度验算",
+  "nameEn": "GB 50017 Steel Beam Strength and Deflection Check",
+  "description": "按GB 50017-2017《钢结构设计标准》进行钢梁强度和挠度验算。简支梁跨度12m，采用H型钢HN500×200，材料Q345B。荷载：恒载g=5kN/m(含自重)，活载q=10kN/m。强度验算：M_max = (1.3g+1.5q)L²/8，σ = M/(γ·W_x) ≤ f。挠度验算：δ = 5qL⁴/(384EI) ≤ L/250。其中γ为截面塑性发展系数(取1.05)，f为钢材强度设计值(305MPa)。验算承载能力极限状态和正常使用极限状态。",
+  "category": "compliance",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["GB-50017", "钢梁", "强度验算", "挠度限值", "LRFD", "钢结构"],
+  "geometry": {
+    "type": "simply_supported_beam",
+    "span": 12.0,
+    "section_type": "H-beam",
+    "section_name": "HN500×200",
+    "section_area": 0.0114,
+    "moment_of_inertia_strong": 4.72e-4,
+    "section_modulus_x": 1.89e-3,
+    "radius_of_gyration_strong": 0.203
+  },
+  "material": {
+    "name": "Q345B",
+    "elastic_modulus": 206000000000,
+    "yield_strength": 345000000,
+    "design_strength": 305000000,
+    "density": 7850,
+    "poisson_ratio": 0.3
+  },
+  "loading": {
+    "dead_load": 5000,
+    "live_load": 10000,
+    "load_factor_dead": 1.3,
+    "load_factor_live": 1.5,
+    "plastic_section_factor": 1.05,
+    "deflection_limit_ratio": 250
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "最大弯矩M_max", "value": 387000, "unit": "N·m", "tolerance": 2 },
+      { "name": "弯曲正应力σ=M/(γ·W_x)", "value": 195, "unit": "MPa", "tolerance": 5 },
+      { "name": "强度应力比σ/f", "value": 0.64, "unit": "-", "tolerance": 5 },
+      { "name": "标准组合挠度δ", "value": 36.8, "unit": "mm", "tolerance": 10 },
+      { "name": "挠度限值L/250", "value": 48.0, "unit": "mm", "tolerance": 0 },
+      { "name": "挠度比δ/(L/250)", "value": 0.77, "unit": "-", "tolerance": 10 }
+    ]
+  }
+}

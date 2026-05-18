@@ -1,0 +1,96 @@
+{
+  "id": "SC-02",
+  "name": "热轧板坯温度场与塑性变形",
+  "nameEn": "Hot Rolling Slab Temperature Field and Plastic Deformation",
+  "description": "中厚板热轧过程热-结构耦合模拟。板坯初始尺寸 0.22m×1.2m×2.0m，初始温度 1423K(1150°C)，经过 5 道次轧制至厚度 25mm。每道次压下量依次为 40mm、30mm、25mm、20mm、10mm，轧辊直径 800mm，轧辊转速 2rad/s。轧制过程中板坯与轧辊的接触传热（h≈15000W/(m²·K)）和与空气的对流+辐射散热（h≈50W/(m²·K)）共同影响温度分布。材料为 Q345B 低合金钢，采用 Johnson-Cook 本构模型描述高温流动应力。终轧温度目标 1123K(850°C)。",
+  "category": "structural",
+  "usage": "demo",
+  "difficulty": 5,
+  "tags": ["hot_rolling", "plastic_deformation", "temperature_field", "plate", "thermomechanical", "Johnson-Cook", "rolling_mill"],
+  "geometry": {
+    "type": "plate",
+    "length": 2.0,
+    "width": 1.2,
+    "height": 0.22,
+    "radius": null,
+    "thickness": 0.22,
+    "dimension": "3d",
+    "final_thickness": 0.025
+  },
+  "mesh": {
+    "x_div": 80,
+    "y_div": 20,
+    "z_div": 20,
+    "element_type": "C3D8RT"
+  },
+  "material": {
+    "name": "Q345B 低合金高强度钢",
+    "elastic_modulus": 206000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 345000000,
+    "tensile_stress": 470000000,
+    "thermal_expansion": 12e-6,
+    "thermal_conductivity": 40,
+    "specific_heat": 560,
+    "Johnson_Cook": {
+      "A": 350000000,
+      "B": 680000000,
+      "n": 0.33,
+      "C": 0.028,
+      "m": 1.03,
+      "T_melt": 1788,
+      "T_ref": 298,
+      "eps_dot_ref": 1.0
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "symmetry_planes",
+    "load_type": "displacement",
+    "load_face": "top_and_bottom",
+    "temperature_bc": {
+      "T_initial": 1423,
+      "T_boundary": null,
+      "T_ambient": 298,
+      "convection_coeff": 50,
+      "roll_contact_h": 15000,
+      "roll_temperature": 373,
+      "heat_source": 0,
+      "pass_schedule": [
+        { "pass": 1, "h_before": 0.220, "h_after": 0.180, "speed": 1.5 },
+        { "pass": 2, "h_before": 0.180, "h_after": 0.150, "speed": 2.0 },
+        { "pass": 3, "h_before": 0.150, "h_after": 0.125, "speed": 2.8 },
+        { "pass": 4, "h_before": 0.125, "h_after": 0.105, "speed": 3.5 },
+        { "pass": 5, "h_before": 0.105, "h_after": 0.025, "speed": 4.2 }
+      ]
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 3000,
+    "convergence_tolerance": 1e-4,
+    "time_step": 0.01,
+    "total_time": 30
+  },
+  "theoretical": {
+    "formula": "σ_flow = (A + B·ε^n)(1 + C·ln(ε̇/ε̇_ref))(1 - T*^m); T* = (T-T_ref)/(T_melt-T_ref); p = 1.15·σ_flow·Qp·(2/√3)·ln(h_in/h_out)",
+    "reference": "G.R. Johnson, W.H. Cook, A constitutive model and data for metals subjected to large strains, high strain rates and high temperatures, 7th Int. Symp. Ballistics, 1983; 刘相华等, 轧制理论与工艺, 冶金工业出版社",
+    "max_temperature": 1423,
+    "finish_rolling_temperature": 1123
+  },
+  "acceptance": {
+    "temperature_error_limit": 10.0,
+    "stress_error_limit": 15.0,
+    "displacement_error_limit": 5.0
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "终轧温度", "value": 1123, "unit": "K", "tolerance": 10 },
+      { "name": "第1道次轧制力", "value": 25000000, "unit": "N", "tolerance": 20 },
+      { "name": "最终厚度", "value": 0.025, "unit": "m", "tolerance": 2 },
+      { "name": "最大等效塑性应变", "value": 2.1, "unit": "-", "tolerance": 15 },
+      { "name": "最大轧制温度", "value": 1400, "unit": "K", "tolerance": 8 },
+      { "name": "表面温降(各道次累积)", "value": 300, "unit": "K", "tolerance": 15 }
+    ]
+  }
+}

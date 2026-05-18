@@ -1,0 +1,118 @@
+{
+  "id": "SC-04",
+  "name": "淬火热处理温度场与相变应力",
+  "nameEn": "Quenching Heat Treatment Temperature Field and Phase Transformation Stress",
+  "description": "圆柱形齿轮坯(42CrMo 合金结构钢)淬火热处理热-结构-相变耦合模拟。坯料直径 200mm、高度 80mm，奥氏体化温度 1123K(850°C)，保温 40min 后浸入 298K(25°C)淬火油中冷却。淬火油对流换热系数 h 随温度变化：高温段(>773K) h≈800W/(m²·K)(膜沸腾)，中间段(573-773K) h≈3000W/(m²·K)(核沸腾)，低温段(<573K) h≈1200W/(m²·K)(对流)。材料经历奥氏体→马氏体相变，马氏体转变起始温度 Ms=593K(320°C)，转变终了温度 Mf=373K(100°C)。相变产生体积膨胀约 4%，导致淬火残余应力分布：表面为压应力、心部为拉应力。这是典型的热处理淬火工艺验证场景。",
+  "category": "thermal",
+  "usage": "demo",
+  "difficulty": 4,
+  "tags": ["quenching", "heat_treatment", "phase_transformation", "martensite", "residual_stress", "42CrMo", "oil_quench"],
+  "geometry": {
+    "type": "solid",
+    "shape": "cylinder",
+    "diameter": 0.2,
+    "height": 0.08,
+    "dimension": "3d",
+    "symmetry": "axisymmetric"
+  },
+  "mesh": {
+    "radial_div": 30,
+    "circumferential_div": 32,
+    "axial_div": 16,
+    "element_type": "DC3D8"
+  },
+  "material": {
+    "name": "42CrMo 合金结构钢",
+    "elastic_modulus": 210000000000,
+    "poisson_ratio": 0.3,
+    "density": 7850,
+    "yield_stress": 930000000,
+    "tensile_stress": 1080000000,
+    "thermal_expansion": 12.3e-6,
+    "thermal_conductivity": 42,
+    "specific_heat": 510,
+    "Austenite": {
+      "elastic_modulus": 200000000000,
+      "thermal_conductivity": 25,
+      "specific_heat": 620,
+      "density": 7850
+    },
+    "Martensite": {
+      "elastic_modulus": 215000000000,
+      "thermal_conductivity": 30,
+      "specific_heat": 470,
+      "density": 7850,
+      "volume_change": 0.04,
+      "yield_stress": 1200000000
+    },
+    "Bainite": {
+      "elastic_modulus": 210000000000,
+      "thermal_conductivity": 33,
+      "specific_heat": 500,
+      "density": 7850,
+      "volume_change": 0.02,
+      "yield_stress": 1000000000
+    },
+    "phase_transformation": {
+      "Ms_temperature": 593,
+      "Mf_temperature": 373,
+      "Ac1": 1000,
+      "Ac3": 1098,
+      "CCT_diagram_ref": "42CrMo CCT Atlas"
+    }
+  },
+  "boundaryConditions": {
+    "fixed_face": "center_axis",
+    "load_type": "convection",
+    "load_face": "outer_surface",
+    "temperature_bc": {
+      "T_initial": 1123,
+      "T_boundary": null,
+      "T_ambient": 298,
+      "convection_coeff": 0,
+      "heat_source": 0,
+      "quench_medium": "oil",
+      "h_curve": {
+        "type": "piecewise",
+        "points": [
+          { "T": 1123, "h": 800 },
+          { "T": 773, "h": 800 },
+          { "T": 673, "h": 3000 },
+          { "T": 573, "h": 3000 },
+          { "T": 473, "h": 1200 },
+          { "T": 298, "h": 1200 }
+        ]
+      }
+    }
+  },
+  "solver": {
+    "type": "coupled_thermal_structural",
+    "max_iterations": 5000,
+    "convergence_tolerance": 1e-5,
+    "time_step": 0.5,
+    "total_time": 600
+  },
+  "theoretical": {
+    "formula": "T(r,t) = (T_i-T_∞)·Σ C_n·J_0(λ_n·r/R)·exp(-λ_n²·α·t/R²); ξ_M = 1-exp(-0.011·(Ms-T)) (Koistinen-Marburger); V_M = V_A·(1+0.04·ξ_M)",
+    "reference": "D.P. Koistinen, R.E. Marburger, Acta Metallurgica, 1959; 中国机械工程学会热处理学会, 钢的热处理——原理和工艺, 机械工业出版社; GB/T 16923-2008 钢件的正火与退火; GB/T 16924-2008 钢件的淬火与回火",
+    "max_temperature": 1123,
+    "martensite_fraction_surface": 0.95,
+    "martensite_fraction_core": 0.70
+  },
+  "acceptance": {
+    "temperature_error_limit": 5.0,
+    "stress_error_limit": 15.0
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "30s时表面温度", "value": 423, "unit": "K", "tolerance": 10 },
+      { "name": "60s时心部温度", "value": 673, "unit": "K", "tolerance": 10 },
+      { "name": "300s时心部温度", "value": 323, "unit": "K", "tolerance": 8 },
+      { "name": "表面马氏体体积分数", "value": 0.95, "unit": "-", "tolerance": 5 },
+      { "name": "心部马氏体体积分数", "value": 0.70, "unit": "-", "tolerance": 10 },
+      { "name": "表面残余应力(切向)", "value": -400000000, "unit": "Pa", "tolerance": 25 },
+      { "name": "心部残余应力(切向)", "value": 300000000, "unit": "Pa", "tolerance": 25 },
+      { "name": "表面硬度(HRC)", "value": 52, "unit": "HRC", "tolerance": 10 }
+    ]
+  }
+}

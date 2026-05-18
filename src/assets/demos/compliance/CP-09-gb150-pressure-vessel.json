@@ -1,0 +1,51 @@
+{
+  "id": "CP-09",
+  "name": "GB/T 150 内压容器壁厚验算",
+  "nameEn": "GB/T 150 Internal Pressure Vessel Wall Thickness Check",
+  "description": "按GB/T 150.3-2011《压力容器 第3部分：设计》进行内压圆筒和椭圆形封头壁厚计算。圆筒内径Di=1000mm，设计压力P=2.5MPa，设计温度150°C，材料Q345R。圆筒壁厚计算：δ = P·Di/(2·[σ]·φ-P)，其中φ=0.85(双面焊对接接头100%RT)，[σ]=185MPa(150°C许用应力)。计算壁厚δ_c=8.05mm，加上腐蚀裕量C2=2mm，取名义壁厚δ_n=12mm。椭圆形封头(标准型2:1)：δ_h = P·Di/(2·[σ]·φ-0.5P)。水压试验压力P_T=1.25P·[σ]_T/[σ]。",
+  "category": "compliance",
+  "usage": "demo",
+  "difficulty": 3,
+  "tags": ["GB-150", "pressure_vessel", "wall_thickness", "cylinder", "elliptical_head", "hydrostatic_test"],
+  "geometry": {
+    "type": "pressure_vessel",
+    "shell_type": "cylindrical",
+    "inner_diameter": 1.0,
+    "head_type": "elliptical_2_1",
+    "cylinder_length": 2.0
+  },
+  "material": {
+    "name": "Q345R",
+    "elastic_modulus": 206000000000,
+    "yield_strength": 345000000,
+    "yield_strength_at_design_temp": 325000000,
+    "design_stress": 185000000,
+    "density": 7850,
+    "poisson_ratio": 0.3
+  },
+  "design_parameters": {
+    "design_pressure": 2500000,
+    "design_temperature": 423,
+    "joint_efficiency": 0.85,
+    "corrosion_allowance": 0.002,
+    "hydrostatic_test_factor": 1.25
+  },
+  "loading": {
+    "internal_pressure": 2500000,
+    "external_pressure": 0,
+    "wind_load": 0,
+    "seismic_load": 0
+  },
+  "expected_results": {
+    "quantities": [
+      { "name": "圆筒计算壁厚δ_c=P·Di/(2·[σ]·φ-P)", "value": 0.00805, "unit": "m", "tolerance": 5 },
+      { "name": "圆筒设计壁厚δ_d=δ_c+C2", "value": 0.01005, "unit": "m", "tolerance": 5 },
+      { "name": "圆筒名义壁厚δ_n", "value": 0.012, "unit": "m", "tolerance": 0 },
+      { "name": "封头计算壁厚δ_h", "value": 0.00674, "unit": "m", "tolerance": 5 },
+      { "name": "封头名义壁厚", "value": 0.010, "unit": "m", "tolerance": 0 },
+      { "name": "水压试验压力P_T", "value": 3.38, "unit": "MPa", "tolerance": 5 },
+      { "name": "试验压力下筒体薄膜应力σ_T", "value": 217, "unit": "MPa", "tolerance": 5 },
+      { "name": "试验应力比σ_T/(0.9σ_s)", "value": 0.74, "unit": "-", "tolerance": 5 }
+    ]
+  }
+}
