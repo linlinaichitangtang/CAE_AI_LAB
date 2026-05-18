@@ -4,8 +4,9 @@ use std::sync::Mutex as StdMutex;
 use tauri::Manager;
 
 mod commands;
-pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate, material_data_platform, tc4_failure, active_learning, knowledge_memory, vector_store};
+pub use commands::{cae_api, file, input_gen, output_parser, postprocess, project, settings, ai, materials, parametric, transient_dynamics, contact, cfd, topology_optimization, optimization_commands, electronics, biomechanics, explicit_dynamics, code_exec, step_import, auth, collaboration, fsi, molecular_dynamics, atom_builder, md_postprocess, trajectory_viewer, phase_field, phase_field_postprocess, phase_field_bridge, dft_input, dft_task, dft_postprocess, dft_bridge, ontology, coordinate_mapping, coarse_graining, error_tracking, benchmark, regression_ci, audit_log, cross_scale_viz, multiscale_integration, workflow_template, high_throughput, ai_recommend, nightly_ci, multiscale_workspace, workflow_editor, data_transfer, workflow_scheduler, param_mapping, workflow_presets, result_comparison, report_generator, adaptive_precision, solver_manager, ml_predict, simulation_archive, ml_potential, multiscale_surrogate, material_data_platform, tc4_failure, active_learning, knowledge_memory, vector_store, education};
 pub mod python_bridge;
+pub mod conda_env;
 pub mod solver;
 pub mod plugin;
 mod db;
@@ -752,6 +753,24 @@ pub fn run() {
             python_bridge::python_run_module,
             python_bridge::python_check_package,
             python_bridge::python_install_package,
+            // V4.3: Education commands
+            commands::education::create_course,
+            commands::education::list_courses,
+            commands::education::get_course,
+            commands::education::add_experiment_to_course,
+            commands::education::list_experiments,
+            commands::education::create_assignment,
+            commands::education::list_assignments,
+            commands::education::submit_assignment,
+            commands::education::list_submissions,
+            commands::education::auto_grade_submission,
+            commands::education::get_learning_progress,
+            commands::education::get_class_progress_stats,
+            commands::education::check_submission_similarity,
+            // V4.4-001: Conda environment management
+            conda_env::conda_get_status,
+            conda_env::conda_bootstrap,
+            conda_env::conda_install_package,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

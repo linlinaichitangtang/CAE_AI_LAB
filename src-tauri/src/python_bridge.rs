@@ -61,14 +61,25 @@ pub struct ModuleRunRequest {
 // ============================================================================
 
 /// 检测系统中可用的 Python 解释器
+/// 优先使用 CAELab conda 环境 (V4.4-001)，回退到系统 Python
 pub fn detect_python() -> Result<PythonRuntimeInfo, String> {
+    // V4.4-001: 优先检测 CAELab conda 环境
+    if let Some(app_data) = dirs_next::data_dir().map(|d| d.join("caelab")) {
+        if let Some(python) = crate::conda_env::get_conda_python(&app_data) {
+            if let Ok(info) = check_python_executable(python.to_str().unwrap_or("python3")) {
+                return Ok(info);
+            }
+        }
+    }
+
+    // 回退到系统 Python
     for cmd_name in ["python3", "python", "py"] {
         match check_python_executable(cmd_name) {
             Ok(info) => return Ok(info),
             Err(_) => continue,
         }
     }
-    Err("No Python interpreter found. Please install Python 3.8+".to_string())
+    Err("No Python interpreter found. Please install Python 3.8+ or run CAELab AI setup.".to_string())
 }
 
 fn check_python_executable(cmd: &str) -> Result<PythonRuntimeInfo, String> {
