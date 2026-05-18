@@ -10,6 +10,7 @@ pub mod conda_env;
 pub mod solver;
 pub mod plugin;
 pub mod model_repo;
+pub mod training_manager;
 mod db;
 mod models;
 pub mod api_server;
@@ -778,6 +779,10 @@ pub fn run() {
             model_repo::install_model_package,
             model_repo::model_predict,
             model_repo::export_model_to_onnx,
+            // V4.4-003: ML training manager
+            training_manager::recommend_training_config,
+            training_manager::submit_real_training_job,
+            training_manager::list_training_checkpoints,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
