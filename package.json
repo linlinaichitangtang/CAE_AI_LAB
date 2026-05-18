@@ -13,6 +13,7 @@
     "build:all": "echo 'Cross-platform builds require platform-specific environments'",
     "build:harmony": "vite build --mode harmony",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "test:e2e": "playwright test",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
     "@codemirror/theme-one-dark": "^6.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.45.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
