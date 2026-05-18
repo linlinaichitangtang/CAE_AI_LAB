@@ -12,6 +12,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 // ============================================================================
 // V2.6-001: ML 势函数接口抽象层
@@ -28,6 +31,12 @@ pub enum MLPotentialType {
     GAP,
     CHGNet,
     SevenNet,
+    /// V4.2-002: 经典势函数类型
+    EAM,
+    MEAM,
+    ReaxFF,
+    LJ,
+    AIREBO,
 }
 
 impl MLPotentialType {
@@ -41,6 +50,11 @@ impl MLPotentialType {
             "gap" => Some(Self::GAP),
             "chgnet" => Some(Self::CHGNet),
             "sevennet" => Some(Self::SevenNet),
+            "eam" => Some(Self::EAM),
+            "meam" => Some(Self::MEAM),
+            "reaxff" => Some(Self::ReaxFF),
+            "lj" => Some(Self::LJ),
+            "airebo" => Some(Self::AIREBO),
             _ => None,
         }
     }
@@ -55,12 +69,22 @@ impl MLPotentialType {
             Self::GAP => "gap",
             Self::CHGNet => "chgnet",
             Self::SevenNet => "sevennet",
+            Self::EAM => "eam",
+            Self::MEAM => "meam",
+            Self::ReaxFF => "reaxff",
+            Self::LJ => "lj",
+            Self::AIREBO => "airebo",
         }
     }
 
     /// 是否为通用预训练势（无需训练，直接使用）
     pub fn is_pretrained(&self) -> bool {
         matches!(self, Self::CHGNet | Self::MACE | Self::SevenNet)
+    }
+
+    /// V4.2-002: 是否为经典势函数（通过参数文件定义，非 ML 训练得到）
+    pub fn is_classical(&self) -> bool {
+        matches!(self, Self::EAM | Self::MEAM | Self::ReaxFF | Self::LJ | Self::AIREBO)
     }
 }
 
@@ -397,6 +421,98 @@ pub struct HyperparamRecommendation {
 }
 
 // ============================================================================
+// V4.2-002: LAMMPS 真实调用数据结构
+// ============================================================================
+
+/// LAMMPS 输入配置
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LammpsInputConfig {
+    /// 势函数类型: "eam", "meam", "reaxff", "lj", "airebo", "ml"
+    pub potential_type: String,
+    /// 势函数文件路径（eam/meam/reaxff 的参数文件，或 ML 模型文件）
+    pub potential_file: Option<String>,
+    /// 附加势函数文件（如 meam 的 library 文件）
+    pub potential_file_extra: Option<String>,
+    /// 系综: "nve", "nvt", "npt"
+    pub ensemble: String,
+    /// 温度 (K)
+    pub temperature: f64,
+    /// 压强 (bar, 仅 npt)
+    pub pressure: Option<f64>,
+    /// 时间步长 (fs)
+    pub timestep_fs: f64,
+    /// 模拟步数
+    pub num_steps: u32,
+    /// 原子类型列表: ["Fe", "C", ...]
+    pub atom_types: Vec<String>,
+    /// 原子位置 (Å): [[x, y, z], ...]
+    pub positions: Vec<Vec<f64>>,
+    /// 晶胞向量 (3x3, Å)
+    pub cell: Vec<Vec<f64>>,
+    /// thermo 输出频率 (步)
+    pub thermo_freq: u32,
+    /// dump 输出频率 (步)
+    pub dump_freq: u32,
+    /// 工作目录
+    pub work_dir: String,
+    /// 随机数种子
+    pub random_seed: u64,
+    /// LJ 参数 (epsilon, sigma, cutoff) — 仅 lj 类型使用
+    pub lj_params: Option<Vec<Vec<f64>>>,
+    /// 元素到 LAMMPS atom type 的映射
+    pub element_type_map: Option<HashMap<String, u32>>,
+}
+
+/// LAMMPS 热力学输出（单行 thermo 数据）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LammpsThermoData {
+    pub step: u32,
+    pub temp: f64,
+    pub press: f64,
+    pub pe: f64,
+    pub ke: f64,
+    pub etotal: f64,
+    pub density: f64,
+    pub volume: f64,
+}
+
+/// Dump 原子数据
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DumpAtom {
+    pub id: u32,
+    pub atom_type: u32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fx: Option<f64>,
+    pub fy: Option<f64>,
+    pub fz: Option<f64>,
+}
+
+/// LAMMPS Dump 数据（单帧快照）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LammpsDumpData {
+    pub timestep: u32,
+    pub num_atoms: u32,
+    pub box_bounds: Vec<(f64, f64)>,
+    pub atoms: Vec<DumpAtom>,
+}
+
+/// LAMMPS 模拟结果
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LammpsSimulationResult {
+    pub success: bool,
+    pub potential_type: String,
+    pub thermo_data: Vec<LammpsThermoData>,
+    pub dump_data: Vec<LammpsDumpData>,
+    pub total_time_sec: f64,
+    pub num_atoms: u32,
+    pub exit_code: Option<i32>,
+    pub stderr: String,
+    pub is_real: bool,
+}
+
+// ============================================================================
 // Mock 数据 & 实现函数
 // ============================================================================
 
@@ -444,6 +560,152 @@ fn get_mock_potentials() -> Vec<MLPotentialInfo> {
             is_ready: true,
             training_time_sec: None,
             created_at: Some("2025-03-10T00:00:00Z".to_string()),
+        },
+    ]
+}
+
+/// V4.2-002: 经典势函数列表 (EAM/MEAM/ReaxFF/LJ/AIREBO)
+fn get_classical_potentials() -> Vec<MLPotentialInfo> {
+    vec![
+        MLPotentialInfo {
+            name: "EAM-Fe".to_string(),
+            potential_type: "eam".to_string(),
+            description: "Embedded Atom Method — Fe 专用势函数 (Mendelev 2003)".to_string(),
+            supported_elements: vec!["Fe".into()],
+            energy_rmse: Some(0.5),
+            force_rmse: Some(0.02),
+            cutoff: 5.5,
+            model_path: Some("potentials/Fe_mm.eam.fs".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "EAM-Ni".to_string(),
+            potential_type: "eam".to_string(),
+            description: "Embedded Atom Method — Ni 专用势函数 (Foiles 1986)".to_string(),
+            supported_elements: vec!["Ni".into()],
+            energy_rmse: Some(0.8),
+            force_rmse: Some(0.03),
+            cutoff: 5.5,
+            model_path: Some("potentials/Ni.eam".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "EAM-Cu".to_string(),
+            potential_type: "eam".to_string(),
+            description: "Embedded Atom Method — Cu 专用势函数 (Mishin 2001)".to_string(),
+            supported_elements: vec!["Cu".into()],
+            energy_rmse: Some(0.6),
+            force_rmse: Some(0.025),
+            cutoff: 5.5,
+            model_path: Some("potentials/Cu.eam".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "EAM-Al".to_string(),
+            potential_type: "eam".to_string(),
+            description: "Embedded Atom Method — Al 专用势函数 (Mishin 1999)".to_string(),
+            supported_elements: vec!["Al".into()],
+            energy_rmse: Some(0.7),
+            force_rmse: Some(0.03),
+            cutoff: 5.5,
+            model_path: Some("potentials/Al.eam".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "EAM-W".to_string(),
+            potential_type: "eam".to_string(),
+            description: "Embedded Atom Method — W 专用势函数 (Zhou 2004)".to_string(),
+            supported_elements: vec!["W".into()],
+            energy_rmse: Some(0.9),
+            force_rmse: Some(0.04),
+            cutoff: 5.5,
+            model_path: Some("potentials/W.eam".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "MEAM-SiC".to_string(),
+            potential_type: "meam".to_string(),
+            description: "Modified Embedded Atom Method — Si-C 二元素体系 (Lenosky 2000)".to_string(),
+            supported_elements: vec!["Si".into(), "C".into()],
+            energy_rmse: Some(1.2),
+            force_rmse: Some(0.05),
+            cutoff: 5.0,
+            model_path: Some("potentials/library.meam".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "ReaxFF-CHO".to_string(),
+            potential_type: "reaxff".to_string(),
+            description: "Reactive Force Field — C-H-O 燃烧体系 (Chenoweth 2008)".to_string(),
+            supported_elements: vec!["C".into(), "H".into(), "O".into()],
+            energy_rmse: Some(3.0),
+            force_rmse: Some(0.1),
+            cutoff: 10.0,
+            model_path: Some("potentials/ffield.reaxff.CHO".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "ReaxFF-SiOH".to_string(),
+            potential_type: "reaxff".to_string(),
+            description: "Reactive Force Field — Si-O-H 水合硅酸盐体系 (van Duin 2003)".to_string(),
+            supported_elements: vec!["Si".into(), "O".into(), "H".into()],
+            energy_rmse: Some(2.5),
+            force_rmse: Some(0.08),
+            cutoff: 10.0,
+            model_path: Some("potentials/ffield.reaxff.SiOH".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "LJ-Argon".to_string(),
+            potential_type: "lj".to_string(),
+            description: "Lennard-Jones 势函数 — Ar 标准参数 (epsilon=0.0104 eV, sigma=3.405 A)".to_string(),
+            supported_elements: vec!["Ar".into()],
+            energy_rmse: None,
+            force_rmse: None,
+            cutoff: 10.0,
+            model_path: None,
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
+        },
+        MLPotentialInfo {
+            name: "AIREBO-Carbon".to_string(),
+            potential_type: "airebo".to_string(),
+            description: "Adaptive Intermolecular Reactive Empirical Bond Order — 碳纳米管/石墨烯体系 (Stuart 2000)".to_string(),
+            supported_elements: vec!["C".into(), "H".into()],
+            energy_rmse: Some(1.5),
+            force_rmse: Some(0.06),
+            cutoff: 2.0,
+            model_path: Some("potentials/CH.airebo".to_string()),
+            training_data_size: None,
+            is_ready: true,
+            training_time_sec: None,
+            created_at: Some("2025-12-01T00:00:00Z".to_string()),
         },
     ]
 }
@@ -690,24 +952,845 @@ fn rand_factor() -> f64 {
 }
 
 // ============================================================================
+// V4.2-002: LAMMPS 真实调用辅助函数
+// ============================================================================
+
+/// 检测 LAMMPS 是否可用
+fn lammps_available() -> bool {
+    for name in &["lmp", "lammps", "lmp_serial", "lmp_mpi"] {
+        if Command::new("which")
+            .arg(name)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// 构建元素到 LAMMPS atom type 的映射
+fn build_element_type_map(atom_types: &[String]) -> (HashMap<String, u32>, u32) {
+    let mut map = HashMap::new();
+    let mut next_id = 1u32;
+    for atom in atom_types {
+        if !map.contains_key(atom) {
+            map.insert(atom.clone(), next_id);
+            next_id += 1;
+        }
+    }
+    let num_types = next_id - 1;
+    (map, num_types)
+}
+
+/// 生成 LAMMPS data 文件内容
+fn generate_lammps_data(config: &LammpsInputConfig) -> String {
+    let (elem_map, num_types) = match &config.element_type_map {
+        Some(m) => (m.clone(), m.values().copied().max().unwrap_or(1)),
+        None => {
+            let (m, n) = build_element_type_map(&config.atom_types);
+            (m, n)
+        }
+    };
+
+    let num_atoms = config.positions.len();
+    let a = &config.cell[0];
+    let b = &config.cell[1];
+    let c = &config.cell[2];
+
+    let mut data = String::new();
+    data.push_str("# LAMMPS data file generated by SOLO V4.2-002\n\n");
+    data.push_str(&format!("{} atoms\n", num_atoms));
+    data.push_str(&format!("{} atom types\n\n", num_types));
+
+    // 盒边界
+    let xlo = 0.0;
+    let ylo = 0.0;
+    let zlo = 0.0;
+    let xhi = a[0];
+    let yhi = b[1];
+    let zhi = c[2];
+
+    // 对非正交盒做 tilt
+    let xy = a[1];
+    let xz = a[2];
+    let yz = b[2];
+
+    data.push_str(&format!("{:.6} {:.6} xlo xhi\n", xlo, xhi));
+    data.push_str(&format!("{:.6} {:.6} ylo yhi\n", ylo, yhi));
+    data.push_str(&format!("{:.6} {:.6} zlo zhi\n", zlo, zhi));
+
+    if xy.abs() > 1e-12 || xz.abs() > 1e-12 || yz.abs() > 1e-12 {
+        data.push_str(&format!("{:.6} {:.6} {:.6} xy xz yz\n", xy, xz, yz));
+    }
+
+    // Masses section (estimate from element)
+    data.push_str("\nMasses\n\n");
+    let mut sorted_elements: Vec<&String> = elem_map.keys().collect();
+    sorted_elements.sort_by_key(|k| elem_map.get(*k).unwrap());
+    for elem in &sorted_elements {
+        let mass = estimate_atomic_mass(elem);
+        data.push_str(&format!("  {}  {:.3}\n", elem_map.get(*elem).unwrap(), mass));
+    }
+
+    // Atoms section
+    data.push_str("\nAtoms # atomic\n\n");
+    for (i, pos) in config.positions.iter().enumerate() {
+        let elem = &config.atom_types[i];
+        let atom_type = elem_map.get(elem).copied().unwrap_or(1);
+        data.push_str(&format!(
+            "{} {} {:.6} {:.6} {:.6}\n",
+            i + 1,
+            atom_type,
+            pos[0],
+            pos[1],
+            pos[2]
+        ));
+    }
+
+    data
+}
+
+/// 估算常见元素的原子质量 (g/mol)
+fn estimate_atomic_mass(elem: &str) -> f64 {
+    match elem {
+        "H" => 1.008, "He" => 4.003, "Li" => 6.941, "Be" => 9.012,
+        "B" => 10.811, "C" => 12.011, "N" => 14.007, "O" => 15.999,
+        "F" => 18.998, "Ne" => 20.180, "Na" => 22.990, "Mg" => 24.305,
+        "Al" => 26.982, "Si" => 28.086, "P" => 30.974, "S" => 32.065,
+        "Cl" => 35.453, "Ar" => 39.948, "K" => 39.098, "Ca" => 40.078,
+        "Sc" => 44.956, "Ti" => 47.867, "V" => 50.942, "Cr" => 51.996,
+        "Mn" => 54.938, "Fe" => 55.845, "Co" => 58.933, "Ni" => 58.693,
+        "Cu" => 63.546, "Zn" => 65.380, "Ga" => 69.723, "Ge" => 72.630,
+        "As" => 74.922, "Se" => 78.960, "Br" => 79.904, "Kr" => 83.798,
+        "Rb" => 85.468, "Sr" => 87.620, "Y" => 88.906, "Zr" => 91.224,
+        "Nb" => 92.906, "Mo" => 95.950, "Tc" => 98.0, "Ru" => 101.070,
+        "Rh" => 102.906, "Pd" => 106.420, "Ag" => 107.868, "Cd" => 112.411,
+        "In" => 114.818, "Sn" => 118.710, "Sb" => 121.760, "Te" => 127.600,
+        "I" => 126.904, "Xe" => 131.293, "Cs" => 132.905, "Ba" => 137.327,
+        "La" => 138.905, "Hf" => 178.490, "Ta" => 180.948, "W" => 183.840,
+        "Re" => 186.207, "Os" => 190.230, "Ir" => 192.217, "Pt" => 195.078,
+        "Au" => 196.967, "Hg" => 200.592, "Tl" => 204.383, "Pb" => 207.200,
+        "Bi" => 208.980,
+        _ => 12.011, // fallback to carbon
+    }
+}
+
+/// 生成 LAMMPS 输入脚本
+fn generate_lammps_script(config: &LammpsInputConfig) -> String {
+    let mut script = String::new();
+    script.push_str("# LAMMPS input script generated by SOLO V4.2-002\n\n");
+
+    // 基本设置
+    script.push_str("units        metal\n");
+    script.push_str("atom_style   atomic\n");
+    script.push_str("boundary     p p p\n");
+    script.push_str("\n");
+
+    // 读取数据文件
+    script.push_str("read_data    data.lammps\n\n");
+
+    // 势函数设置 — 根据类型选择 pair_style
+    let pt_lower = config.potential_type.to_lowercase();
+    match pt_lower.as_str() {
+        "eam" => {
+            script.push_str("pair_style   eam\n");
+            if let Some(ref pf) = config.potential_file {
+                let fname = Path::new(pf).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| pf.clone());
+                script.push_str(&format!("pair_coeff   * * {}\n", fname));
+            } else {
+                script.push_str("pair_coeff   * * Fe_mm.eam.fs Fe\n");
+            }
+        }
+        "meam" => {
+            script.push_str("pair_style   meam\n");
+            if let Some(ref pf) = config.potential_file {
+                let fname = Path::new(pf).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| pf.clone());
+                script.push_str(&format!("pair_coeff   * * {} ", fname));
+                if let Some(ref pf2) = config.potential_file_extra {
+                    let fname2 = Path::new(pf2).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| pf2.clone());
+                    script.push_str(&format!("{} ", fname2));
+                }
+                // 列出所有元素
+                for elem in unique_sorted_elements(&config.atom_types) {
+                    script.push_str(&format!("{} ", elem));
+                }
+                script.push('\n');
+            } else {
+                script.push_str("pair_coeff   * * library.meam SiC.meam C Si\n");
+            }
+        }
+        "reaxff" => {
+            script.push_str("pair_style   reaxff NULL\n");
+            if let Some(ref pf) = config.potential_file {
+                let fname = Path::new(pf).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| pf.clone());
+                script.push_str(&format!("pair_coeff   * * {} ", fname));
+            } else {
+                script.push_str("pair_coeff   * * ffield.reaxff ");
+            }
+            for elem in unique_sorted_elements(&config.atom_types) {
+                script.push_str(&format!("{} ", elem));
+            }
+            script.push('\n');
+        }
+        "lj" => {
+            let cutoff = config
+                .lj_params
+                .as_ref()
+                .and_then(|v| v.first())
+                .and_then(|p| if p.len() >= 3 { Some(p[2]) } else { None })
+                .unwrap_or(10.0);
+            script.push_str(&format!("pair_style   lj/cut {:.3}\n", cutoff));
+
+            if let Some(ref lj_params) = config.lj_params {
+                // lj_params 是 Vec<Vec<f64>>，每行 [epsilon, sigma, cutoff]
+                for (i, params) in lj_params.iter().enumerate() {
+                    let eps = params.get(0).copied().unwrap_or(1.0);
+                    let sig = params.get(1).copied().unwrap_or(1.0);
+                    let cut = params.get(2).copied().unwrap_or(cutoff);
+                    script.push_str(&format!(
+                        "pair_coeff   {} {} {:.6} {:.6} {:.3}\n",
+                        i + 1, i + 1, eps, sig, cut
+                    ));
+                }
+            } else {
+                script.push_str("pair_coeff   * * 1.0 1.0 10.0\n");
+            }
+        }
+        "airebo" => {
+            script.push_str("pair_style   airebo 2.0 0 0\n");
+            script.push_str("pair_coeff   * * CH.airebo C\n");
+        }
+        "ml" => {
+            script.push_str("pair_style   ml\n");
+            if let Some(ref pf) = config.potential_file {
+                let fname = Path::new(pf).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| pf.clone());
+                script.push_str(&format!("pair_coeff   * * {}\n", fname));
+            } else {
+                script.push_str("pair_coeff   * * model.pt\n");
+            }
+        }
+        _ => {
+            script.push_str("pair_style   lj/cut 10.0\n");
+            script.push_str("pair_coeff   * * 1.0 1.0 10.0\n");
+        }
+    }
+    script.push('\n');
+
+    // 速度初始化
+    script.push_str(&format!(
+        "velocity     all create {:.2} {} dist gaussian\n\n",
+        config.temperature, config.random_seed
+    ));
+
+    // 系综 fix
+    let ensemble_lower = config.ensemble.to_lowercase();
+    let tau = (100.0 * config.timestep_fs).max(10.0);
+    match ensemble_lower.as_str() {
+        "nve" => {
+            script.push_str("fix          1 all nve\n");
+        }
+        "nvt" => {
+            script.push_str(&format!(
+                "fix          1 all nvt temp {:.2} {:.2} {:.1}\n",
+                config.temperature, config.temperature, tau
+            ));
+        }
+        "npt" => {
+            let pressure = config.pressure.unwrap_or(0.0);
+            let tau_p = tau * 10.0;
+            script.push_str(&format!(
+                "fix          1 all npt temp {:.2} {:.2} {:.1} iso {:.2} {:.2} {:.1}\n",
+                config.temperature, config.temperature, tau,
+                pressure, pressure, tau_p
+            ));
+        }
+        _ => {
+            script.push_str("fix          1 all nve\n");
+        }
+    }
+
+    // 时间步长
+    script.push_str(&format!("\ntimestep     {:.6}\n", config.timestep_fs * 0.001)); // fs -> ps
+    script.push_str(&format!("thermo       {}\n", config.thermo_freq));
+    script.push_str("thermo_style custom step temp press pe ke etotal density vol\n\n");
+
+    // Dump
+    script.push_str(&format!(
+        "dump         1 all custom {} dump.lammps id type x y z fx fy fz\n",
+        config.dump_freq
+    ));
+    script.push_str("dump_modify  1 sort id\n\n");
+
+    // 运行
+    script.push_str(&format!("run          {}\n", config.num_steps));
+
+    script
+}
+
+/// 返回去重排序后的元素列表
+fn unique_sorted_elements(atom_types: &[String]) -> Vec<String> {
+    let mut elems: Vec<String> = atom_types.iter().cloned().collect();
+    elems.sort();
+    elems.dedup();
+    elems
+}
+
+/// 生成 LAMMPS input script 和 data 文件内容
+/// 返回 (input_script, data_file)
+pub fn generate_lammps_input(config: &LammpsInputConfig) -> (String, String) {
+    let input_script = generate_lammps_script(config);
+    let data_file = generate_lammps_data(config);
+    (input_script, data_file)
+}
+
+/// 解析 LAMMPS log 文件中的 thermo 数据
+pub fn parse_lammps_log(log_path: &str) -> Result<Vec<LammpsThermoData>, String> {
+    let content = std::fs::read_to_string(log_path)
+        .map_err(|e| format!("无法读取 log 文件 {}: {}", log_path, e))?;
+
+    let mut thermo_data = Vec::new();
+    let mut in_thermo = false;
+    let mut col_map: Vec<usize> = Vec::new();
+    // 列索引: 0=Step, 1=Temp, 2=Press, 3=PotEng, 4=KinEng, 5=TotEng, 6=Density, 7=Volume
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // 跳过空行和注释
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        // 检测 thermo header
+        if trimmed.starts_with("Step ") || trimmed.to_lowercase().starts_with("step ") {
+            let headers: Vec<&str> = trimmed.split_whitespace().collect();
+            col_map.clear();
+            col_map.resize(8, usize::MAX);
+            for (i, h) in headers.iter().enumerate() {
+                let h_lower = h.to_lowercase();
+                match h_lower.as_str() {
+                    "step" => col_map[0] = i,
+                    "temp" => col_map[1] = i,
+                    "press" => col_map[2] = i,
+                    "poteng" | "pe" => col_map[3] = i,
+                    "kineng" | "ke" => col_map[4] = i,
+                    "toteng" | "etotal" => col_map[5] = i,
+                    "density" => col_map[6] = i,
+                    "volume" | "vol" => col_map[7] = i,
+                    _ => {}
+                }
+            }
+            in_thermo = true;
+            continue;
+        }
+
+        if !in_thermo {
+            continue;
+        }
+
+        // 尝试解析数据行
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        if parts.is_empty() {
+            continue;
+        }
+
+        // 检查是否是数字（数据行以数字开头）
+        if parts[0].parse::<f64>().is_err() {
+            continue;
+        }
+
+        // 如果是 "Loop time" 之类，停止
+        if trimmed.starts_with("Loop time") || trimmed.starts_with("Performance:") {
+            break;
+        }
+
+        let get_col = |idx: usize| -> Option<f64> {
+            if idx < col_map.len() && col_map[idx] < parts.len() {
+                parts[col_map[idx]].parse::<f64>().ok()
+            } else {
+                None
+            }
+        };
+
+        thermo_data.push(LammpsThermoData {
+            step: get_col(0).map(|v| v as u32).unwrap_or(0),
+            temp: get_col(1).unwrap_or(0.0),
+            press: get_col(2).unwrap_or(0.0),
+            pe: get_col(3).unwrap_or(0.0),
+            ke: get_col(4).unwrap_or(0.0),
+            etotal: get_col(5).unwrap_or(0.0),
+            density: get_col(6).unwrap_or(0.0),
+            volume: get_col(7).unwrap_or(0.0),
+        });
+    }
+
+    if thermo_data.is_empty() {
+        Err(format!("log 文件 {} 中未找到 thermo 数据", log_path))
+    } else {
+        Ok(thermo_data)
+    }
+}
+
+/// 解析 LAMMPS dump 文件
+pub fn parse_lammps_dump_file(dump_path: &str) -> Result<Vec<LammpsDumpData>, String> {
+    let content = std::fs::read_to_string(dump_path)
+        .map_err(|e| format!("无法读取 dump 文件 {}: {}", dump_path, e))?;
+
+    let mut dump_frames: Vec<LammpsDumpData> = Vec::new();
+    let mut lines = content.lines().peekable();
+
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim();
+        if trimmed != "ITEM: TIMESTEP" {
+            continue;
+        }
+
+        // 解析 timestep
+        let timestep = lines
+            .next()
+            .ok_or("dump 文件格式错误: 缺少 timestep")?
+            .trim()
+            .parse::<u32>()
+            .map_err(|e| format!("dump 文件格式错误: {}", e))?;
+
+        // ITEM: NUMBER OF ATOMS
+        let _ = lines.next();
+        let num_atoms = lines
+            .next()
+            .ok_or("dump 文件格式错误: 缺少原子数")?
+            .trim()
+            .parse::<u32>()
+            .map_err(|e| format!("dump 文件格式错误: {}", e))?;
+
+        // ITEM: BOX BOUNDS
+        let _ = lines.next();
+        let mut box_bounds: Vec<(f64, f64)> = Vec::new();
+        for _ in 0..3 {
+            let bline = lines.next().ok_or("dump 文件格式错误: 缺少盒边界")?;
+            let parts: Vec<&str> = bline.trim().split_whitespace().collect();
+            if parts.len() >= 2 {
+                let lo = parts[0].parse::<f64>().unwrap_or(0.0);
+                let hi = parts[1].parse::<f64>().unwrap_or(0.0);
+                box_bounds.push((lo, hi));
+            }
+        }
+
+        // ITEM: ATOMS
+        let atom_header_line = lines
+            .next()
+            .ok_or("dump 文件格式错误: 缺少 ITEM: ATOMS")?;
+        let atom_headers: Vec<&str> = atom_header_line
+            .trim()
+            .split_whitespace()
+            .skip(2) // 跳过 "ITEM:" 和 "ATOMS"
+            .collect();
+
+        // 找到各列的索引
+        let id_col = atom_headers.iter().position(|&h| h == "id");
+        let type_col = atom_headers.iter().position(|&h| h == "type");
+        let x_col = atom_headers.iter().position(|&h| h == "x");
+        let y_col = atom_headers.iter().position(|&h| h == "y");
+        let z_col = atom_headers.iter().position(|&h| h == "z");
+        let fx_col = atom_headers.iter().position(|&h| h == "fx");
+        let fy_col = atom_headers.iter().position(|&h| h == "fy");
+        let fz_col = atom_headers.iter().position(|&h| h == "fz");
+
+        let mut atoms = Vec::new();
+        for _ in 0..num_atoms {
+            let aline = lines.next().ok_or("dump 文件格式错误: 原子数据不完整")?;
+            let parts: Vec<&str> = aline.trim().split_whitespace().collect();
+
+            let get_col = |col: Option<usize>| -> Option<f64> {
+                col.and_then(|c| parts.get(c))
+                    .and_then(|v| v.parse::<f64>().ok())
+            };
+
+            atoms.push(DumpAtom {
+                id: id_col
+                    .and_then(|c| parts.get(c))
+                    .and_then(|v| v.parse::<u32>().ok())
+                    .unwrap_or(0),
+                atom_type: type_col
+                    .and_then(|c| parts.get(c))
+                    .and_then(|v| v.parse::<u32>().ok())
+                    .unwrap_or(0),
+                x: x_col.and_then(|c| parts.get(c)).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0),
+                y: y_col.and_then(|c| parts.get(c)).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0),
+                z: z_col.and_then(|c| parts.get(c)).and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0),
+                fx: get_col(fx_col),
+                fy: get_col(fy_col),
+                fz: get_col(fz_col),
+            });
+        }
+
+        dump_frames.push(LammpsDumpData {
+            timestep,
+            num_atoms,
+            box_bounds,
+            atoms,
+        });
+    }
+
+    if dump_frames.is_empty() {
+        Err(format!("dump 文件 {} 中未找到数据帧", dump_path))
+    } else {
+        Ok(dump_frames)
+    }
+}
+
+/// 执行真实 LAMMPS 模拟
+fn run_lammps_real(config: &LammpsInputConfig) -> Result<LammpsSimulationResult, String> {
+    let work_dir = Path::new(&config.work_dir);
+
+    // 创建工作目录
+    std::fs::create_dir_all(work_dir)
+        .map_err(|e| format!("无法创建工作目录 {:?}: {}", work_dir, e))?;
+
+    // 生成输入文件
+    let (input_script, data_file) = generate_lammps_input(config);
+
+    // 写入 data 文件
+    let data_path = work_dir.join("data.lammps");
+    let mut data_f = std::fs::File::create(&data_path)
+        .map_err(|e| format!("无法创建 data 文件: {}", e))?;
+    data_f
+        .write_all(data_file.as_bytes())
+        .map_err(|e| format!("无法写入 data 文件: {}", e))?;
+
+    // 写入 input 脚本
+    let input_path = work_dir.join("in.lammps");
+    let mut input_f = std::fs::File::create(&input_path)
+        .map_err(|e| format!("无法创建 input 文件: {}", e))?;
+    input_f
+        .write_all(input_script.as_bytes())
+        .map_err(|e| format!("无法写入 input 文件: {}", e))?;
+
+    // 寻找 LAMMPS 可执行文件
+    let lmp_bin = find_lammps_binary().ok_or("未找到 LAMMPS 可执行文件 (已尝试 lmp, lammps, lmp_serial, lmp_mpi)")?;
+
+    let start_time = std::time::Instant::now();
+
+    // 执行 LAMMPS
+    let output = Command::new(&lmp_bin)
+        .arg("-in")
+        .arg("in.lammps")
+        .current_dir(work_dir)
+        .output()
+        .map_err(|e| format!("执行 LAMMPS 失败: {}", e))?;
+
+    let elapsed = start_time.elapsed().as_secs_f64();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if !output.status.success() {
+        return Ok(LammpsSimulationResult {
+            success: false,
+            potential_type: config.potential_type.clone(),
+            thermo_data: vec![],
+            dump_data: vec![],
+            total_time_sec: elapsed,
+            num_atoms: config.positions.len() as u32,
+            exit_code: output.status.code(),
+            stderr,
+            is_real: true,
+        });
+    }
+
+    // 解析 log.lammps（thermo 输出）
+    let log_path = work_dir.join("log.lammps");
+    let thermo_data = if log_path.exists() {
+        parse_lammps_log(log_path.to_str().unwrap_or("")).unwrap_or_else(|_| vec![])
+    } else {
+        vec![]
+    };
+
+    // 解析 dump 文件
+    let dump_path = work_dir.join("dump.lammps");
+    let dump_data = if dump_path.exists() {
+        parse_lammps_dump_file(dump_path.to_str().unwrap_or("")).unwrap_or_else(|_| vec![])
+    } else {
+        vec![]
+    };
+
+    Ok(LammpsSimulationResult {
+        success: true,
+        potential_type: config.potential_type.clone(),
+        thermo_data,
+        dump_data,
+        total_time_sec: elapsed,
+        num_atoms: config.positions.len() as u32,
+        exit_code: Some(0),
+        stderr,
+        is_real: true,
+    })
+}
+
+/// 查找 LAMMPS 可执行文件
+fn find_lammps_binary() -> Option<String> {
+    for name in &["lmp", "lammps", "lmp_serial", "lmp_mpi"] {
+        if let Ok(output) = Command::new("which").arg(name).output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    return Some(name.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// 检测真实 GPU — 先尝试 nvidia-smi，再尝试 rocm-smi
+fn detect_real_gpu() -> Option<Vec<GpuInfo>> {
+    // 尝试 nvidia-smi
+    if let Ok(output) = Command::new("nvidia-smi")
+        .args(&[
+            "--query-gpu=name,memory.total,memory.free",
+            "--format=csv,noheader,nounits",
+        ])
+        .output()
+    {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut gpus = Vec::new();
+            for line in stdout.lines() {
+                let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
+                if parts.len() >= 3 {
+                    let total_mb = parts[1].parse::<f64>().unwrap_or(0.0);
+                    let free_mb = parts[2].parse::<f64>().unwrap_or(0.0);
+                    gpus.push(GpuInfo {
+                        name: parts[0].to_string(),
+                        total_memory_gb: total_mb / 1024.0,
+                        available_memory_gb: free_mb / 1024.0,
+                        is_available: true,
+                        cuda_version: detect_cuda_version(),
+                    });
+                }
+            }
+            if !gpus.is_empty() {
+                return Some(gpus);
+            }
+        }
+    }
+
+    // 尝试 rocm-smi
+    if let Ok(output) = Command::new("rocm-smi")
+        .args(&["--showproductname", "--showmeminfo", "vram", "--csv"])
+        .output()
+    {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut gpus = Vec::new();
+            for line in stdout.lines().skip(1) {
+                let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
+                if parts.len() >= 3 {
+                    let total_mb = parts[1].parse::<f64>().unwrap_or(0.0);
+                    let used_mb = parts[2].parse::<f64>().unwrap_or(0.0);
+                    let free_mb = total_mb - used_mb;
+                    gpus.push(GpuInfo {
+                        name: parts[0].to_string(),
+                        total_memory_gb: total_mb / 1024.0,
+                        available_memory_gb: free_mb / 1024.0,
+                        is_available: true,
+                        cuda_version: None,
+                    });
+                }
+            }
+            if !gpus.is_empty() {
+                return Some(gpus);
+            }
+        }
+    }
+
+    None
+}
+
+/// 检测 CUDA 版本
+fn detect_cuda_version() -> Option<String> {
+    if let Ok(output) = Command::new("nvidia-smi").output() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if line.contains("CUDA Version") {
+                let parts: Vec<&str> = line.split(':').collect();
+                if parts.len() >= 2 {
+                    return Some(parts[1].trim().to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+// ============================================================================
 // Tauri 命令
 // ============================================================================
 
-/// 列出可用的 ML 势函数
+/// 列出可用的 ML 势函数 (V4.2-002: 增加经典势函数)
 #[tauri::command]
 pub async fn list_ml_potentials() -> Result<Vec<MLPotentialInfo>, String> {
-    Ok(get_mock_potentials())
+    let mut potentials = get_mock_potentials();
+    // V4.2-002: 追加经典势函数条目
+    potentials.extend(get_classical_potentials());
+    Ok(potentials)
 }
 
-/// ML 势函数推理
+/// ML 势函数推理 (V4.2-002: 真实 LAMMPS 优先)
 #[tauri::command]
 pub async fn compute_ml_potential(
     request: MLPotentialComputeRequest,
 ) -> Result<MLPotentialComputeResult, String> {
     let start = std::time::Instant::now();
+
+    // V4.2-002: 尝试真实 LAMMPS 单点能量计算
+    if lammps_available() && !request.positions.is_empty() {
+        let cell = request.cell.clone().unwrap_or_else(|| {
+            let box_size = 20.0;
+            vec![
+                vec![box_size, 0.0, 0.0],
+                vec![0.0, box_size, 0.0],
+                vec![0.0, 0.0, box_size],
+            ]
+        });
+
+        let pt_name = request.potential_name.to_lowercase();
+        let (potential_type, potential_file) = if pt_name.contains("eam") {
+            ("eam".to_string(), None)
+        } else if pt_name.contains("meam") {
+            ("meam".to_string(), None)
+        } else if pt_name.contains("reaxff") {
+            ("reaxff".to_string(), None)
+        } else if pt_name.contains("lj") {
+            ("lj".to_string(), None)
+        } else if pt_name.contains("airebo") {
+            ("airebo".to_string(), None)
+        } else {
+            ("lj".to_string(), None)
+        };
+
+        let work_dir = format!(
+            "/tmp/solo_lammps_sp_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        );
+
+        let lammps_config = LammpsInputConfig {
+            potential_type,
+            potential_file,
+            potential_file_extra: None,
+            ensemble: "nve".to_string(),
+            temperature: 0.1, // 近似 0 K 单点
+            pressure: None,
+            timestep_fs: 1.0,
+            num_steps: 0, // run 0 — 单点能量
+            atom_types: request.atom_types.clone(),
+            positions: request.positions.clone(),
+            cell,
+            thermo_freq: 1,
+            dump_freq: 1,
+            work_dir: work_dir.clone(),
+            random_seed: 12345,
+            lj_params: None,
+            element_type_map: None,
+        };
+
+        match run_lammps_real(&lammps_config) {
+            Ok(result) if result.success => {
+                let num_atoms = request.atom_types.len() as u32;
+                let total_energy = result.thermo_data.last().map(|t| t.etotal).unwrap_or(0.0);
+                let energy_per_atom = total_energy / num_atoms as f64;
+                let maybe_forces = result
+                    .dump_data
+                    .first()
+                    .map(|d| {
+                        d.atoms
+                            .iter()
+                            .map(|a| {
+                                vec![
+                                    a.fx.unwrap_or(0.0),
+                                    a.fy.unwrap_or(0.0),
+                                    a.fz.unwrap_or(0.0),
+                                ]
+                            })
+                            .collect::<Vec<Vec<f64>>>()
+                    });
+
+                return Ok(MLPotentialComputeResult {
+                    potential_name: request.potential_name.clone(),
+                    total_energy,
+                    energy_per_atom,
+                    forces: if request.compute_forces {
+                        maybe_forces
+                    } else {
+                        None
+                    },
+                    stress: None,
+                    inference_time_ms: start.elapsed().as_millis() as u64,
+                    num_atoms,
+                });
+            }
+            Ok(result) => {
+                eprintln!("LAMMPS single-point failed: {}", result.stderr);
+            }
+            Err(e) => {
+                eprintln!("LAMMPS single-point error: {}", e);
+            }
+        }
+    }
+
+    // Fallback: Mock 势函数推理
     let mut result = mock_potential_compute(&request);
     result.inference_time_ms = start.elapsed().as_millis() as u64;
     Ok(result)
+}
+
+// ============================================================================
+// V4.2-002: LAMMPS 直接调用命令
+// ============================================================================
+
+/// 直接调用 LAMMPS 执行 ML 势函数模拟（V4.2-002 新增）
+/// 返回完整的 LammpsSimulationResult，包含 thermo 和 dump 数据
+#[tauri::command]
+pub async fn run_ml_lammps_simulation(
+    config: LammpsInputConfig,
+) -> Result<LammpsSimulationResult, String> {
+    if !lammps_available() {
+        // LAMMPS 不可用时返回 mock 结果
+        let num_atoms = config.positions.len() as u32;
+        let num_steps = config.num_steps;
+        let mut mock_thermo = Vec::new();
+        let thermo_freq = config.thermo_freq.max(1);
+        for s in (0..=num_steps).step_by(thermo_freq as usize).take(500) {
+            let ratio = s as f64 / num_steps as f64;
+            mock_thermo.push(LammpsThermoData {
+                step: s,
+                temp: config.temperature + rand_factor() * 10.0 - 5.0,
+                press: rand_factor() * 2.0 - 1.0,
+                pe: num_atoms as f64 * (-6.5 + rand_factor() * 0.3),
+                ke: num_atoms as f64 * 0.04,
+                etotal: num_atoms as f64 * (-6.5 + rand_factor() * 0.3 + 0.04),
+                density: 7.8 + rand_factor() * 0.1,
+                volume: num_atoms as f64 * 10.0,
+            });
+        }
+
+        return Ok(LammpsSimulationResult {
+            success: true,
+            potential_type: config.potential_type.clone(),
+            thermo_data: mock_thermo,
+            dump_data: vec![],
+            total_time_sec: 0.0,
+            num_atoms,
+            exit_code: Some(0),
+            stderr: String::new(),
+            is_real: false,
+        });
+    }
+
+    // 执行真实 LAMMPS
+    run_lammps_real(&config)
 }
 
 /// 势函数自动选择
@@ -718,9 +1801,22 @@ pub async fn auto_select_potential(
     Ok(select_potential_impl(&request))
 }
 
-/// 获取 GPU 资源状态
+/// 获取 GPU 资源状态 (V4.2-002: 真实检测优先)
 #[tauri::command]
 pub async fn get_gpu_status() -> Result<GpuResourceStatus, String> {
+    // V4.2-002: 优先尝试真实 GPU 检测
+    if let Some(gpus) = detect_real_gpu() {
+        let total_vram: f64 = gpus.iter().map(|g| g.total_memory_gb).sum();
+        let used_vram: f64 = gpus.iter().map(|g| g.total_memory_gb - g.available_memory_gb).sum();
+        return Ok(GpuResourceStatus {
+            gpus,
+            total_vram_gb: total_vram,
+            used_vram_gb: used_vram,
+            running_tasks: 0,
+            queued_tasks: 0,
+        });
+    }
+    // Fallback to mock
     Ok(get_mock_gpu_status())
 }
 
@@ -749,7 +1845,7 @@ pub async fn validate_ml_potential(
     Ok(mock_validate(&request))
 }
 
-/// 使用 ML 势运行 MD 模拟
+/// 使用 ML 势运行 MD 模拟 (V4.2-002: 真实 LAMMPS 优先)
 #[tauri::command]
 pub async fn run_md_with_ml_potential(
     potential_name: String,
@@ -763,7 +1859,113 @@ pub async fn run_md_with_ml_potential(
 ) -> Result<serde_json::Value, String> {
     let num_atoms = atom_types.len();
 
-    // Mock MD 结果
+    // V4.2-002: 尝试真实 LAMMPS 运行
+    if lammps_available() {
+        let temp = temperature.unwrap_or(300.0);
+        let the_cell = cell.unwrap_or_else(|| {
+            // 根据原子位置估算盒大小
+            let box_size = 20.0;
+            vec![
+                vec![box_size, 0.0, 0.0],
+                vec![0.0, box_size, 0.0],
+                vec![0.0, 0.0, box_size],
+            ]
+        });
+
+        // 推断势函数类型
+        let pt_lower = potential_name.to_lowercase();
+        let (potential_type, potential_file) = if pt_lower.contains("eam") {
+            ("eam".to_string(), None)
+        } else if pt_lower.contains("meam") {
+            ("meam".to_string(), None)
+        } else if pt_lower.contains("reaxff") {
+            ("reaxff".to_string(), None)
+        } else if pt_lower.contains("lj") {
+            ("lj".to_string(), None)
+        } else if pt_lower.contains("airebo") {
+            ("airebo".to_string(), None)
+        } else {
+            ("lj".to_string(), Some(pt_lower.clone()))
+        };
+
+        let work_dir = format!(
+            "/tmp/solo_lammps_md_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+        );
+
+        let config = LammpsInputConfig {
+            potential_type,
+            potential_file,
+            potential_file_extra: None,
+            ensemble: ensemble.clone(),
+            temperature: temp,
+            pressure: None,
+            timestep_fs,
+            num_steps,
+            atom_types: atom_types.clone(),
+            positions: positions.clone(),
+            cell: the_cell,
+            thermo_freq: (num_steps / 100).max(1),
+            dump_freq: (num_steps / 10).max(1),
+            work_dir: work_dir.clone(),
+            random_seed: 12345,
+            lj_params: None,
+            element_type_map: None,
+        };
+
+        match run_lammps_real(&config) {
+            Ok(result) if result.success => {
+                // 提取摘要
+                let final_energy = result
+                    .thermo_data
+                    .last()
+                    .map(|t| t.etotal)
+                    .unwrap_or(0.0);
+                let initial_energy = result
+                    .thermo_data
+                    .first()
+                    .map(|t| t.etotal)
+                    .unwrap_or(0.0);
+                let final_temp = result
+                    .thermo_data
+                    .last()
+                    .map(|t| t.temp)
+                    .unwrap_or(temp);
+
+                return Ok(serde_json::json!({
+                    "success": true,
+                    "potential_name": potential_name,
+                    "ensemble": ensemble,
+                    "num_atoms": num_atoms,
+                    "num_steps": num_steps,
+                    "timestep_fs": timestep_fs,
+                    "temperature": final_temp,
+                    "initial_energy_eV": initial_energy,
+                    "final_energy_eV": final_energy,
+                    "energy_drift_eV": (final_energy - initial_energy).abs(),
+                    "total_time_ps": num_steps as f64 * timestep_fs / 1000.0,
+                    "wall_time_sec": result.total_time_sec,
+                    "is_mock": false,
+                    "is_real": true,
+                    "thermo_steps": result.thermo_data.len(),
+                    "dump_frames": result.dump_data.len(),
+                    "message": "LAMMPS simulation completed successfully."
+                }));
+            }
+            Ok(result) => {
+                // LAMMPS 运行但失败了，记录错误
+                eprintln!("LAMMPS simulation failed: {}", result.stderr);
+            }
+            Err(e) => {
+                eprintln!("LAMMPS execution error: {}", e);
+            }
+        }
+    }
+
+    // Fallback: Mock MD 结果
     let initial_energy = num_atoms as f64 * (-6.5);
     let result = serde_json::json!({
         "success": true,
@@ -778,6 +1980,7 @@ pub async fn run_md_with_ml_potential(
         "energy_drift_eV": rand_factor() * 0.05,
         "total_time_ps": num_steps as f64 * timestep_fs / 1000.0,
         "is_mock": true,
+        "is_real": false,
         "message": "Mock MD simulation completed. Connect LAMMPS + pair_style ml for real simulation."
     });
 

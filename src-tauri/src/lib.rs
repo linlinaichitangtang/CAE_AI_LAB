@@ -503,7 +503,7 @@ pub fn run() {
             commands::phase_field_bridge::validate_bridge_quality,
             commands::phase_field_bridge::get_bridge_templates,
             commands::phase_field_bridge::export_bridge_data,
-            // V1.7: DFT input commands
+            // V4.2: DFT input commands (去壳化)
             commands::dft_input::generate_vasp_input,
             commands::dft_input::generate_qe_input,
             commands::dft_input::parse_vasp_poscar,
@@ -511,6 +511,12 @@ pub fn run() {
             commands::dft_input::get_vasp_templates,
             commands::dft_input::get_qe_templates,
             commands::dft_input::export_input_files,
+            // V4.2-006: POTCAR generation and k-point convergence
+            commands::dft_input::generate_potcar,
+            commands::dft_input::list_available_potentials,
+            commands::dft_input::run_kpoint_convergence_test,
+            commands::dft_input::run_vasp_local,
+            commands::dft_input::check_vasp_installation,
             // V1.7: DFT task commands
             commands::dft_task::submit_dft_job,
             commands::dft_task::run_qe_local,
@@ -521,7 +527,7 @@ pub fn run() {
             commands::dft_task::generate_pbs_script,
             commands::dft_task::configure_dft_queue,
             commands::dft_task::get_queue_status,
-            // V1.7: DFT post-processing commands
+            // V4.2: DFT post-processing commands (去壳化)
             commands::dft_postprocess::parse_dft_output,
             commands::dft_postprocess::parse_vasp_outcar,
             commands::dft_postprocess::parse_vasp_doscar,
@@ -531,6 +537,11 @@ pub fn run() {
             commands::dft_postprocess::parse_qe_dos,
             commands::dft_postprocess::run_validation,
             commands::dft_postprocess::get_validation_test_suite,
+            // V4.2-006: Real VASP output file parsing
+            commands::dft_postprocess::parse_vasp_outcar_file,
+            commands::dft_postprocess::parse_vasp_doscar_file,
+            commands::dft_postprocess::parse_vasp_eigenval_file,
+            commands::dft_postprocess::parse_dft_output_directory,
             // V1.7: DFT bridge commands
             commands::dft_bridge::prepare_training_data,
             commands::dft_bridge::train_potential,
@@ -663,6 +674,11 @@ pub fn run() {
             commands::calculix_job::get_calculix_job_status,
             commands::calculix_job::parse_calculix_dat,
             commands::calculix_job::parse_calculix_frd,
+            // V4.2-003: CalculiX robust FRD/DAT parsers
+            commands::output_parser::parse_calculix_frd_robust,
+            commands::output_parser::parse_calculix_dat_robust,
+            commands::output_parser::parse_calculix_output_dir,
+            commands::output_parser::get_calculix_test_suite,
             // V2.3-016: Dependency resolution
             commands::solver_manager::resolve_solver_dependencies,
             // V2.3-017: Multi-version management
