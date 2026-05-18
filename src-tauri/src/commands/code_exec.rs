@@ -1,6 +1,18 @@
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
 use tauri::AppHandle;
+use tauri::Manager;
+
+/// V4.4-001: 解析 Python 路径，优先使用 CAELab conda 环境
+fn resolve_python_path(_app: &AppHandle) -> String {
+    // TODO: V4.4 conda_env 集成完成后启用
+    // if let Ok(app_data) = app.path().app_data_dir() {
+    //     if let Some(python) = crate::conda_env::get_conda_python(&app_data) {
+    //         return python.to_string_lossy().to_string();
+    //     }
+    // }
+    "python3".to_string()
+}
 
 #[derive(serde::Serialize, Clone)]
 pub struct CodeOutput {
@@ -11,16 +23,20 @@ pub struct CodeOutput {
 
 #[tauri::command]
 pub async fn execute_code(
-    _app: AppHandle,
+    app: AppHandle,
     language: String,
     code: String,
     working_dir: Option<String>,
 ) -> Result<CodeOutput, String> {
     // 根据 language 选择解释器
     let (cmd, args) = match language.as_str() {
-        "python" | "python3" => ("python3", vec!["-c", &code]),
-        "javascript" | "js" | "node" => ("node", vec!["-e", &code]),
-        "typescript" | "ts" => ("npx", vec!["ts-node", "-e", &code]),
+        "python" | "python3" => {
+            // V4.4-001: 优先使用 CAELab conda 环境的 Python
+            let python_cmd = resolve_python_path(&app);
+            (python_cmd, vec!["-c".to_string(), code.clone()])
+        }
+        "javascript" | "js" | "node" => ("node".to_string(), vec!["-e".to_string(), code.clone()]),
+        "typescript" | "ts" => ("npx".to_string(), vec!["ts-node".to_string(), "-e".to_string(), code.clone()]),
         "rust" => {
             // Rust 代码需要写入临时文件再编译运行
             let tmp_dir = std::env::temp_dir();
@@ -32,7 +48,8 @@ pub async fn execute_code(
         _ => return Err(format!("Unsupported language: {}", language)),
     };
 
-    run_command(cmd, args, working_dir.as_deref())
+    let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    run_command(&cmd, arg_refs, working_dir.as_deref())
 }
 
 fn run_command(cmd: &str, args: Vec<&str>, working_dir: Option<&str>) -> Result<CodeOutput, String> {
