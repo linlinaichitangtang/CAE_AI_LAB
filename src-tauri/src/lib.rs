@@ -16,6 +16,7 @@ pub mod surrogate_manager;
 pub mod active_learning_manager;
 pub mod dft_workflow;
 pub mod v45_managers;
+pub mod v478_managers;
 mod db;
 mod models;
 pub mod api_server;
@@ -811,6 +812,27 @@ pub fn run() {
             v45_managers::run_bayesian_uq,
             v45_managers::search_materials_db,
             v45_managers::batch_download_materials,
+            // V4.7: Materials thermodynamics
+            v478_managers::calphad_elements,
+            v478_managers::calphad_gibbs,
+            v478_managers::calphad_curve,
+            v478_managers::phase_diagram_binary,
+            v478_managers::phase_diagram_isothermal,
+            v478_managers::scheil_simulate,
+            v478_managers::diffusion_simulate,
+            v478_managers::kwn_precipitate,
+            v478_managers::thermophysical_list,
+            v478_managers::thermophysical_get,
+            v478_managers::kinetics_isothermal,
+            v478_managers::kinetics_avrami,
+            v478_managers::defects_concentration,
+            // V4.8: Productization
+            v478_managers::wizard_steps,
+            v478_managers::cases_list,
+            v478_managers::cases_get,
+            v478_managers::glossary_search,
+            v478_managers::compliance_check,
+            v478_managers::report_generate,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
