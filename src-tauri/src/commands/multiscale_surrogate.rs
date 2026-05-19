@@ -441,10 +441,36 @@ pub async fn extract_microstructure_features(
 }
 
 /// 宏观性能预测
+/// V4.4-005: 宏观性能预测，优先使用真实 Surrogate 模型
 #[tauri::command]
 pub async fn predict_macro_properties(
     request: MacroPropertyPredictionRequest,
 ) -> Result<MacroPropertyPredictionResponse, String> {
+    let start = std::time::Instant::now();
+
+    // 尝试使用真实 Surrogate 模型
+    if let Some(ref features) = request.feature_vector {
+        if let Ok(real_result) = crate::surrogate_manager::surrogate_predict(
+            features.clone(),
+        ).await {
+            return Ok(MacroPropertyPredictionResponse {
+                model_name: "surrogate_mlp".to_string(),
+                is_mock: real_result.is_mock,
+                inference_time_ms: start.elapsed().as_millis() as u64,
+                predictions: real_result.predictions.iter().map(|p| MacroPropertyPrediction {
+                    property_name: p.property_name.clone(),
+                    predicted_value: p.predicted_value,
+                    unit: p.unit.clone(),
+                    confidence_lower: p.predicted_value - 1.96 * p.uncertainty,
+                    confidence_upper: p.predicted_value + 1.96 * p.uncertainty,
+                    uncertainty: p.uncertainty,
+                    needs_verification: p.uncertainty / p.predicted_value.abs().max(1e-10) > 0.1,
+                }).collect(),
+            });
+        }
+    }
+
+    // Mock 回退
     Ok(mock_predict_macro_property(&request))
 }
 
