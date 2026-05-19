@@ -833,6 +833,14 @@ pub fn run() {
             v478_managers::glossary_search,
             v478_managers::compliance_check,
             v478_managers::report_generate,
+            // V4.0-003: 可视化材料编辑器
+            v478_managers::material_templates,
+            v478_managers::material_get,
+            v478_managers::material_categories,
+            v478_managers::material_compare,
+            // V4.1-003: 结果置信度
+            v478_managers::confidence_compute,
+            v478_managers::confidence_annotate,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

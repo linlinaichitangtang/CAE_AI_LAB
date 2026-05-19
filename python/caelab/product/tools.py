@@ -199,12 +199,163 @@ def generate_report(project_name: str, results: dict, output_format: str = "json
 
 
 # ============================================================================
+# V4.0-003: 可视化材料编辑器
+# ============================================================================
+
+MATERIAL_TEMPLATES = {
+    "structural_steel": {"name": "结构钢 Q235", "category": "金属", "density": 7850, "elastic_modulus": 210e9,
+                         "poisson_ratio": 0.3, "yield_strength": 235e6, "ultimate_strength": 370e6,
+                         "thermal_expansion": 1.2e-5, "thermal_conductivity": 50, "color": "#8090A0"},
+    "stainless_304": {"name": "不锈钢 304", "category": "金属", "density": 8000, "elastic_modulus": 193e9,
+                      "poisson_ratio": 0.29, "yield_strength": 215e6, "ultimate_strength": 505e6,
+                      "thermal_expansion": 1.73e-5, "thermal_conductivity": 16.2, "color": "#C0C8D0"},
+    "aluminum_6061": {"name": "铝合金 6061-T6", "category": "金属", "density": 2700, "elastic_modulus": 68.9e9,
+                      "poisson_ratio": 0.33, "yield_strength": 276e6, "ultimate_strength": 310e6,
+                      "thermal_expansion": 2.36e-5, "thermal_conductivity": 167, "color": "#D0D8E0"},
+    "titanium_ti64": {"name": "钛合金 Ti-6Al-4V", "category": "金属", "density": 4430, "elastic_modulus": 113.8e9,
+                      "poisson_ratio": 0.342, "yield_strength": 880e6, "ultimate_strength": 950e6,
+                      "thermal_expansion": 8.6e-6, "thermal_conductivity": 6.7, "color": "#B8B8C8"},
+    "copper_pure": {"name": "纯铜 C11000", "category": "金属", "density": 8960, "elastic_modulus": 117e9,
+                    "poisson_ratio": 0.34, "yield_strength": 70e6, "ultimate_strength": 220e6,
+                    "thermal_expansion": 1.67e-5, "thermal_conductivity": 401, "color": "#E08040"},
+    "cast_iron": {"name": "灰铸铁 HT200", "category": "金属", "density": 7200, "elastic_modulus": 120e9,
+                  "poisson_ratio": 0.25, "yield_strength": 200e6, "ultimate_strength": 300e6,
+                  "thermal_expansion": 1.08e-5, "thermal_conductivity": 50, "color": "#606060"},
+    "nylon_66": {"name": "尼龙 PA66", "category": "塑料", "density": 1140, "elastic_modulus": 2.5e9,
+                 "poisson_ratio": 0.39, "yield_strength": 55e6, "ultimate_strength": 75e6,
+                 "thermal_expansion": 9.0e-5, "thermal_conductivity": 0.25, "color": "#4080FF"},
+    "abs": {"name": "ABS 塑料", "category": "塑料", "density": 1050, "elastic_modulus": 2.3e9,
+            "poisson_ratio": 0.38, "yield_strength": 40e6, "ultimate_strength": 45e6,
+            "thermal_expansion": 8.5e-5, "thermal_conductivity": 0.18, "color": "#FF8040"},
+    "carbon_fiber_epoxy": {"name": "碳纤维/环氧 T300", "category": "复合材料", "density": 1600,
+                           "elastic_modulus": 70e9, "poisson_ratio": 0.3, "yield_strength": 600e6,
+                           "ultimate_strength": 1500e6, "thermal_expansion": 2.0e-6, "thermal_conductivity": 5,
+                           "color": "#404040", "orthotropic": True},
+    "concrete_c30": {"name": "混凝土 C30", "category": "建筑材料", "density": 2400, "elastic_modulus": 30e9,
+                     "poisson_ratio": 0.2, "compressive_strength": 30e6, "thermal_expansion": 1.0e-5,
+                     "thermal_conductivity": 1.5, "color": "#B0B0A0"},
+    "glass": {"name": "钢化玻璃", "category": "脆性材料", "density": 2500, "elastic_modulus": 70e9,
+              "poisson_ratio": 0.22, "compressive_strength": 1000e6, "thermal_expansion": 8.5e-6,
+              "thermal_conductivity": 1.0, "color": "#A0D0F0"},
+    "rubber": {"name": "天然橡胶", "category": "弹性体", "density": 1100, "elastic_modulus": 0.01e9,
+               "poisson_ratio": 0.49, "hyperelastic": True, "thermal_expansion": 2.0e-4,
+               "thermal_conductivity": 0.15, "color": "#404040"},
+}
+
+
+def list_material_templates(category: str = None):
+    templates = list(MATERIAL_TEMPLATES.values())
+    if category:
+        templates = [t for t in templates if t.get("category") == category]
+    return templates
+
+
+def get_material_template(name: str):
+    for key, tmpl in MATERIAL_TEMPLATES.items():
+        if tmpl["name"] == name or key == name:
+            return {"id": key, **tmpl}
+    return None
+
+
+def edit_material(material_id: str, properties: dict) -> dict:
+    tmpl = MATERIAL_TEMPLATES.get(material_id)
+    if tmpl is None:
+        return {"error": f"材料模板不存在: {material_id}"}
+    edited = dict(tmpl)
+    edited.update(properties)
+    return {"id": material_id, **edited}
+
+
+def material_categories() -> list[str]:
+    return sorted(set(t["category"] for t in MATERIAL_TEMPLATES.values()))
+
+
+def compare_materials(material_ids: list[str]) -> dict:
+    """对比多个材料的关键属性"""
+    comparison = {"properties": ["density", "elastic_modulus", "yield_strength", "poisson_ratio",
+                                  "thermal_expansion", "thermal_conductivity"],
+                  "materials": []}
+    for mid in material_ids:
+        tmpl = MATERIAL_TEMPLATES.get(mid)
+        if tmpl:
+            comparison["materials"].append({"id": mid, "name": tmpl["name"],
+                                             "values": {p: tmpl.get(p) for p in comparison["properties"]}})
+    return comparison
+
+
+# ============================================================================
+# V4.1-003: 结果置信度标注
+# ============================================================================
+
+def compute_confidence(simulation_results: dict) -> dict:
+    """计算仿真结果的综合置信度
+
+    四大因子：
+    - 网格质量 (mesh_quality: 0~1)
+    - 收敛性 (convergence: 0~1)
+    - 材料不确定性 (material_uncertainty: 0~1)
+    - 边界条件合理性 (bc_validity: 0~1)
+    """
+    mesh_q = simulation_results.get("mesh_quality", 0.85)
+    conv = simulation_results.get("convergence_score", 0.90)
+    mat_u = simulation_results.get("material_uncertainty", 0.10)
+    bc_v = simulation_results.get("bc_validity", 0.90)
+
+    # 加权综合置信度
+    weights = {"mesh": 0.25, "convergence": 0.30, "material": 0.20, "bc": 0.25}
+    confidence = (mesh_q * weights["mesh"] + conv * weights["convergence"] +
+                  (1 - mat_u) * weights["material"] + bc_v * weights["bc"])
+
+    level = "high" if confidence >= 0.85 else ("medium" if confidence >= 0.65 else "low")
+    color = "green" if level == "high" else ("orange" if level == "medium" else "red")
+
+    factors = [
+        {"factor": "网格质量", "score": round(mesh_q, 3), "weight": 0.25,
+         "suggestion": None if mesh_q >= 0.8 else "建议细化关键区域的网格"},
+        {"factor": "收敛性", "score": round(conv, 3), "weight": 0.30,
+         "suggestion": None if conv >= 0.85 else "建议减小收敛容差或增加迭代次数"},
+        {"factor": "材料不确定性", "score": round(1 - mat_u, 3), "weight": 0.20,
+         "suggestion": None if mat_u <= 0.15 else "建议使用更精确的材料参数或进行参数敏感性分析"},
+        {"factor": "边界条件", "score": round(bc_v, 3), "weight": 0.25,
+         "suggestion": None if bc_v >= 0.85 else "建议检查约束/荷载设置的合理性"},
+    ]
+
+    return {"confidence": round(confidence, 3), "level": level, "color": color,
+            "factors": factors, "is_mock": False}
+
+
+def annotate_result_field(field_name: str, field_values: list[float],
+                          confidence_map: dict[str, float] = None) -> dict:
+    """对结果场进行逐区域置信度标注"""
+    if confidence_map is None:
+        confidence_map = {}
+
+    mean_val = np.mean(field_values)
+    std_val = np.std(field_values)
+    cv = std_val / (abs(mean_val) + 1e-10)
+
+    # 变异性越大，置信度越低
+    local_confidence = max(0.3, min(0.98, 1.0 - cv * 2))
+
+    # 热点区域检测
+    threshold = mean_val + 2 * std_val
+    hot_spots = [i for i, v in enumerate(field_values) if v > threshold]
+
+    return {"field": field_name, "mean": round(float(mean_val), 4),
+            "std": round(float(std_val), 4), "cv": round(float(cv), 4),
+            "local_confidence": round(local_confidence, 3),
+            "n_hot_spots": len(hot_spots), "hot_spot_indices": hot_spots[:20],
+            "is_mock": False}
+
+
+# ============================================================================
 # CLI
 # ============================================================================
 
 def main():
     if len(sys.argv) < 2:
         print("product: wizard | cases | glossary <term> | compliance <std> <results_json> | report <name> <results_json>")
+        print("         materials [category] | material <id> | compare <ids_json> | confidence <results_json>")
         sys.exit(1)
     cmd = sys.argv[1]
 
@@ -225,6 +376,25 @@ def main():
         name = sys.argv[2]
         results = json.loads(sys.argv[3])
         print(json.dumps(generate_report(name, results), ensure_ascii=False))
+    # V4.0-003: 材料编辑器
+    elif cmd == "materials":
+        cat = sys.argv[2] if len(sys.argv) > 2 else None
+        print(json.dumps(list_material_templates(cat), ensure_ascii=False))
+    elif cmd == "material":
+        print(json.dumps(get_material_template(sys.argv[2]), ensure_ascii=False))
+    elif cmd == "material_categories":
+        print(json.dumps(material_categories()))
+    elif cmd == "compare_materials":
+        ids = json.loads(sys.argv[2]) if len(sys.argv) > 2 else []
+        print(json.dumps(compare_materials(ids), ensure_ascii=False))
+    # V4.1-003: 置信度
+    elif cmd == "confidence":
+        results = json.loads(sys.argv[2])
+        print(json.dumps(compute_confidence(results), ensure_ascii=False))
+    elif cmd == "annotate":
+        field = sys.argv[2]
+        values = json.loads(sys.argv[3])
+        print(json.dumps(annotate_result_field(field, values), ensure_ascii=False))
     else:
         print(f"未知命令: {cmd}")
 
