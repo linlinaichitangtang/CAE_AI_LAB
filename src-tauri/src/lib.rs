@@ -14,6 +14,7 @@ pub mod training_manager;
 pub mod experiment_tracker;
 pub mod surrogate_manager;
 pub mod active_learning_manager;
+pub mod dft_workflow;
 mod db;
 mod models;
 pub mod api_server;
@@ -796,6 +797,10 @@ pub fn run() {
             // V4.4-006: Active learning with real uncertainty
             active_learning_manager::compute_structure_uncertainty,
             active_learning_manager::al_select_candidates,
+            // V4.5-001: DFT workflow
+            dft_workflow::run_dft_workflow,
+            dft_workflow::list_dft_codes,
+            dft_workflow::compute_defect_formation_energy,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
