@@ -15,6 +15,7 @@ pub mod experiment_tracker;
 pub mod surrogate_manager;
 pub mod active_learning_manager;
 pub mod dft_workflow;
+pub mod v45_managers;
 mod db;
 mod models;
 pub mod api_server;
@@ -801,6 +802,15 @@ pub fn run() {
             dft_workflow::run_dft_workflow,
             dft_workflow::list_dft_codes,
             dft_workflow::compute_defect_formation_energy,
+            // V4.5-002~006: Research depth modules
+            v45_managers::search_kim_potentials,
+            v45_managers::verify_kim_potential,
+            v45_managers::run_microstructure_chain,
+            v45_managers::run_fe2_multiscale,
+            v45_managers::check_kpoint_convergence_cmd,
+            v45_managers::run_bayesian_uq,
+            v45_managers::search_materials_db,
+            v45_managers::batch_download_materials,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
