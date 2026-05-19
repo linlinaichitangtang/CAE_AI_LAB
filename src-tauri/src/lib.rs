@@ -13,6 +13,7 @@ pub mod model_repo;
 pub mod training_manager;
 pub mod experiment_tracker;
 pub mod surrogate_manager;
+pub mod active_learning_manager;
 mod db;
 mod models;
 pub mod api_server;
@@ -792,6 +793,9 @@ pub fn run() {
             // V4.4-005: Multiscale surrogate training
             surrogate_manager::train_surrogate_model,
             surrogate_manager::surrogate_predict,
+            // V4.4-006: Active learning with real uncertainty
+            active_learning_manager::compute_structure_uncertainty,
+            active_learning_manager::al_select_candidates,
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {
