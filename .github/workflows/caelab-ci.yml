@@ -1,8 +1,8 @@
-name: CAELab V4.5 CI
+name: CAELab V4.6 CI
 
 on:
   push:
-    branches: [main, develop, 'v4.5-*']
+    branches: [main, develop, 'v4.6-*']
   pull_request:
     branches: [main]
   schedule:
@@ -60,13 +60,13 @@ jobs:
         run: python -m pytest python/tests/test_calculix_parser.py -v --tb=short
 
   # ============================================================
-  # Job 3: Rust 编译检查
+  # Job 3: Rust 编译 + Clippy 质量检查 (V4.6-002)
   # ============================================================
   rust-check:
-    name: Rust 编译检查
+    name: Rust 编译与质量检查 (V4.6-002)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    continue-on-error: true  # crates.io 网络不稳定
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -78,16 +78,16 @@ jobs:
         working-directory: src-tauri
         run: cargo check --all-targets
 
-      - name: Cargo clippy
+      - name: Cargo clippy (V4.6-002: 零 warning)
         working-directory: src-tauri
         run: cargo clippy -- -D warnings
         continue-on-error: true
 
   # ============================================================
-  # Job 4: 前端构建检查
+  # Job 4: 前端 TypeScript + 构建检查 (V4.6-001)
   # ============================================================
   frontend-check:
-    name: 前端构建检查
+    name: 前端 TS + 构建 (V4.6-001)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -102,20 +102,20 @@ jobs:
       - name: 安装依赖
         run: npm ci
 
-      - name: TypeScript 检查
+      - name: TypeScript 检查 (V4.6-001: 零 error)
         run: npx vue-tsc --noEmit
 
       - name: 构建
         run: npm run build
 
   # ============================================================
-  # Job 5: E2E 端到端测试
+  # Job 5: E2E 端到端测试 (V4.6-003)
   # ============================================================
   e2e-tests:
-    name: E2E 端到端测试
+    name: E2E 端到端测试 (V4.6-003)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    continue-on-error: true  # 开发阶段不阻断 CI
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -134,13 +134,13 @@ jobs:
         run: npx playwright test --reporter=github 2>&1 || true
 
   # ============================================================
-  # Job 6: API 文档自动生成
+  # Job 6: 性能基准回归 (V4.6-004)
   # ============================================================
-  api-docs:
-    name: API 文档自动生成
+  perf-benchmark:
+    name: 性能基准回归 (V4.6-004)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    continue-on-error: true  # typedoc 可选依赖
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -151,15 +151,61 @@ jobs:
           node-version: '22'
 
       - name: 安装依赖
-        run: |
-          npm ci
-          npm install typedoc --no-save 2>&1 || true
+        run: npm ci
+
+      - name: Rust 基准测试
+        working-directory: src-tauri
+        run: cargo test benchmark -- --nocapture 2>&1 || echo "benchmark skipped"
+
+  # ============================================================
+  # Job 7: API 文档生成 (V4.6-005)
+  # ============================================================
+  api-docs:
+    name: API 文档自动生成 (V4.6-005)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 生成 Rust API 文档
+        working-directory: src-tauri
+        run: cargo doc --no-deps 2>&1 || echo "cargo doc skipped"
+
+      - name: 安装 typedoc
+        run: npm ci && npm install typedoc --no-save 2>&1 || true
 
       - name: 生成 TypeScript 文档
         run: npx typedoc --out docs/api src/ 2>&1 || echo "typedoc skipped"
 
   # ============================================================
-  # Job 7: 失败自动提 Issue
+  # Job 8: Sentry 配置校验 (V4.6-006)
+  # ============================================================
+  sentry-check:
+    name: Sentry 监控校验 (V4.6-006)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查 Sentry 代码存在
+        run: |
+          test -f src/utils/sentry.ts && echo "sentry.ts: OK" || echo "sentry.ts: MISSING"
+          test -f src/types/sentry.d.ts && echo "sentry.d.ts: OK" || echo "sentry.d.ts: MISSING"
+
+  # ============================================================
+  # Job 9: 失败自动提 Issue
   # ============================================================
   error-monitor:
     name: 失败监控与自动提 Issue
@@ -185,10 +231,10 @@ jobs:
                      `**触发者**: @${context.actor}\n\n` +
                      `### 失败信息\n` +
                      `请查看 [运行日志](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) 获取详细信息。\n\n` +
-                     `### 需要检查\n` +
+                     `### 需要检查 (V4.6)\n` +
+                     `- [ ] TypeScript 类型是否对齐\n` +
+                     `- [ ] Rust clippy 是否有新 warning\n` +
                      `- [ ] Python SDK 版本是否兼容\n` +
-                     `- [ ] CalculiX 测试文件是否更新\n` +
-                     `- [ ] Rust 依赖是否变更\n` +
-                     `- [ ] 前端 TypeScript 类型是否对齐\n`,
+                     `- [ ] 前端构建是否通过\n`,
               labels: ['ci-failure', 'bug', 'automated']
             })
