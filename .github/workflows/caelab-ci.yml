@@ -1,8 +1,8 @@
-name: CAELab V4.6 CI
+name: CAELab V4.8 CI
 
 on:
   push:
-    branches: [main, develop, 'v4.6-*']
+    branches: [main, develop, 'v4.8-*']
   pull_request:
     branches: [main]
   schedule:
@@ -60,7 +60,95 @@ jobs:
         run: python -m pytest python/tests/test_calculix_parser.py -v --tb=short
 
   # ============================================================
-  # Job 3: Rust 编译 + Clippy 质量检查 (V4.6-002)
+  # Job 2a: Thermo 热力学模块测试 (V4.7)
+  # ============================================================
+  thermo-smoke:
+    name: 热力学模块测试 (V4.7)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install numpy scipy pytest
+
+      - name: Thermo 模块冒烟测试
+        run: python -m pytest python/tests/test_thermo.py -v --tb=short
+
+  # ============================================================
+  # Job 2b: Product 产品化模块测试 (V4.8)
+  # ============================================================
+  product-smoke:
+    name: 产品化模块测试 (V4.8)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install numpy scipy pytest
+
+      - name: Product 模块冒烟测试
+        run: python -m pytest python/tests/test_product.py -v --tb=short
+
+  # ============================================================
+  # Job 2c: AI/ML 模型模块测试 (V4.4)
+  # ============================================================
+  models-smoke:
+    name: AI/ML 模型测试 (V4.4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install numpy scipy pytest
+
+      - name: Models 模块冒烟测试
+        run: python -m pytest python/tests/test_models.py -v --tb=short
+
+  # ============================================================
+  # Job 2d: DFT 多尺度模块测试 (V4.5)
+  # ============================================================
+  dft-smoke:
+    name: DFT 多尺度测试 (V4.5)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install numpy scipy pytest
+
+      - name: DFT 模块冒烟测试
+        run: python -m pytest python/tests/test_dft.py -v --tb=short
+
+  # ============================================================
+  # Job 3: Rust 编译 + Clippy 质量检查 (V4.8)
   # ============================================================
   rust-check:
     name: Rust 编译与质量检查 (V4.6-002)
@@ -210,7 +298,7 @@ jobs:
   error-monitor:
     name: 失败监控与自动提 Issue
     runs-on: ubuntu-24.04
-    needs: [python-smoke, calculix-parser, rust-check, frontend-check]
+    needs: [python-smoke, calculix-parser, thermo-smoke, product-smoke, models-smoke, dft-smoke, rust-check, frontend-check]
     if: failure()
     permissions:
       issues: write
@@ -231,10 +319,14 @@ jobs:
                      `**触发者**: @${context.actor}\n\n` +
                      `### 失败信息\n` +
                      `请查看 [运行日志](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) 获取详细信息。\n\n` +
-                     `### 需要检查 (V4.6)\n` +
+                     `### 需要检查 (V4.8)\n` +
                      `- [ ] TypeScript 类型是否对齐\n` +
                      `- [ ] Rust clippy 是否有新 warning\n` +
                      `- [ ] Python SDK 版本是否兼容\n` +
+                     `- [ ] 热力学模块 (thermo) 是否正常\n` +
+                     `- [ ] 产品化模块 (product) 是否正常\n` +
+                     `- [ ] AI/ML 模块 (models) 是否正常\n` +
+                     `- [ ] DFT 多尺度模块 (dft) 是否正常\n` +
                      `- [ ] 前端构建是否通过\n`,
               labels: ['ci-failure', 'bug', 'automated']
             })

@@ -104,7 +104,7 @@ def search_glossary(keyword: str) -> list[dict]:
     return results
 
 def list_glossary():
-    return sorted(GROSSARY.keys())
+    return sorted(GLOSSARY.keys())
 
 
 # ============================================================================
