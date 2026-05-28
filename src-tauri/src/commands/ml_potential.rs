@@ -1829,11 +1829,11 @@ pub async fn recommend_training_hyperparams(
 }
 
 /// 提交训练任务
+/// V4.4-003: mock 训练结果（真实训练通过 training_manager 的 submit_real_training_job 调用）
 #[tauri::command]
 pub async fn submit_training_job(
     config: TrainingConfig,
 ) -> Result<TrainingResult, String> {
-    // Mock: 直接返回训练结果
     Ok(mock_train_result(&config))
 }
 

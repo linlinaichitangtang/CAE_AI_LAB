@@ -938,8 +938,8 @@ mod tests {
                 let t = frame as f64 * 0.1;
                 // Random walk-like displacement
                 frame_pos.push([
-                    atom as f64 * 3.0 + t * 0.5 * (atom as f64 % 3 + 1) as f64,
-                    atom as f64 * 3.0 + t * 0.3 * (atom as f64 % 2 + 1) as f64,
+                    atom as f64 * 3.0 + t * 0.5 * (atom as f64 % 3.0 + 1.0),
+                    atom as f64 * 3.0 + t * 0.3 * (atom as f64 % 2.0 + 1.0),
                     atom as f64 * 3.0 + t * 0.4,
                 ]);
             }

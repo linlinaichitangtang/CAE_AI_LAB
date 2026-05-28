@@ -1566,6 +1566,7 @@ mod tests {
             num_steps: 1000,
             initial_condition: "random".to_string(),
             parameters: HashMap::new(),
+            output_interval: 100,
         };
         let result = validate_pf_config(config).unwrap();
         assert!(result.valid);
@@ -1583,6 +1584,7 @@ mod tests {
             num_steps: 0,
             initial_condition: "bad".to_string(),
             parameters: HashMap::new(),
+            output_interval: 10,
         };
         let result = validate_pf_config(config).unwrap();
         assert!(!result.valid);

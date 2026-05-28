@@ -18,8 +18,8 @@
 //! - I = b*h³/12
 //! - c = h/2
 
-use caelab_lib::solver::mesh::{GridConfig, MeshGenerator, MeshElementType};
-use caelab_lib::solver::input_gen::{
+use caelab::solver::mesh::{GridConfig, MeshGenerator, MeshElementType};
+use caelab::input_gen::{
     InpGenerator, Model, Material, Step, BoundaryCondition, Load,
     LoadType, Direction, ElementType as CaelabElementType,
 };
@@ -150,7 +150,7 @@ pub fn run_cantilever_beam_test() -> TestResult {
     for j in 0..num_nodes_y {
         for i in 0..num_nodes_x {
             let y_offset = beam.height / 2.0 - j as f64 * dy; // center at y=0
-            nodes.push(caelab_lib::solver::input_gen::Node {
+            nodes.push(caelab::input_gen::Node {
                 id: j * num_nodes_x + i + 1,
                 x: i as f64 * dx,
                 y: y_offset,
@@ -167,7 +167,7 @@ pub fn run_cantilever_beam_test() -> TestResult {
             let n1 = n0 + 1;
             let n2 = n0 + num_nodes_x + 1;
             let n3 = n0 + num_nodes_x;
-            elements.push(caelab_lib::solver::input_gen::Element {
+            elements.push(caelab::input_gen::Element {
                 id: j * nx + i + 1,
                 element_type: CaelabElementType::S4,
                 nodes: vec![n0, n1, n2, n3],
@@ -272,8 +272,8 @@ pub fn run_cantilever_beam_test() -> TestResult {
         // Attempt to run solver (commented out to avoid actual solve in test)
         // Uncomment to perform actual solve:
         /*
-        let solver = caelab_lib::solver::CalculiXSolver::new(
-            caelab_lib::solver::SolverConfig::default()
+        let solver = caelab::solver::CalculiXSolver::new(
+            caelab::solver::SolverConfig::default()
         );
         
         match solver.solve(&inp_path, &test_dir) {
@@ -284,7 +284,7 @@ pub fn run_cantilever_beam_test() -> TestResult {
                 // Parse results
                 let frd_path = test_dir.join("cantilever_beam.frd");
                 if frd_path.exists() {
-                    let parser = caelab_lib::solver::FrdParser::new(frd_path);
+                    let parser = caelab::solver::FrdParser::new(frd_path);
                     match parser.get_displacements() {
                         Ok(displacements) => {
                             // Find maximum deflection (should be at free end)
@@ -311,7 +311,7 @@ pub fn run_cantilever_beam_test() -> TestResult {
         }
         */
         
-        result.messages.push(format!("  (Actual solve skipped for test - enable in code to run)");
+        result.messages.push(format!("  (Actual solve skipped for test - enable in code to run)"));
     } else {
         result.messages.push(format!("⚠ CalculiX (ccx) not installed"));
         result.messages.push(format!("  Install with: sudo apt install calculix-ccx"));

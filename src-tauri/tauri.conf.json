@@ -56,9 +56,6 @@
       "appimage": {
         "bundleMediaFramework": false
       }
-    },
-    "ios": {
-      "minimumSystemVersion": "14.0"
     }
   },
   "app": {

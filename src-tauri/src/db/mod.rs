@@ -54,6 +54,8 @@ impl Database {
         db.init_builtin_materials()?;
         db.init_archive_table()?;
         db.init_material_property_table()?;
+        db.init_knowledge_tables()?;
+        db.init_vector_store_table()?;
         Ok(db)
     }
 
@@ -352,6 +354,22 @@ impl Database {
         let conn = self.conn.lock()
             .map_err(|e| format!("failed to lock database connection: {}", e))?;
         crate::commands::material_data_platform::create_material_property_table(&conn)
+            .map_err(Error::Rusqlite)
+    }
+
+    /// Initialize V3.9 knowledge memory tables (material_knowledge, design_standards, failure_modes, user_profiles)
+    fn init_knowledge_tables(&self) -> Result<(), Error> {
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
+        crate::commands::knowledge_memory::create_knowledge_tables(&conn)
+            .map_err(Error::Rusqlite)
+    }
+
+    /// Initialize V3.10 vector store table
+    fn init_vector_store_table(&self) -> Result<(), Error> {
+        let conn = self.conn.lock()
+            .map_err(|e| format!("failed to lock database connection: {}", e))?;
+        crate::commands::vector_store::create_vector_store_table(&conn)
             .map_err(Error::Rusqlite)
     }
 

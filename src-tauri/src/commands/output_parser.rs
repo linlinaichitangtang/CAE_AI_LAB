@@ -1105,8 +1105,8 @@ mod tests {
     #[test]
     fn test_element_stress_calc() {
         // Simple tension case
-        let s11 = 100.0;
-        let s_eqv = ((0.5 * ((s11 - 0.0).powi(2) + (0.0 - 0.0).powi(2) + (0.0 - s11).powi(2))) as f64).sqrt();
+        let s11: f64 = 100.0;
+        let s_eqv = (0.5_f64 * ((s11 - 0.0_f64).powi(2) + (0.0_f64 - 0.0_f64).powi(2) + (0.0_f64 - s11).powi(2))).sqrt();
         assert!((s_eqv - 100.0).abs() < 0.001);
     }
 
